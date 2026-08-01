@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Geografía Colombia · MEDFUT</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+:root{
+  --bg:#0f172a;--surf:#1e293b;--bord:#334155;
+  --t1:#f1f5f9;--t2:#cbd5e1;--t3:#94a3b8;--t4:#64748b;--t5:#475569;--t6:#334155;
+  --accent:#38bdf8;
+  --c-reg:#60a5fa;--c-dpto:#34d399;--c-subr:#c084fc;
+  --c-mpio:#fb923c;--c-zona:#f472b6;--c-com:#facc15;--c-bar:#86efac;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+     background:var(--bg);color:var(--t1);min-height:100vh;font-size:13px}
+
+/* ── Nav ─────────────────────────────────────────────────── */
+.topnav{background:var(--surf);height:48px;padding:0 20px;display:flex;align-items:center;
+        gap:6px;border-bottom:1px solid var(--bord);position:sticky;top:0;z-index:100}
+.nav-logo{font-size:15px;font-weight:800;color:var(--accent);margin-right:10px;white-space:nowrap}
+.nav-btn{display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;
+         text-decoration:none;font-size:.73rem;font-weight:600;border:1px solid var(--bord);
+         color:var(--t4);transition:all .15s}
+.nav-btn:hover{border-color:var(--accent);color:var(--t2)}
+.nav-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.nav-btn.active:hover{background:#0ea5e9}
+.btn-reload{margin-left:auto;background:var(--surf);border:1px solid var(--bord);border-radius:7px;
+            padding:5px 12px;color:var(--t4);font-size:.73rem;cursor:pointer;font-weight:600;
+            display:flex;align-items:center;gap:5px;transition:all .15s}
+.btn-reload:hover{border-color:var(--accent);color:var(--accent)}
+.btn-reload.spin svg{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Page header ─────────────────────────────────────────── */
+.page-hd{padding:16px 20px 0;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.page-title{font-size:18px;font-weight:700}
+.page-title span{color:var(--accent)}
+.page-sub{font-size:11px;color:var(--t5)}
+
+/* ── KPIs ────────────────────────────────────────────────── */
+.kpi-row{display:flex;gap:8px;padding:14px 20px 0;flex-wrap:wrap}
+.kpi{background:var(--surf);border:1px solid var(--bord);border-radius:8px;
+     padding:10px 16px;flex:1;min-width:100px}
+.kpi-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--t5);margin-bottom:4px}
+.kpi-value{font-size:22px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;line-height:1}
+
+/* ── Controls ────────────────────────────────────────────── */
+.controls{padding:12px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pills{display:flex;gap:5px;flex-wrap:wrap}
+.pill{background:transparent;border:1.5px solid var(--bord);color:var(--t5);
+      padding:4px 11px;border-radius:16px;cursor:pointer;font-size:11.5px;font-weight:500;
+      transition:all .15s;user-select:none;white-space:nowrap}
+.pill:hover{border-color:var(--t3);color:var(--t3)}
+.pill.active[data-r="all"]      {border-color:var(--accent);background:rgba(56,189,248,.1);color:var(--accent)}
+.pill.active[data-r="Andina"]   {border-color:var(--c-reg);background:rgba(96,165,250,.1);color:var(--c-reg)}
+.pill.active[data-r="Caribe"]   {border-color:var(--c-dpto);background:rgba(52,211,153,.1);color:var(--c-dpto)}
+.pill.active[data-r="Pacífico"] {border-color:var(--c-subr);background:rgba(192,132,252,.1);color:var(--c-subr)}
+.pill.active[data-r="Orinoquía"]{border-color:var(--c-mpio);background:rgba(251,146,60,.1);color:var(--c-mpio)}
+.pill.active[data-r="Amazonía"] {border-color:var(--c-bar);background:rgba(134,239,172,.1);color:var(--c-bar)}
+.search-wrap{margin-left:auto;position:relative}
+.search-inp{background:var(--surf);border:1.5px solid var(--bord);color:var(--t1);
+            padding:6px 10px 6px 30px;border-radius:7px;font-size:12px;outline:none;
+            width:220px;transition:border-color .2s}
+.search-inp::placeholder{color:var(--t6)}
+.search-inp:focus{border-color:var(--accent)}
+.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--t5);pointer-events:none}
+
+/* ── Table wrapper ───────────────────────────────────────── */
+.tbl-wrap{padding:0 20px 32px}
+.tbl-scroll{border:1px solid var(--bord);border-radius:10px;
+            max-height:calc(100vh - 295px);overflow:auto}
+.tbl-scroll::-webkit-scrollbar{width:5px;height:5px}
+.tbl-scroll::-webkit-scrollbar-track{background:var(--bg)}
+.tbl-scroll::-webkit-scrollbar-thumb{background:var(--bord);border-radius:3px}
+
+/* ── Geo table ───────────────────────────────────────────── */
+.geo-table{width:100%;border-collapse:collapse;min-width:1100px}
+.geo-table thead{position:sticky;top:0;z-index:20}
+.geo-table th{padding:8px 10px;text-align:left;font-size:9.5px;text-transform:uppercase;
+              letter-spacing:.5px;border-bottom:2px solid var(--surf);background:var(--bg);
+              white-space:nowrap;font-weight:700}
+.th-reg {color:var(--c-reg)}
+.th-dpto{color:var(--c-dpto)}
+.th-subr{color:var(--c-subr)}
+.th-mpio{color:var(--c-mpio)}
+.th-zona{color:var(--c-zona)}
+.th-com {color:var(--c-com)}
+.th-bar {color:var(--c-bar)}
+.th-cnt {color:var(--t6);text-align:right;width:80px}
+
+.geo-table td{padding:0;border-bottom:1px solid rgba(15,23,42,.7)}
+.geo-table td.empty{background:transparent}
+.geo-table tbody tr:last-child td{border-bottom:none}
+
+/* ── Cell content ────────────────────────────────────────── */
+.cw{display:flex;align-items:center;gap:6px;padding:7px 10px;transition:background .1s}
+.chv{display:inline-block;font-size:9px;transition:transform .18s;
+     color:var(--t6);flex-shrink:0;width:11px}
+.expanded .chv{transform:rotate(90deg)}
+.chv-ph{width:11px;flex-shrink:0;display:inline-block}
+.abr{font-size:9.5px;font-weight:700;background:var(--surf);border:1px solid var(--bord);
+     color:var(--t5);padding:1px 4px;border-radius:3px;font-family:monospace;flex-shrink:0}
+.cnt-cell{text-align:right;padding-right:10px;vertical-align:middle;
+          font-size:11px;color:var(--t6);white-space:nowrap}
+.sub-cnt-cell{text-align:center;vertical-align:middle;padding:3px 6px}
+.sub-cnt{font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;
+         display:inline-block;white-space:nowrap;background:rgba(255,255,255,.04)}
+
+/* ── Per-level row styles ────────────────────────────────── */
+/* Region */
+.tr-r td{background:#0d1d33}
+.tr-r .cw{cursor:pointer;padding:9px 10px}
+.tr-r:hover td{background:#122040}
+.tr-r .cname{font-weight:600;font-size:13.5px}
+.tr-r[data-r="Andina"]    .cname{color:var(--c-reg)}
+.tr-r[data-r="Caribe"]    .cname{color:var(--c-dpto)}
+.tr-r[data-r="Pacífico"]  .cname{color:var(--c-subr)}
+.tr-r[data-r="Orinoquía"] .cname{color:var(--c-mpio)}
+.tr-r[data-r="Amazonía"]  .cname{color:var(--c-bar)}
+/* Region badge */
+.rbadge{font-size:9.5px;font-weight:600;padding:1px 7px;border-radius:9px}
+.tr-r[data-r="Andina"]    .rbadge{background:rgba(96,165,250,.12);color:var(--c-reg)}
+.tr-r[data-r="Caribe"]    .rbadge{background:rgba(52,211,153,.12);color:var(--c-dpto)}
+.tr-r[data-r="Pacífico"]  .rbadge{background:rgba(192,132,252,.12);color:var(--c-subr)}
+.tr-r[data-r="Orinoquía"] .rbadge{background:rgba(251,146,60,.12);color:var(--c-mpio)}
+.tr-r[data-r="Amazonía"]  .rbadge{background:rgba(134,239,172,.12);color:var(--c-bar)}
+
+/* Departamento */
+.tr-d .cw{cursor:pointer}
+.tr-d:hover td{background:rgba(255,255,255,.025)}
+.tr-d .cname{color:var(--t2);font-weight:500}
+
+/* Subregión */
+.tr-s .cw{cursor:pointer}
+.tr-s:hover td{background:rgba(255,255,255,.02)}
+.tr-s .cname{color:var(--t3)}
+
+/* Municipio */
+.tr-m .cw.clickable{cursor:pointer}
+.tr-m:hover td{background:rgba(255,255,255,.015)}
+.tr-m .cname{color:var(--t4)}
+
+/* Zona */
+.tr-z .cw{cursor:pointer}
+.tr-z:hover td{background:rgba(255,255,255,.015)}
+.tr-z .cname{color:var(--t4);font-size:12px}
+
+/* Comuna */
+.tr-c .cw.clickable{cursor:pointer}
+.tr-c:hover td{background:rgba(255,255,255,.01)}
+.tr-c .cname{color:var(--t5);font-size:12px}
+
+/* Barrio */
+.tr-b .cname{color:var(--t6);font-size:11.5px}
+
+/* ── Tags en columna conteo ──────────────────────────────── */
+.tag{display:inline-block;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:500}
+.tag-c{background:rgba(56,189,248,.1);color:var(--accent);border:1px solid rgba(56,189,248,.2)}
+.tag-b{background:rgba(134,239,172,.07);color:#4ade80;border:1px solid rgba(74,222,128,.2)}
+.tag-d{color:var(--t6)}
+
+/* ── State rows ──────────────────────────────────────────── */
+.state-row td{padding:48px;text-align:center;color:var(--t5);font-size:13px}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--bord);
+         border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;
+         vertical-align:middle;margin-right:8px}
+.no-res{padding:32px;text-align:center;color:var(--t6);font-size:12px;display:none}
+
+/* ── Split view: tabla 60% (izq) / mapa 40% (der) ───────────── */
+.split-view{display:flex;gap:16px;padding:0 20px 32px;align-items:flex-start}
+.split-view .map-section{flex:0 0 40%;max-width:40%;min-width:0;order:2}
+.split-view .tbl-wrap{flex:1 1 60%;min-width:0;padding:0;order:1}
+
+/* ── Mapa ────────────────────────────────────────────────── */
+.map-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.map-title{font-size:14px;font-weight:700;color:var(--t1)}
+.map-badge{font-size:10.5px;color:var(--t5);background:var(--surf);border:1px solid var(--bord);
+           border-radius:6px;padding:2px 8px}
+.autozoom-toggle{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--t4);
+                 cursor:pointer;user-select:none;margin-left:auto}
+.autozoom-toggle input{cursor:pointer}
+.map-levels{display:flex;gap:4px;flex-wrap:wrap;width:100%}
+.mlvl{background:transparent;border:1.5px solid var(--bord);color:var(--t5);
+      padding:3px 9px;border-radius:14px;cursor:pointer;font-size:10.5px;font-weight:500;
+      transition:all .15s;user-select:none}
+.mlvl:hover{border-color:var(--t3);color:var(--t3)}
+.mlvl.active{border-color:var(--accent);background:rgba(56,189,248,.1);color:var(--accent)}
+.map-crumb{font-size:11px;color:var(--t4);display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+           margin-bottom:8px;min-height:16px}
+.map-crumb .cr{cursor:pointer;padding:2px 6px;border-radius:5px}
+.map-crumb .cr:hover{background:var(--surf);color:var(--t2)}
+.map-crumb .cr.last{color:var(--accent);cursor:default}
+.map-crumb .cr.last:hover{background:transparent}
+.map-wrap{position:relative;border:1px solid var(--bord);border-radius:10px;overflow:hidden;
+          height:calc(100vh - 330px);min-height:420px;background:var(--surf)}
+#map{width:100%;height:100%;background:var(--bg)}
+.map-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+             background:rgba(15,23,42,.55);color:var(--t3);font-size:12px;z-index:500;gap:8px}
+.map-loading.hidden{display:none}
+.map-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+           background:rgba(15,23,42,.85);color:var(--t5);font-size:12px;z-index:500;text-align:center;padding:20px}
+.map-empty.show{display:flex}
+.leaflet-tooltip.geo-tooltip{background:var(--surf);color:var(--t1);border:1px solid var(--bord);
+                             border-radius:7px;padding:7px 10px;box-shadow:none}
+.leaflet-tooltip.geo-tooltip::before{border-top-color:var(--bord)}
+.mpop-name{font-weight:700;font-size:12.5px;margin-bottom:2px}
+.mpop-meta{font-size:10.5px;color:var(--t4)}
+.mpop-action{margin-top:6px;font-size:10.5px;color:var(--accent);cursor:pointer}
+
+/* Rotulo del area seleccionada, flotante sobre el mapa (lado derecho, no tapa el zoom) */
+.map-area-label{position:absolute;right:10px;top:10px;z-index:450;
+                background:rgba(15,23,42,.82);border:1px solid var(--bord);border-radius:8px;
+                padding:7px 12px;pointer-events:none;backdrop-filter:blur(3px);
+                max-width:70%;text-align:right}
+.mal-name{font-size:14px;font-weight:700;color:var(--t1);line-height:1.2}
+.mal-meta{font-size:10px;color:var(--t4);margin-top:1px}
+
+/* Fila de tabla resaltada por sincronizacion desde el mapa */
+@keyframes rowFlash{0%{background:rgba(56,189,248,.35)}100%{background:transparent}}
+tr.row-flash td{animation:rowFlash 1.6s ease-out}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="topnav">
+  <div class="nav-logo">⚡ MEDFUT</div>
+  <a href="dashboard_local.html"  class="nav-btn">🗳️ Electoral</a>
+  <a href="leads_import.html"     class="nav-btn">📥 Importar</a>
+  <a href="leads_analytics.html"  class="nav-btn">📊 Analítica</a>
+  <a href="c98geo_dashboard.html" class="nav-btn active">🗺️ Geografía</a>
+  <button class="btn-reload" onclick="loadData()" id="btn-rl">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </svg>Actualizar
+  </button>
+</nav>
+
+<!-- Header -->
+<div class="page-hd">
+  <div class="page-title">Geografía <span>Colombia</span></div>
+  <div class="page-sub">Base c98_geo · 7 niveles: Región → Departamento → Subregión → Municipio → Zona → Comuna → Barrio</div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-label" style="color:var(--c-reg)">Regiones</div><div class="kpi-value" id="kpi-r">—</div></div>
+  <div class="kpi"><div class="kpi-label" style="color:var(--c-dpto)">Departamentos</div><div class="kpi-value" id="kpi-d">—</div></div>
+  <div class="kpi"><div class="kpi-label" style="color:var(--c-subr)">Subregiones</div><div class="kpi-value" id="kpi-s">—</div></div>
+  <div class="kpi"><div class="kpi-label" style="color:var(--c-mpio)">Municipios</div><div class="kpi-value" id="kpi-m">—</div></div>
+  <div class="kpi"><div class="kpi-label" style="color:var(--c-zona)">Zonas</div><div class="kpi-value" id="kpi-z">—</div></div>
+  <div class="kpi"><div class="kpi-label" style="color:var(--c-com)">Comunas</div><div class="kpi-value" id="kpi-c">—</div></div>
+  <div class="kpi"><div class="kpi-label" style="color:var(--c-bar)">Barrios</div><div class="kpi-value" id="kpi-b">—</div></div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="pills" id="pills"></div>
+  <div class="search-wrap">
+    <svg class="si" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input class="search-inp" id="s-inp" type="text" placeholder="Buscar en todos los niveles…" oninput="onSearch(this.value)">
+  </div>
+</div>
+
+<!-- Mapa + Tabla: layout de dos columnas conectadas -->
+<div class="split-view">
+
+<!-- Mapa (40%) -->
+<div class="map-section">
+  <div class="map-hd">
+    <div class="map-title">🗺️ Coropletas</div>
+    <div class="map-badge" id="map-badge">—</div>
+    <label class="autozoom-toggle" title="Cambiar de nivel automáticamente según el zoom del mapa">
+      <input type="checkbox" id="autozoom-chk" checked onchange="autoZoomOn=this.checked">
+      Zoom automático
+    </label>
+    <div class="map-levels" id="map-levels">
+      <span class="mlvl" data-lvl="region">Región</span>
+      <span class="mlvl active" data-lvl="departamento">Departamento</span>
+      <span class="mlvl" data-lvl="subregion">Subregión</span>
+      <span class="mlvl" data-lvl="municipio">Municipio</span>
+      <span class="mlvl" data-lvl="zona">Zona</span>
+      <span class="mlvl" data-lvl="comuna">Comuna</span>
+      <span class="mlvl" data-lvl="barrio">Barrio</span>
+    </div>
+  </div>
+  <div class="map-crumb" id="map-crumb"></div>
+  <div class="map-wrap">
+    <div id="map"></div>
+    <div class="map-area-label" id="map-area-label">
+      <div class="mal-name">Colombia</div>
+      <div class="mal-meta" id="mal-meta">—</div>
+    </div>
+    <div class="map-loading" id="map-loading"><span class="spinner"></span>Cargando geometría…</div>
+    <div class="map-empty" id="map-empty">Este nivel no tiene geometría para el área seleccionada.</div>
+  </div>
+</div>
+
+<!-- Table (60%) -->
+<div class="tbl-wrap">
+  <div class="tbl-scroll">
+    <table class="geo-table">
+      <thead>
+        <tr>
+          <th class="th-reg">Región</th>
+          <th class="th-dpto">Departamento</th>
+          <th class="th-subr">Subregión</th>
+          <th class="th-mpio">Municipio</th>
+          <th class="th-zona">Zona</th>
+          <th class="th-com">Comuna</th>
+          <th class="th-bar">Barrio</th>
+        </tr>
+      </thead>
+      <tbody id="geo-body">
+        <tr class="state-row"><td colspan="7"><span class="spinner"></span>Cargando…</td></tr>
+      </tbody>
+    </table>
+    <div class="no-res" id="no-res">Sin resultados para "<strong id="sq"></strong>"</div>
+  </div>
+</div>
+
+</div><!-- /.split-view -->
+
+<script>
+/* ── Estado ──────────────────────────────────────────────────────── */
+let GEO = null;
+let activeR = 'all', searchTerm = '';
+const EXP = { r:new Set(), d:new Set(), s:new Set(), m:new Set(), z:new Set(), c:new Set() };
+
+/* ── Carga ───────────────────────────────────────────────────────── */
+async function loadData() {
+  const btn = document.getElementById('btn-rl');
+  btn.classList.add('spin'); btn.disabled = true;
+  try {
+    const res  = await fetch('c98geo_api.php?_=' + Date.now());
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    GEO = json.data;
+    renderKPIs(); renderPills(); renderTable();
+  } catch(e) {
+    document.getElementById('geo-body').innerHTML =
+      `<tr class="state-row"><td colspan="7" style="color:#f87171">✗ ${e.message}</td></tr>`;
+  } finally { btn.classList.remove('spin'); btn.disabled = false; }
+}
+
+/* ── KPIs ────────────────────────────────────────────────────────── */
+function renderKPIs() {
+  const s = k => GEO.reduce((a,r)=>a+(r[k]||0),0);
+  document.getElementById('kpi-r').textContent = GEO.length;
+  document.getElementById('kpi-d').textContent = s('n_dptos');
+  document.getElementById('kpi-s').textContent = s('n_subrs');
+  document.getElementById('kpi-m').textContent = fmt(s('n_mpios'));
+
+  // Zonas: suma real de m.zonas en todos los municipios (no solo los que tienen detalle)
+  let totZ=0;
+  GEO.forEach(r=>r.dptos.forEach(d=>d.subrs.forEach(s=>s.mpios.forEach(m=>{ totZ+=m.zonas||0; }))));
+  document.getElementById('kpi-z').textContent = fmt(totZ);
+  document.getElementById('kpi-c').textContent = s('comunas');
+  document.getElementById('kpi-b').textContent = fmt(s('barrios'));
+}
+
+/* ── Pills ───────────────────────────────────────────────────────── */
+function renderPills() {
+  const c = document.getElementById('pills'); c.innerHTML='';
+  const mk=(label,val)=>{
+    const el=document.createElement('span');
+    el.className='pill'+(val===activeR?' active':'');
+    el.dataset.r=val; el.textContent=label;
+    el.onclick=()=>setR(val); return el;
+  };
+  c.appendChild(mk('Todas','all'));
+  GEO.forEach(r=>c.appendChild(mk(r.r,r.r)));
+}
+function setR(val){
+  activeR=val;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active',p.dataset.r===val));
+  applyFilters();
+}
+
+/* ── Búsqueda ────────────────────────────────────────────────────── */
+function onSearch(v){
+  searchTerm=v.trim().toLowerCase();
+  document.getElementById('sq').textContent='"'+v.trim()+'"';
+  applyFilters();
+}
+
+/* ── Compute visible rows in search mode ─────────────────────────── */
+function computeVis(){
+  const vis=new Set();
+  GEO.forEach((reg,ri)=>{
+    if(activeR!=='all'&&reg.r!==activeR)return;
+    const mR=reg.r.toLowerCase().includes(searchTerm);
+    reg.dptos.forEach((dpto,di)=>{
+      const mD=mR||dpto.d.toLowerCase().includes(searchTerm);
+      dpto.subrs.forEach((subr,si)=>{
+        const mS=mD||subr.s.toLowerCase().includes(searchTerm);
+        let anyM=false;
+        subr.mpios.forEach((mpio,mi)=>{
+          const mM=mS||mpio.m.toLowerCase().includes(searchTerm)||(mpio.abr||'').toLowerCase().includes(searchTerm);
+          let anyZ=false;
+          if(mpio.detail){
+            mpio.detail.forEach((zona,zi)=>{
+              const mZ=mM||zona.z.toLowerCase().includes(searchTerm);
+              let anyC=false;
+              zona.coms.forEach((com,ci)=>{
+                const mC=mZ||com.c.toLowerCase().includes(searchTerm);
+                let anyB=false;
+                com.bars.forEach((bar,bi)=>{
+                  if(mC||bar.n.toLowerCase().includes(searchTerm)){
+                    vis.add(`b${ri}_${di}_${si}_${mi}_${zi}_${ci}_${bi}`); anyB=true;
+                  }
+                });
+                if(anyB||mC){vis.add(`c${ri}_${di}_${si}_${mi}_${zi}_${ci}`);anyC=true;}
+              });
+              if(anyC||mZ){vis.add(`z${ri}_${di}_${si}_${mi}_${zi}`);anyZ=true;}
+            });
+          }
+          if(anyZ||mM){vis.add(`m${ri}_${di}_${si}_${mi}`);anyM=true;}
+        });
+        if(anyM||mS){vis.add(`s${ri}_${di}_${si}`);vis.add(`d${ri}_${di}`);vis.add(`r${ri}`);}
+      });
+    });
+  });
+  return vis;
+}
+
+/* ── Apply filters ───────────────────────────────────────────────── */
+function applyFilters(){
+  if(!GEO)return;
+  const isSrch=searchTerm.length>0;
+  const vis=isSrch?computeVis():null;
+  let any=false;
+  document.querySelectorAll('#geo-body tr[data-gt]').forEach(tr=>{
+    const gt=tr.dataset.gt;
+    const ri=+tr.dataset.ri, di=+tr.dataset.di||0, si=+tr.dataset.si||0,
+          mi=+tr.dataset.mi||0, zi=+tr.dataset.zi||0, ci=+tr.dataset.ci||0, bi=+tr.dataset.bi||0;
+    const rg=tr.dataset.r;
+    if(activeR!=='all'&&rg!==activeR){tr.style.display='none';return;}
+    let show=false;
+    if(isSrch){
+      if     (gt==='r')show=vis.has(`r${ri}`);
+      else if(gt==='d')show=vis.has(`d${ri}_${di}`);
+      else if(gt==='s')show=vis.has(`s${ri}_${di}_${si}`);
+      else if(gt==='m')show=vis.has(`m${ri}_${di}_${si}_${mi}`);
+      else if(gt==='z')show=vis.has(`z${ri}_${di}_${si}_${mi}_${zi}`);
+      else if(gt==='c')show=vis.has(`c${ri}_${di}_${si}_${mi}_${zi}_${ci}`);
+      else if(gt==='b')show=vis.has(`b${ri}_${di}_${si}_${mi}_${zi}_${ci}_${bi}`);
+    } else {
+      const kr=ri, kd=`${ri}_${di}`, ks=`${ri}_${di}_${si}`,
+            km=`${ri}_${di}_${si}_${mi}`, kz=`${ri}_${di}_${si}_${mi}_${zi}`,
+            kc=`${ri}_${di}_${si}_${mi}_${zi}_${ci}`;
+      if     (gt==='r')show=true;
+      else if(gt==='d')show=EXP.r.has(kr);
+      else if(gt==='s')show=EXP.r.has(kr)&&EXP.d.has(kd);
+      else if(gt==='m')show=EXP.r.has(kr)&&EXP.d.has(kd)&&EXP.s.has(ks);
+      else if(gt==='z')show=EXP.r.has(kr)&&EXP.d.has(kd)&&EXP.s.has(ks)&&EXP.m.has(km);
+      else if(gt==='c')show=EXP.r.has(kr)&&EXP.d.has(kd)&&EXP.s.has(ks)&&EXP.m.has(km)&&EXP.z.has(kz);
+      else if(gt==='b')show=EXP.r.has(kr)&&EXP.d.has(kd)&&EXP.s.has(ks)&&EXP.m.has(km)&&EXP.z.has(kz)&&EXP.c.has(kc);
+    }
+    tr.style.display=show?'table-row':'none';
+    if(show)any=true;
+  });
+  document.getElementById('no-res').style.display=(!any&&isSrch)?'block':'none';
+}
+
+/* ── Toggles ─────────────────────────────────────────────────────── */
+function tog(expSet, key, ...clearSets){
+  if(expSet.has(key)){
+    expSet.delete(key);
+    clearSets.forEach(s=>[...s].forEach(k=>{if(k.startsWith(key+'_')||k===key)s.delete(k);}));
+  } else expSet.add(key);
+}
+function toggleR(ri){ tog(EXP.r,ri,EXP.d,EXP.s,EXP.m,EXP.z,EXP.c);
+  updChv('r',{ri}); applyFilters();
+  if(EXP.r.has(ri)) syncMapFromTableById('region', GEO[ri].id); }
+function toggleD(ri,di){ tog(EXP.d,`${ri}_${di}`,EXP.s,EXP.m,EXP.z,EXP.c);
+  updChv('d',{ri,di}); applyFilters();
+  const key=`${ri}_${di}`;
+  if(EXP.d.has(key)) syncMapFromTableById('departamento', GEO[ri].dptos[di].id); }
+function toggleS(ri,di,si){ tog(EXP.s,`${ri}_${di}_${si}`,EXP.m,EXP.z,EXP.c);
+  updChv('s',{ri,di,si}); applyFilters();
+  const key=`${ri}_${di}_${si}`;
+  if(EXP.s.has(key)) syncMapFromTableById('subregion', GEO[ri].dptos[di].subrs[si].id); }
+function toggleM(ri,di,si,mi){ tog(EXP.m,`${ri}_${di}_${si}_${mi}`,EXP.z,EXP.c);
+  updChv('m',{ri,di,si,mi}); applyFilters();
+  const key=`${ri}_${di}_${si}_${mi}`;
+  if(EXP.m.has(key)) syncMapFromTableById('municipio', GEO[ri].dptos[di].subrs[si].mpios[mi].id); }
+function toggleZ(ri,di,si,mi,zi){ tog(EXP.z,`${ri}_${di}_${si}_${mi}_${zi}`,EXP.c);
+  updChv('z',{ri,di,si,mi,zi}); applyFilters();
+  const key=`${ri}_${di}_${si}_${mi}_${zi}`;
+  if(EXP.z.has(key)) syncMapFromTableById('zona', GEO[ri].dptos[di].subrs[si].mpios[mi].detail[zi].id); }
+function toggleC(ri,di,si,mi,zi,ci){ tog(EXP.c,`${ri}_${di}_${si}_${mi}_${zi}_${ci}`);
+  updChv('c',{ri,di,si,mi,zi,ci}); applyFilters();
+  const key=`${ri}_${di}_${si}_${mi}_${zi}_${ci}`;
+  if(EXP.c.has(key)) syncMapFromTableById('comuna', GEO[ri].dptos[di].subrs[si].mpios[mi].detail[zi].coms[ci].id); }
+
+function updChv(gt,ids){
+  const sel = Object.entries(ids).map(([k,v])=>`[data-${k}="${v}"]`).join('');
+  const tr = document.querySelector(`tr[data-gt="${gt}"]${sel}`);
+  if(!tr)return;
+  const keys = {r:ids.ri,d:`${ids.ri}_${ids.di}`,s:`${ids.ri}_${ids.di}_${ids.si}`,
+                m:`${ids.ri}_${ids.di}_${ids.si}_${ids.mi}`,
+                z:`${ids.ri}_${ids.di}_${ids.si}_${ids.mi}_${ids.zi}`,
+                c:`${ids.ri}_${ids.di}_${ids.si}_${ids.mi}_${ids.zi}_${ids.ci}`};
+  const isExp = EXP[gt].has(keys[gt]);
+  tr.classList.toggle('expanded', isExp);
+}
+
+/* ── Render table ────────────────────────────────────────────────── */
+function renderTable(){
+  const frag = document.createDocumentFragment();
+  const E = ()=>document.createElement('td'); // empty cell
+  const ec = n => { const td=E(); for(let i=0;i<n;i++)td.colSpan; return td; };
+
+  function tds(n){ return Array.from({length:n},()=>'<td class="empty"></td>').join(''); }
+
+  GEO.forEach((reg,ri)=>{
+    // ── Región ──────────────────────────────────────────────────
+    const trR = mtr('tr-r','r',{ri}); trR.dataset.r=reg.r; trR.dataset.eid=reg.id;
+    trR.innerHTML=
+      `<td onclick="toggleR(${ri})">
+        <div class="cw"><span class="chv">▶</span>
+          <span class="cname">${reg.r}</span>
+          <span class="rbadge">${reg.n_dptos}d</span>
+        </div>
+      </td>${cntCell(reg.n_dptos,'--c-dpto')}${cntCell(reg.n_subrs,'--c-subr')}${cntCell(reg.n_mpios,'--c-mpio')}<td class="empty"></td><td class="empty"></td><td class="empty"></td>`;
+    frag.appendChild(trR);
+
+    reg.dptos.forEach((dpto,di)=>{
+      // ── Departamento ─────────────────────────────────────────
+      const trD=mtr('tr-d','d',{ri,di}); trD.dataset.r=reg.r; trD.dataset.eid=dpto.id;
+      trD.innerHTML=
+        `<td class="empty"></td>
+        <td onclick="toggleD(${ri},${di})">
+          <div class="cw"><span class="chv">▶</span>
+            <span class="cname">${dpto.d}</span>
+          </div>
+        </td>${cntCell(dpto.n_subrs,'--c-subr')}${cntCell(dpto.n_mpios,'--c-mpio')}<td class="empty"></td><td class="empty"></td><td class="empty"></td>`;
+      frag.appendChild(trD);
+
+      dpto.subrs.forEach((subr,si)=>{
+        // ── Subregión ────────────────────────────────────────
+        const trS=mtr('tr-s','s',{ri,di,si}); trS.dataset.r=reg.r; trS.dataset.eid=subr.id;
+        trS.innerHTML=
+          `${tds(2)}
+          <td onclick="toggleS(${ri},${di},${si})">
+            <div class="cw"><span class="chv">▶</span>
+              <span class="cname">${subr.s}</span>
+            </div>
+          </td>${cntCell(subr.n,'--c-mpio')}<td class="empty"></td><td class="empty"></td><td class="empty"></td>`;
+        frag.appendChild(trS);
+
+        subr.mpios.forEach((mpio,mi)=>{
+          const hasDet = mpio.detail && mpio.detail.length>0;
+          // ── Municipio ────────────────────────────────────
+          const trM=mtr('tr-m','m',{ri,di,si,mi}); trM.dataset.r=reg.r; trM.dataset.eid=mpio.id;
+          const mClick = hasDet ? `onclick="toggleM(${ri},${di},${si},${mi})"` : '';
+          const nZonas = hasDet ? mpio.detail.length : 0;
+          trM.innerHTML=
+            `${tds(3)}
+            <td ${mClick}>
+              <div class="cw${hasDet?' clickable':''}">
+                ${hasDet?`<span class="chv">▶</span>`:`<span class="chv-ph"></span>`}
+                <span class="cname">${mpio.m}</span>
+                ${mpio.abr?`<span class="abr">${mpio.abr}</span>`:''}
+              </div>
+            </td>${nZonas?cntCell(nZonas,'--c-zona'):'<td class="empty"></td>'}${mpio.comunas?cntCell(mpio.comunas,'--c-com'):'<td class="empty"></td>'}${mpio.barrios?cntCell(mpio.barrios,'--c-bar'):'<td class="empty"></td>'}`;
+          frag.appendChild(trM);
+
+          if(hasDet){
+            mpio.detail.forEach((zona,zi)=>{
+              // ── Zona ────────────────────────────────────
+              const trZ=mtr('tr-z','z',{ri,di,si,mi,zi}); trZ.dataset.r=reg.r; trZ.dataset.eid=zona.id;
+              const zonaBars=zona.coms.reduce((a,c)=>a+c.n_bar,0);
+              trZ.innerHTML=
+                `${tds(4)}
+                <td onclick="toggleZ(${ri},${di},${si},${mi},${zi})">
+                  <div class="cw"><span class="chv">▶</span>
+                    <span class="cname" title="${zona.z}">${zona.z}</span>
+                  </div>
+                </td>${cntCell(zona.n_com,'--c-com')}${zonaBars?cntCell(zonaBars,'--c-bar'):'<td class="empty"></td>'}`;
+              frag.appendChild(trZ);
+
+              zona.coms.forEach((com,ci)=>{
+                const hasBars=com.bars&&com.bars.length>0;
+                // ── Comuna ────────────────────────────────
+                const trC=mtr('tr-c','c',{ri,di,si,mi,zi,ci}); trC.dataset.r=reg.r; trC.dataset.eid=com.id;
+                const cClick=hasBars?`onclick="toggleC(${ri},${di},${si},${mi},${zi},${ci})"` : '';
+                trC.innerHTML=
+                  `${tds(5)}
+                  <td ${cClick}>
+                    <div class="cw${hasBars?' clickable':''}">
+                      ${hasBars?`<span class="chv">▶</span>`:`<span class="chv-ph"></span>`}
+                      <span class="cname">${com.c}</span>
+                    </div>
+                  </td>${com.n_bar?cntCell(com.n_bar,'--c-bar'):'<td class="empty"></td>'}`;
+                frag.appendChild(trC);
+
+                com.bars.forEach((bar,bi)=>{
+                  // ── Barrio ──────────────────────────────
+                  const trB=mtr('tr-b','b',{ri,di,si,mi,zi,ci,bi}); trB.dataset.r=reg.r;
+                  trB.dataset.eid=bar.id; trB.dataset.bname=bar.n;
+                  trB.innerHTML=
+                    `${tds(6)}
+                    <td onclick="syncMapFromTableById('barrio', '${bar.id}')">
+                      <div class="cw clickable"><span class="chv-ph"></span>
+                        <span class="cname">${bar.n}</span>
+                      </div>
+                    </td>`;
+                  frag.appendChild(trB);
+                });
+              });
+            });
+          }
+        });
+      });
+    });
+  });
+
+  const tbody=document.getElementById('geo-body');
+  tbody.innerHTML=''; tbody.appendChild(frag);
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────── */
+function mtr(cls,gt,ids){
+  const tr=document.createElement('tr');
+  tr.className=cls; tr.dataset.gt=gt;
+  Object.entries(ids).forEach(([k,v])=>tr.dataset[k]=v);
+  tr.style.display=gt==='r'?'table-row':'none';
+  return tr;
+}
+
+function fmt(n){ return n?n.toLocaleString('es-CO'):'—'; }
+function cntCell(val,colorVar){
+  if(!val) return '<td class="empty"></td>';
+  return `<td class="sub-cnt-cell"><span class="sub-cnt" style="color:var(${colorVar})">${val}</span></td>`;
+}
+
+function mpioTag(m){
+  if(m.comunas>0) return `<span class="tag tag-c">${m.comunas} com.</span>`;
+  if(m.barrios>0) return `<span class="tag tag-b">${m.barrios} bar.</span>`;
+  return `<span class="tag-d">—</span>`;
+}
+
+/* ── Init ────────────────────────────────────────────────────────── */
+loadData();
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* ── Mapa de coropletas (fuente: c98_geo, independiente del arbol de arriba) ── */
+const MAP_LEVELS  = ['region','departamento','subregion','municipio','zona','comuna','barrio'];
+const MAP_LABELS  = {region:'Región',departamento:'Departamento',subregion:'Subregión',
+                      municipio:'Municipio',zona:'Zona',comuna:'Comuna',barrio:'Barrio'};
+const MAP_COLORS  = {region:'#60a5fa',departamento:'#34d399',subregion:'#c084fc',
+                      municipio:'#fb923c',zona:'#f472b6',comuna:'#facc15',barrio:'#86efac'};
+const PADRE_FIELD = {departamento:'id_region',subregion:'id_departamento',municipio:'id_subregion',
+                      zona:'id_municipio',comuna:'id_zona',barrio:'id_comuna'};
+
+let map, geoLayer;
+let mapStack = []; // [{lvl, padre, padreCampo, nombre}] — breadcrumb de drill-down
+let curLvl = 'departamento';
+let programmaticZoom = false; // true mientras el propio codigo mueve el mapa (fitBounds)
+let autoZoomBusy = false;     // true mientras se resuelve un salto de nivel por zoom
+let autoZoomOn = true;
+
+// Umbral de zoom -> nivel. Zoom out = bloques grandes (departamento), zoom in = detalle (barrio).
+const ZOOM_BREAKS = [
+  {max:6,  lvl:'departamento'},
+  {max:8,  lvl:'subregion'},
+  {max:10, lvl:'municipio'},
+  {max:12, lvl:'zona'},
+  {max:13, lvl:'comuna'},
+  {max:99, lvl:'barrio'},
+];
+function levelForZoom(z){
+  for(const b of ZOOM_BREAKS) if(z<=b.max) return b.lvl;
+  return 'barrio';
+}
+
+function initMap(){
+  map = L.map('map', {zoomControl:true}).setView([4.5,-74.0], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'© OpenStreetMap, © CARTO', maxZoom:18, subdomains:'abcd'
+  }).addTo(map);
+  geoLayer = L.geoJSON(null).addTo(map);
+
+  document.getElementById('map-levels').addEventListener('click', e=>{
+    const el = e.target.closest('.mlvl');
+    if(!el) return;
+    mapStack = [];
+    curLvl = el.dataset.lvl;
+    loadMapLevel(curLvl, {});
+  });
+
+  map.on('zoomend', onMapZoomEnd);
+
+  loadMapLevel(curLvl, {});
+}
+
+/* ── Zoom automatico por nivel: departamento -> subregion -> municipio ->
+   zona -> comuna -> barrio, segun el nivel de zoom y el centro del mapa ── */
+async function onMapZoomEnd(){
+  if(!autoZoomOn || programmaticZoom || autoZoomBusy) return;
+  const z = map.getZoom();
+  const objetivo = levelForZoom(z);
+  if(objetivo === curLvl) return;
+
+  autoZoomBusy = true;
+  try{
+    const c = map.getCenter();
+    await jumpToLevelAtPoint(objetivo, c.lng, c.lat);
+  } finally {
+    autoZoomBusy = false;
+  }
+}
+
+async function jumpToLevelAtPoint(targetLvl, lon, lat){
+  if(targetLvl === 'departamento'){
+    mapStack = []; curLvl = 'departamento';
+    await loadMapLevel('departamento', {noFit:true});
+    return;
+  }
+  const idx = MAP_LEVELS.indexOf(targetLvl);
+  const chain = [];
+  let padre = null, padreCampo = null;
+  for(let i=1; i<idx; i++){
+    const lvl = MAP_LEVELS[i];
+    let url = `c98geo_map_api.php?tipo=${lvl}&punto=${lon},${lat}`;
+    if(padre){ url += `&padre=${encodeURIComponent(padre)}&padre_campo=${encodeURIComponent(padreCampo)}`; }
+    const res = await fetch(url);
+    const json = await res.json();
+    if(!json.ok || json.count===0) return; // sin geometria en este punto para ese nivel — no hay a donde saltar
+    const feat = json.data.features[0];
+    chain.push({lvl, opts:{padre, padreCampo}, nombre: feat.properties.nombre});
+    padre = feat.properties.id;
+    padreCampo = PADRE_FIELD[MAP_LEVELS[i+1]];
+  }
+  mapStack = chain;
+  curLvl = targetLvl;
+  await loadMapLevel(targetLvl, {padre, padreCampo, noFit:true});
+}
+
+function styleFor(lvl){
+  const c = MAP_COLORS[lvl];
+  return {color:c, weight:1.2, fillColor:c, fillOpacity:.28};
+}
+function styleHover(lvl){
+  const c = MAP_COLORS[lvl];
+  return {color:c, weight:2.5, fillColor:c, fillOpacity:.5};
+}
+
+/**
+ * Carga un nivel del mapa.
+ * opts: {padre, padreCampo}          → drill-down normal por id (desde click en poligono)
+ *       {nombre, padreNombre}        → jump por nombre (desde click en fila de tabla)
+ *       {}                           → nivel completo, sin filtro (pill de nivel)
+ */
+async function loadMapLevel(lvl, opts){
+  opts = opts || {};
+  const loading = document.getElementById('map-loading');
+  const empty = document.getElementById('map-empty');
+  loading.classList.remove('hidden'); empty.classList.remove('show');
+  document.querySelectorAll('.mlvl').forEach(p=>p.classList.toggle('active', p.dataset.lvl===lvl));
+
+  let url = `c98geo_map_api.php?tipo=${lvl}`;
+  if(opts.id) url += `&id=${encodeURIComponent(opts.id)}`;
+  if(opts.padre){
+    url += `&padre=${encodeURIComponent(opts.padre)}`;
+    if(opts.padreCampo) url += `&padre_campo=${encodeURIComponent(opts.padreCampo)}`;
+  }
+  if(opts.nombre) url += `&nombre=${encodeURIComponent(opts.nombre)}`;
+  if(opts.padreNombre) url += `&padre_nombre=${encodeURIComponent(opts.padreNombre)}`;
+
+  try{
+    const res = await fetch(url);
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.error);
+
+    // si se cargo por id (salto desde la tabla), reemplazar el nombre placeholder
+    // del breadcrumb por el nombre real que devuelve el mapa
+    if(opts.id && json.count>=1 && mapStack.length>0){
+      mapStack[mapStack.length-1].nombre = json.data.features[0].properties.nombre;
+    }
+
+    document.getElementById('map-badge').textContent =
+      `${json.count} · resolución ${json.resolution}`;
+    renderCrumb();
+    updateAreaLabel(lvl, json.count);
+
+    geoLayer.clearLayers();
+    if(json.count===0){ empty.classList.add('show'); loading.classList.add('hidden'); return 0; }
+
+    geoLayer.addData(json.data);
+    geoLayer.eachLayer(layer=>{
+      layer.setStyle(styleFor(lvl));
+      const p = layer.feature.properties;
+      const childLvl = MAP_LEVELS[MAP_LEVELS.indexOf(lvl)+1];
+      const drillHint = childLvl ? `<div class="mpop-action">Click para ver ${MAP_LABELS[childLvl].toLowerCase()}s ▸</div>` : '';
+      layer.bindTooltip(
+        `<div class="mpop-name">${p.nombre}</div><div class="mpop-meta">${MAP_LABELS[lvl]} · ${p.id}</div>${drillHint}`,
+        {sticky:true, className:'geo-tooltip', direction:'top', opacity:1}
+      );
+      layer.on('mouseover', ()=>layer.setStyle(styleHover(lvl)));
+      layer.on('mouseout', ()=>layer.setStyle(styleFor(lvl)));
+      layer.on('click', ()=>{
+        highlightTableRow(lvl, p.id);
+        if(!childLvl) return;
+        const padreCampoHijo = PADRE_FIELD[childLvl];
+        const opts = {padre: p.id, padreCampo: padreCampoHijo};
+        mapStack.push({lvl: childLvl, opts, nombre: p.nombre});
+        curLvl = childLvl;
+        loadMapLevel(childLvl, opts);
+      });
+    });
+    const b = geoLayer.getBounds();
+    if(b.isValid() && !opts.noFit){
+      programmaticZoom = true;
+      map.fitBounds(b, {padding:[20,20]});
+      setTimeout(()=>{ programmaticZoom = false; }, 350);
+    }
+    return json.count;
+  } catch(e){
+    document.getElementById('map-badge').textContent = 'Error: ' + e.message;
+    return -1;
+  } finally {
+    loading.classList.add('hidden');
+  }
+}
+
+/* ── Rotulo flotante del area seleccionada ──────────────────────────── */
+function updateAreaLabel(lvl, count){
+  const nameEl = document.querySelector('#map-area-label .mal-name');
+  const metaEl = document.getElementById('mal-meta');
+  if(mapStack.length===0){
+    nameEl.textContent = 'Colombia';
+    metaEl.textContent = `${MAP_LABELS[lvl]} · ${count} ${count===1?'área':'áreas'}`;
+  } else {
+    const last = mapStack[mapStack.length-1];
+    nameEl.textContent = last.nombre;
+    metaEl.textContent = `${MAP_LABELS[lvl]} · ${count} ${count===1?'área':'áreas'}`;
+  }
+}
+
+/* ── Sync: click en fila de tabla → salta el mapa a esa area ────────── */
+// Tabla y mapa comparten la misma fuente (c98_geo) — se sincroniza por id
+// exacto, no por nombre. Evita colisiones como "La Candelaria" (existe como
+// comuna tanto en Bogota como en Medellin, con nombres de zona parecidos).
+async function syncMapFromTableById(lvl, id){
+  if(!id) return;
+  const opts = {id};
+  mapStack = [{lvl, opts, nombre: String(id)}];
+  curLvl = lvl;
+  await loadMapLevel(lvl, opts);
+}
+
+/* ── Sync: click en poligono del mapa → resalta la fila en la tabla ─── */
+const GT_POR_NIVEL = {region:'r',departamento:'d',subregion:'s',municipio:'m',zona:'z',comuna:'c',barrio:'b'};
+function highlightTableRow(lvl, id){
+  const gt = GT_POR_NIVEL[lvl];
+  if(!gt) return;
+  const found = document.querySelector(`#geo-body tr[data-gt="${gt}"][data-eid="${CSS.escape(String(id))}"]`);
+  if(!found) return;
+
+  const ri=+found.dataset.ri, di=+found.dataset.di||0, si=+found.dataset.si||0,
+        mi=+found.dataset.mi||0, zi=+found.dataset.zi||0, ci=+found.dataset.ci||0;
+  const niveles = ['d','s','m','z','c','b'];
+  if(niveles.includes(gt)) EXP.r.add(ri);
+  if(['s','m','z','c','b'].includes(gt)) EXP.d.add(`${ri}_${di}`);
+  if(['m','z','c','b'].includes(gt)) EXP.s.add(`${ri}_${di}_${si}`);
+  if(['z','c','b'].includes(gt)) EXP.m.add(`${ri}_${di}_${si}_${mi}`);
+  if(['c','b'].includes(gt)) EXP.z.add(`${ri}_${di}_${si}_${mi}_${zi}`);
+  if(gt==='b') EXP.c.add(`${ri}_${di}_${si}_${mi}_${zi}_${ci}`);
+  applyFilters();
+
+  found.scrollIntoView({block:'center', behavior:'smooth'});
+  found.classList.remove('row-flash'); void found.offsetWidth; found.classList.add('row-flash');
+}
+
+function renderCrumb(){
+  const el = document.getElementById('map-crumb');
+  el.innerHTML = '';
+  const mk = (label, onclick, isLast)=>{
+    const s = document.createElement('span');
+    s.className = 'cr' + (isLast?' last':'');
+    s.textContent = label;
+    if(!isLast) s.onclick = onclick;
+    return s;
+  };
+  el.appendChild(mk('Colombia', ()=>{ mapStack=[]; curLvl='departamento'; loadMapLevel(curLvl,{}); }, mapStack.length===0));
+  mapStack.forEach((s,i)=>{
+    const sep = document.createElement('span'); sep.textContent='›'; sep.style.color='var(--t6)';
+    el.appendChild(sep);
+    const isLast = false;
+    el.appendChild(mk(s.nombre, ()=>{
+      const target = mapStack[i];
+      mapStack = mapStack.slice(0,i+1);
+      curLvl = target.lvl;
+      loadMapLevel(target.lvl, target.opts);
+    }, isLast));
+  });
+  if(mapStack.length>0){
+    const sep = document.createElement('span'); sep.textContent='›'; sep.style.color='var(--t6)';
+    el.appendChild(sep);
+    el.appendChild(mk(MAP_LABELS[curLvl], null, true));
+  }
+}
+
+initMap();
+</script>
+</body>
+</html>

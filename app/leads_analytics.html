@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDFUT · Analítica de Leads</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0" crossorigin="anonymous"></script>
+<style>
+:root{
+  --bg:#0f1117; --surface:#1a1d2e; --card:#1e2132;
+  --border:#2d3148; --text:#e8eaf0; --muted:#7b84a3;
+  --accent:#6366f1; --accent2:#8b5cf6;
+  --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --blue:#3b82f6;
+  --orange:#f97316; --pink:#ec4899; --cyan:#06b6d4;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+
+/* HEADER */
+header{background:linear-gradient(135deg,#1a1d2e,#0f1117);border-bottom:1px solid var(--border);
+  padding:14px 28px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{font-size:1.4rem}
+.brand h1{font-size:1.1rem;font-weight:700;background:linear-gradient(90deg,#6366f1,#8b5cf6);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand p{font-size:.68rem;color:var(--muted);margin-top:2px}
+.nav-links{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;
+  text-decoration:none;font-size:.73rem;font-weight:600;border:1px solid var(--border);
+  color:var(--muted);transition:all .15s}
+.nav-btn:hover{border-color:var(--accent);color:var(--text)}
+.nav-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-reload{background:var(--surface);border:1px solid var(--border);border-radius:7px;
+  padding:6px 14px;color:var(--muted);font-size:.73rem;cursor:pointer;transition:all .15s;font-weight:600}
+.btn-reload:hover{border-color:var(--accent);color:var(--text)}
+
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:999;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--muted);font-size:.82rem}
+
+/* FILTROS */
+.filter-bar{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:10px 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.filter-label{font-size:.72rem;color:var(--muted);font-weight:600}
+.filter-select{background:var(--card);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-size:.73rem;padding:5px 10px;cursor:pointer;outline:none}
+.filter-select:focus{border-color:var(--accent)}
+.filter-sep{color:var(--border);font-size:1.2rem}
+.badge-total{background:var(--accent);color:#fff;font-size:.68rem;font-weight:700;
+  padding:3px 8px;border-radius:10px}
+
+/* LAYOUT */
+main{padding:20px 28px;max-width:1700px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+
+/* FILA SUPERIOR: KPI + Cobertura (25% / 75%) */
+.top-row{display:grid;grid-template-columns:1fr 3fr;gap:16px;align-items:stretch}
+@media(max-width:900px){.top-row{grid-template-columns:1fr}}
+
+/* KPI TOTAL */
+.kpi-total-card{background:var(--card);border:1px solid var(--border);border-radius:11px;
+  padding:20px 20px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.kpi-total-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.kpi-total-card .lbl{font-size:.63rem;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.kpi-total-card .val{font-size:2.2rem;font-weight:900;color:var(--blue);line-height:1;letter-spacing:-1px}
+.kpi-total-card .periodo{font-size:.65rem;color:var(--muted);margin-top:8px;line-height:1.4}
+.kpi-total-card .periodo strong{color:var(--text)}
+
+/* CARDS GENÉRICAS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:18px 20px}
+.card-title{font-size:.78rem;font-weight:700;color:var(--text);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.card-title span{color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;font-size:.7rem}
+
+/* COBERTURA — grid de 3 columnas en el card ancho (75%) */
+.cob-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 20px}
+@media(max-width:1200px){.cob-list{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.cob-list{grid-template-columns:1fr}}
+.cob-item{display:flex;flex-direction:column;gap:4px}
+.cob-header{display:flex;justify-content:space-between;align-items:center}
+.cob-col{font-size:.7rem;color:var(--text);font-weight:600}
+.cob-pct{font-size:.7rem;font-weight:700;min-width:40px;text-align:right}
+.cob-bar{height:6px;border-radius:3px;background:var(--surface);overflow:hidden}
+.cob-fill{height:100%;border-radius:3px;transition:width .5s ease}
+
+/* CHART GRIDS */
+.chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:1100px){.chart-grid-3,.chart-grid-2{grid-template-columns:1fr}}
+.chart-wrap{position:relative;height:250px}
+.chart-wrap.tall{height:310px}
+.chart-wrap.full{height:280px}
+
+/* TABS GEO */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:0}
+.tab{padding:7px 14px;font-size:.72rem;font-weight:600;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s;background:none;
+  border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Select filtro geo padre */
+.geo-filter-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0 12px;min-height:38px;
+}
+.geo-filter-bar label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.geo-filter-bar select{
+  background:#1e2132;border:1px solid var(--border);
+  color:#e8eaf0;font-size:11px;padding:5px 28px 5px 10px;border-radius:6px;
+  cursor:pointer;outline:none;min-width:180px;max-width:320px;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236366f1'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;
+  box-shadow:0 0 0 1px rgba(99,102,241,.1);
+}
+.geo-filter-bar select:hover{border-color:var(--accent);background-color:#252840}
+.geo-filter-bar select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(99,102,241,.25);outline:none}
+/* Opciones del desplegable — dark en Chrome/Firefox/Edge */
+.geo-filter-bar select option{
+  background:#1a1d3a;color:#e8eaf0;padding:6px 10px;font-size:11px;
+}
+.geo-filter-bar select option:hover,
+.geo-filter-bar select option:checked{
+  background:#6366f1;color:#fff;
+}
+#geo-count{font-size:10px;color:var(--muted);margin-left:auto;white-space:nowrap}
+
+/* TABLA */
+.tbl-wrap{overflow-x:auto;max-height:320px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:.72rem}
+thead th{position:sticky;top:0;background:var(--card);padding:7px 10px;text-align:left;
+  color:var(--muted);font-size:.63rem;text-transform:uppercase;letter-spacing:.4px;
+  border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;user-select:none}
+thead th:hover{color:var(--text)}
+tbody td{padding:7px 10px;border-bottom:1px solid rgba(45,49,72,.5);white-space:nowrap}
+tbody tr:hover{background:rgba(99,102,241,.05)}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.63rem;font-weight:700}
+.badge-green{background:rgba(16,185,129,.15);color:var(--green)}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--blue)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-purple{background:rgba(99,102,241,.15);color:var(--accent)}
+.badge-orange{background:rgba(249,115,22,.15);color:var(--orange)}
+
+footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">Cargando analítica…</div>
+</div>
+
+<header>
+  <div class="brand">
+    <span class="brand-icon">📊</span>
+    <div>
+      <h1>Analítica de Leads</h1>
+      <p>MEDFUT · Medellín 2026</p>
+    </div>
+  </div>
+  <nav class="nav-links">
+    <a href="dashboard_local.html"  class="nav-btn">🗳️ Electoral</a>
+    <a href="leads_import.html"     class="nav-btn">📥 Importar</a>
+    <a href="leads_analytics.html"  class="nav-btn active">📊 Analítica</a>
+    <a href="c98geo_dashboard.html" class="nav-btn">🗺️ Geografía</a>
+  </nav>
+  <button class="btn-reload" onclick="load()">↻ Actualizar</button>
+</header>
+
+<div class="filter-bar">
+  <span class="filter-label">Importación:</span>
+  <select class="filter-select" id="f-import" onchange="load()">
+    <option value="">Todas</option>
+  </select>
+  <span class="filter-sep">|</span>
+  <span class="filter-label">Total:</span>
+  <span class="badge-total" id="f-total">…</span>
+</div>
+
+<main>
+
+  <!-- ── FILA 1: Total Leads (25%) | Cobertura por Campo (75%) ── -->
+  <div class="top-row">
+    <div class="kpi-total-card">
+      <div class="lbl">Total Leads</div>
+      <div class="val" id="kpi-total">—</div>
+      <div class="periodo" id="kpi-periodo">—</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Cobertura por Campo</div>
+      <div class="cob-list" id="cob-list"></div>
+    </div>
+  </div>
+
+  <!-- ── FILA 3: Sexo | Rango Edad | Estrato ── -->
+  <div class="chart-grid-3">
+    <div class="card">
+      <div class="card-title">⚥ Sexo</div>
+      <div class="chart-wrap"><canvas id="ch-sexo"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎂 Rango de Edad</div>
+      <div class="chart-wrap"><canvas id="ch-edad"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏠 Estrato</div>
+      <div class="chart-wrap"><canvas id="ch-estrato"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── FILA 4: Afiliación | Nivel Educativo ── -->
+  <div class="chart-grid-2">
+    <div class="card">
+      <div class="card-title">🗳️ Afiliación Política <span>top 15</span></div>
+      <div class="chart-wrap tall"><canvas id="ch-afil"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🎓 Nivel Educativo</div>
+      <div class="chart-wrap tall"><canvas id="ch-edu"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── FILA 5: Plataforma (50%) | Timeline (50%) ── -->
+  <div class="chart-grid-2">
+    <div class="card">
+      <div class="card-title">📱 Plataforma de Origen</div>
+      <div class="chart-wrap"><canvas id="ch-platform"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 Timeline de Importaciones <span>volumen importado por fecha</span></div>
+      <div class="chart-wrap"><canvas id="ch-timeline"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── FILA 6: Jerarquía Geográfica (línea completa) ── -->
+  <div class="card">
+    <div class="card-title">🌎 Jerarquía Geográfica
+      <span>Departamento › Subregión › Municipio › Zona › Comuna › Barrio</span>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchGeo('departamento',this)">Departamento</button>
+      <button class="tab" onclick="switchGeo('subregion',this)">Subregión</button>
+      <button class="tab" onclick="switchGeo('municipio',this)">Municipio</button>
+      <button class="tab" onclick="switchGeo('zona',this)">Zona</button>
+      <button class="tab" onclick="switchGeo('comuna',this)">Comuna</button>
+      <button class="tab" onclick="switchGeo('barrio',this)">Barrio</button>
+    </div>
+    <div class="geo-filter-bar" id="geo-filter-bar" style="display:none">
+      <label id="geo-filter-label">Filtrar por</label>
+      <select id="geo-parent-select" onchange="applyGeoFilter()"></select>
+      <span id="geo-count"></span>
+    </div>
+    <div class="chart-wrap tall"><canvas id="ch-geo"></canvas></div>
+  </div>
+
+  <!-- ── TABLA ── -->
+  <div class="card">
+    <div class="card-title">📂 Historial de Importaciones</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th onclick="sortTbl(0)">#</th>
+          <th onclick="sortTbl(1)">Archivo</th>
+          <th onclick="sortTbl(2)">Hoja</th>
+          <th onclick="sortTbl(3)">Fecha</th>
+          <th onclick="sortTbl(4)">Nuevos ↕</th>
+          <th onclick="sortTbl(5)">Dup.</th>
+          <th onclick="sortTbl(6)">Tipo</th>
+          <th onclick="sortTbl(7)">Etapa</th>
+        </tr></thead>
+        <tbody id="tbl-imports"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>MEDFUT · Medellín 2026 · Actualizado <span id="footer-ts">—</span></footer>
+
+<script>
+// ── Registrar plugin datalabels globalmente ───────────────────────────────────
+Chart.register(ChartDataLabels);
+
+const API    = 'leads_importer.php';
+const COLORS = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ef4444','#8b5cf6',
+                '#06b6d4','#f97316','#ec4899','#84cc16','#14b8a6','#a855f7'];
+
+// Colores específicos por plataforma
+const PLATFORM_COLORS = {
+  Facebook:     '#1877F2',
+  Instagram:    '#E4405F',
+  Google:       '#4285F4',
+  TikTok:       '#69C9D0',
+  Desconocido:  '#7b84a3',
+};
+
+// Mapeo de códigos de plataforma a nombre legible
+const PLATFORM_MAP = {
+  fb: 'Facebook', ig: 'Instagram',
+  go: 'Google',   google: 'Google',
+  tt: 'TikTok',   tiktok: 'TikTok',
+  an: 'Desconocido',
+};
+function mapPlatform(v) {
+  if(!v || v === 'desconocido' || v === '—') return 'Desconocido';
+  return PLATFORM_MAP[v.toLowerCase()] || 'Desconocido';
+}
+
+let DATA = null, GEO_DATA = null, charts = {};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmtN  = n => (n||0).toLocaleString('es-CO');   // número completo, sin abreviar
+const fmtK  = n => n>=1e6 ? (n/1e6).toFixed(1)+'M' : n>=1e3 ? (n/1e3).toFixed(1)+'K' : (n||0).toLocaleString('es-CO');
+const pct   = n => (n||0).toFixed(1)+'%';
+const h     = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $     = id => document.getElementById(id);
+
+const COB_LABELS = {
+  nombre:'Nombre', email:'Email', telefono:'Teléfono', sexo:'Sexo',
+  rango_edad:'Rango edad', estrato:'Estrato', afiliacion_politica:'Afiliación política',
+  nivel_educativo:'Nivel educativo', id_geo:'Geo (FK)',
+  geo_departamento:'Departamento', subregion:'Subregión',
+  municipio:'Municipio', zona:'Zona', comuna_localidad:'Comuna/Localidad',
+  barrio:'Barrio', platform:'Plataforma'
+};
+
+function cobColor(p) {
+  if(p >= 80) return '#10b981';
+  if(p >= 50) return '#f59e0b';
+  if(p >= 20) return '#f97316';
+  return '#ef4444';
+}
+
+// ── Cargar datos ─────────────────────────────────────────────────────────────
+async function load() {
+  $('loading').style.display = 'flex';
+  const importSel = $('f-import').value;
+  const qs = importSel ? `&import_id=${importSel}` : '';
+  try {
+    const [analData, logData] = await Promise.all([
+      fetch(`${API}?action=analytics${qs}`).then(r=>r.json()),
+      fetch(`${API}?action=logs`).then(r=>r.json()),
+    ]);
+    if(!analData.ok) throw new Error(analData.error||'Error analytics');
+    DATA    = analData;
+    GEO_DATA = analData.geo;
+    parseGeoData(); // pre-parsear {val, parent, cnt} por nivel
+
+    if(logData.ok && logData.logs?.length) {
+      const sel = $('f-import');
+      const prev = sel.value;
+      while(sel.options.length > 1) sel.remove(1);
+      logData.logs.forEach(l => {
+        const o = document.createElement('option');
+        o.value = l.id;
+        o.textContent = `#${l.id} · ${l.archivo.replace(/\.xlsx?$/i,'')} (${l.fecha||l.importado_en?.slice(0,10)||''})`;
+        sel.appendChild(o);
+      });
+      if(prev) sel.value = prev;
+    }
+    render();
+  } catch(e) {
+    console.error(e);
+  } finally {
+    $('loading').style.display = 'none';
+  }
+}
+
+// ── Render principal ──────────────────────────────────────────────────────────
+function render() {
+  if(!DATA) return;
+  const d = DATA;
+
+  // Badge filtro
+  $('f-total').textContent = fmtK(d.total);
+
+  // KPI Total (número completo)
+  $('kpi-total').textContent = fmtN(d.total);
+  const p1 = d.kpi.primera_fecha?.slice(0,10) || '';
+  const p2 = d.kpi.ultima_fecha?.slice(0,10)  || '';
+  $('kpi-periodo').innerHTML = p1
+    ? `<strong>${p1}</strong> → <strong>${p2}</strong>`
+    : 'Sin fechas registradas';
+
+  // Cobertura vertical
+  renderCobertura(d.cobertura);
+
+  // Timeline (solo volumen)
+  renderTimeline(d.timeline);
+
+  // Distribuciones
+  renderDonut('ch-sexo',    d.dist.sexo);
+  renderBarH( 'ch-edad',    d.dist.rango_edad,         {label:'Personas'});
+  renderBarV( 'ch-estrato', d.dist.estrato,             {label:'Leads'});
+  renderBarH( 'ch-afil',    d.dist.afiliacion_politica, {label:'Leads'});
+  renderBarH( 'ch-edu',     d.dist.nivel_educativo,     {label:'Leads', color:'#06b6d4'});
+
+  // Plataforma con mapeo y colores específicos
+  renderPlatform(d.dist.platform);
+
+  // Geo — inicia en Departamento (sin padre)
+  buildGeoFilter('departamento');
+  renderGeo('departamento', null);
+
+  // Tabla
+  renderTable(d.por_import);
+
+  $('footer-ts').textContent = new Date().toLocaleString('es-CO');
+}
+
+// ── Cobertura (lista vertical en card lateral) ────────────────────────────────
+function renderCobertura(cob) {
+  const sorted = Object.entries(cob).filter(([col]) => col !== 'id_geo').sort((a,b) => b[1]-a[1]);
+  $('cob-list').innerHTML = sorted.map(([col, p]) => `
+    <div class="cob-item">
+      <div class="cob-header">
+        <span class="cob-col">${COB_LABELS[col]||col}</span>
+        <span class="cob-pct" style="color:${cobColor(p)}">${pct(p)}</span>
+      </div>
+      <div class="cob-bar">
+        <div class="cob-fill" style="width:${p}%;background:${cobColor(p)}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Chart helpers ─────────────────────────────────────────────────────────────
+function destroyChart(id) {
+  if(charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// Datalabel config reutilizable
+const DL_BAR_H = {
+  anchor:'end', align:'end',
+  color:'#e8eaf0', font:{size:9,weight:'600'},
+  formatter: v => fmtK(v),
+  padding:{right:4}
+};
+const DL_BAR_V = {
+  anchor:'end', align:'top',
+  color:'#e8eaf0', font:{size:9,weight:'600'},
+  formatter: v => fmtK(v),
+};
+const DL_DONUT = {
+  color:'#fff',
+  font:{size:11,weight:'700'},
+  textShadowBlur:4, textShadowColor:'rgba(0,0,0,.6)',
+  formatter:(v,ctx) => {
+    const tot = ctx.dataset.data.reduce((a,b)=>a+b,0);
+    const p = v/tot*100;
+    return p >= 5 ? p.toFixed(0)+'%' : '';
+  }
+};
+
+function renderDonut(id, data) {
+  destroyChart(id);
+  if(!data?.length) return;
+  const labels = data.map(d=>d.val||'—');
+  const vals   = data.map(d=>d.cnt);
+  charts[id]   = new Chart($(id).getContext('2d'), {
+    type:'doughnut',
+    data:{ labels, datasets:[{
+      data:vals,
+      backgroundColor: COLORS.map(c=>c+'CC'),
+      borderColor:'#1e2132', borderWidth:2
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'55%',
+      plugins:{
+        datalabels: DL_DONUT,
+        legend:{ position:'right', labels:{ color:'#7b84a3', font:{size:11}, usePointStyle:true, padding:10 }},
+        tooltip:{ callbacks:{ label: c => {
+          const tot = c.dataset.data.reduce((a,b)=>a+b,0);
+          return ` ${c.label}: ${fmtN(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
+  });
+}
+
+function renderBarH(id, data, opts={}) {
+  destroyChart(id);
+  if(!data?.length) return;
+  const labels = data.map(d=>d.val||'—');
+  const vals   = data.map(d=>d.cnt);
+  const color  = opts.color||'#6366f1';
+  charts[id]   = new Chart($(id).getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{
+      label:opts.label||'Cantidad', data:vals,
+      backgroundColor: color+'CC', borderColor:color,
+      borderWidth:1, borderRadius:3
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      layout:{ padding:{ right:45 }},
+      plugins:{
+        datalabels: DL_BAR_H,
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.x)} leads` }}
+      },
+      scales:{
+        x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
+        y:{ ticks:{color:'#e8eaf0',font:{size:10}}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderBarV(id, data, opts={}) {
+  destroyChart(id);
+  if(!data?.length) return;
+  const labels = data.map(d=>'E'+(d.val||'?'));
+  const vals   = data.map(d=>d.cnt);
+  charts[id]   = new Chart($(id).getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{
+      label:opts.label||'Cantidad', data:vals,
+      backgroundColor: COLORS.map(c=>c+'CC'),
+      borderColor: COLORS, borderWidth:1, borderRadius:4
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:22 }},
+      plugins:{
+        datalabels: DL_BAR_V,
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.y)} leads` }}
+      },
+      scales:{
+        x:{ ticks:{color:'#e8eaf0',font:{size:10}}, grid:{display:false} },
+        y:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} }
+      }
+    }
+  });
+}
+
+// ── Timeline (solo volumen importado) ─────────────────────────────────────────
+function renderTimeline(data) {
+  destroyChart('ch-timeline');
+  if(!data?.length) return;
+  const labels = data.map(d=>d.fecha);
+  const nuevos = data.map(d=>parseInt(d.nuevos)||0);
+  charts['ch-timeline'] = new Chart($('ch-timeline').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{
+      label:'Leads importados',
+      data:nuevos,
+      backgroundColor:'#6366f1BB',
+      borderColor:'#6366f1',
+      borderRadius:3, borderWidth:1
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:20 }},
+      plugins:{
+        datalabels:{
+          anchor:'end', align:'top',
+          color:'#e8eaf0', font:{size:8,weight:'600'},
+          formatter: v => v>0 ? fmtK(v) : '',
+        },
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.y)} leads` }}
+      },
+      scales:{
+        x:{ ticks:{color:'#7b84a3',font:{size:8},maxRotation:45}, grid:{display:false} },
+        y:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} }
+      }
+    }
+  });
+}
+
+// ── Plataforma con mapeo y colores específicos ────────────────────────────────
+function renderPlatform(rawData) {
+  destroyChart('ch-platform');
+  if(!rawData?.length) return;
+
+  // Agrupar por nombre mapeado
+  const agg = {};
+  rawData.forEach(r => {
+    const name = mapPlatform(r.val);
+    agg[name] = (agg[name]||0) + r.cnt;
+  });
+  const entries = Object.entries(agg).sort((a,b)=>b[1]-a[1]);
+  const labels  = entries.map(e=>e[0]);
+  const vals    = entries.map(e=>e[1]);
+  const colors  = labels.map(l => (PLATFORM_COLORS[l]||'#7b84a3')+'CC');
+  const borders = labels.map(l => PLATFORM_COLORS[l]||'#7b84a3');
+
+  charts['ch-platform'] = new Chart($('ch-platform').getContext('2d'), {
+    type:'doughnut',
+    data:{ labels, datasets:[{
+      data:vals,
+      backgroundColor:colors,
+      borderColor:'#1e2132', borderWidth:2
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'55%',
+      plugins:{
+        datalabels: DL_DONUT,
+        legend:{ position:'right', labels:{ color:'#7b84a3', font:{size:11}, usePointStyle:true, padding:10 }},
+        tooltip:{ callbacks:{ label: c => {
+          const tot = c.dataset.data.reduce((a,b)=>a+b,0);
+          return ` ${c.label}: ${fmtN(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
+  });
+}
+
+// ── Geo drill-down ────────────────────────────────────────────────────────────
+let activeGeo = 'departamento';
+
+// Config de qué nivel actúa como "padre" para el select
+const GEO_PARENT = {
+  subregion: { label:'Departamento'          },
+  municipio:  { label:'Departamento'          },
+  zona:       { label:'Municipio'             },
+  comuna:     { label:'Municipio'             },
+  barrio:     { label:'Ciudad - Zona - Comuna'},
+};
+
+// GEO_PARSED: datos parseados {val, parent, cnt} por nivel
+let GEO_PARSED = {};
+
+function parseGeoData() {
+  if(!GEO_DATA) return;
+  const WITH_PARENT = Object.keys(GEO_PARENT);
+  Object.entries(GEO_DATA).forEach(([nivel, rows]) => {
+    GEO_PARSED[nivel] = rows.map(d => {
+      const raw = d.val || '—';
+      if (!WITH_PARENT.includes(nivel)) return { val:raw, parent:null, cnt:d.cnt };
+      // Separador ||| (triple pipe) — irrompible con nombres normales
+      const sep = raw.indexOf('|||');
+      if (sep < 0) return { val:raw, parent:null, cnt:d.cnt };
+      return {
+        val:    raw.substring(0, sep).trim(),
+        parent: raw.substring(sep + 3).trim() || null,
+        cnt:    d.cnt
+      };
+    });
+  });
+}
+
+function switchGeo(nivel, btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  activeGeo = nivel;
+  buildGeoFilter(nivel);
+  renderGeo(nivel, null);
+}
+
+function buildGeoFilter(nivel) {
+  const bar    = $('geo-filter-bar');
+  const sel    = $('geo-parent-select');
+  const lbl    = $('geo-filter-label');
+  const config = GEO_PARENT[nivel];
+
+  if (!config) { bar.style.display = 'none'; return; }
+
+  // Obtener padres únicos
+  const parents = [...new Set(
+    (GEO_PARSED[nivel] || []).map(d => d.parent).filter(Boolean)
+  )].sort((a,b) => a.localeCompare(b,'es'));
+
+  lbl.textContent = `Filtrar por ${config.label}:`;
+  sel.innerHTML = `<option value="">— Todos (${parents.length}) —</option>` +
+    parents.map(p => `<option value="${p}">${p}</option>`).join('');
+  bar.style.display = 'flex';
+}
+
+function applyGeoFilter() {
+  const parent = $('geo-parent-select').value || null;
+  renderGeo(activeGeo, parent);
+}
+
+function renderGeo(nivel, parentFilter) {
+  destroyChart('ch-geo');
+  let rows = GEO_PARSED?.[nivel];
+  if(!rows?.length) return;
+
+  // Aplicar filtro de padre
+  if (parentFilter) rows = rows.filter(d => d.parent === parentFilter);
+
+  let top = rows.slice(0, 25);
+
+  // Sin filtro de padre (departamento): agrupar visualmente por departamento —
+  // evita ambigüedad entre subregiones/municipios homónimos de distinto departamento
+  // (ej. varias subregiones "Centro" o "Norte" en departamentos distintos).
+  const grouped = !parentFilter && top.some(d => d.parent);
+  if (grouped) {
+    top = [...top].sort((a,b) => {
+      const pa = a.parent || '', pb = b.parent || '';
+      if (pa !== pb) return pa.localeCompare(pb, 'es');
+      return b.cnt - a.cnt;
+    });
+  }
+
+  const vals = top.map(d => d.cnt);
+  const labels = top.map(d => grouped && d.parent ? `${d.val} — ${d.parent}` : (d.val || '—'));
+  const total  = vals.reduce((a,b)=>a+b,0);
+
+  // Actualizar contador
+  $('geo-count').textContent = parentFilter
+    ? `${top.length} resultados · ${fmtK(total)} leads`
+    : `Top ${top.length} · ${fmtK(total)} leads`;
+
+  // Altura dinámica
+  const geoWrap = $('ch-geo').parentElement;
+  geoWrap.style.height = Math.max(300, top.length * 26) + 'px';
+
+  charts['ch-geo'] = new Chart($('ch-geo').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{
+      label:'Leads', data:vals,
+      backgroundColor:'#6366f1CC', borderColor:'#6366f1',
+      borderWidth:1, borderRadius:3
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      layout:{ padding:{ right:55 }},
+      plugins:{
+        datalabels: DL_BAR_H,
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: c => {
+          const row = top[c.dataIndex];
+          const ctx = row.parent ? ` · ${row.parent}` : '';
+          return ` ${fmtN(c.parsed.x)} leads (${(c.parsed.x/total*100).toFixed(1)}%)${ctx}`;
+        }}}
+      },
+      scales:{
+        x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
+        y:{ ticks:{color:'#e8eaf0',font:{size:10},maxTicksLimit:25}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+// ── Tabla ─────────────────────────────────────────────────────────────────────
+let tblData = [], tblSort = {col:3, dir:-1};
+
+const TIPO_BADGE  = t => t==='electoral'
+  ? '<span class="badge badge-purple">🗳️ Electoral</span>'
+  : '<span class="badge badge-blue">📋 Leads</span>';
+const ETAPA_BADGE = e => {
+  const m = {importado:'badge-blue',validando:'badge-yellow',enriquecido:'badge-green',
+             analizado:'badge-green',reportado:'badge-purple',archivado:'badge-orange'};
+  return `<span class="badge ${m[e]||'badge-blue'}">${e||'importado'}</span>`;
+};
+
+function renderTable(data) { tblData = data||[]; renderTblPage(); }
+
+function renderTblPage() {
+  const cols = ['id','archivo','hoja','fecha','nuevos','dup','tipo','etapa'];
+  const sorted = [...tblData].sort((a,b)=>{
+    const k = cols[tblSort.col], av = a[k]||'', bv = b[k]||'';
+    return tblSort.dir * (av < bv ? -1 : av > bv ? 1 : 0);
+  });
+  $('tbl-imports').innerHTML = sorted.map(r=>`
+    <tr>
+      <td><span style="color:var(--muted)">#${r.id}</span></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="${h(r.archivo)}">${h(r.archivo?.replace(/\.xlsx?$/i,'')||'—')}</td>
+      <td><code style="font-size:.67rem;color:var(--muted)">${h(r.hoja)}</code></td>
+      <td style="color:var(--muted)">${r.fecha||'—'}</td>
+      <td style="color:var(--green);font-weight:700">${fmtN(r.nuevos)}</td>
+      <td style="color:var(--yellow)">${fmtN(r.dup)}</td>
+      <td>${TIPO_BADGE(r.tipo)}</td>
+      <td>${ETAPA_BADGE(r.etapa)}</td>
+    </tr>
+  `).join('');
+}
+
+function sortTbl(col) {
+  tblSort.dir = tblSort.col===col ? -tblSort.dir : -1;
+  tblSort.col = col;
+  renderTblPage();
+}
+
+load();
+</script>
+</body>
+</html>

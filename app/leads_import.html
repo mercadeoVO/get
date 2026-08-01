@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDFUT · Importador de Leads Meta Ads</title>
+<style>
+:root {
+  --bg:#0f172a;--surface:#1e293b;--surface2:#263348;--border:#334155;
+  --accent:#3b82f6;--accent2:#6366f1;--green:#22c55e;--yellow:#eab308;
+  --red:#ef4444;--orange:#f97316;--purple:#a855f7;
+  --text:#e2e8f0;--muted:#94a3b8;--small:#64748b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh;}
+
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;}
+.topbar h1{font-size:18px;font-weight:700;}
+.topbar span{color:var(--muted);font-size:13px;}
+.topbar a{color:var(--accent);text-decoration:none;font-size:13px;margin-left:auto;}
+.topbar a:hover{text-decoration:underline;}
+
+.container{max-width:1020px;margin:0 auto;padding:28px 20px;}
+
+/* Stepper */
+.stepper{display:flex;gap:0;margin-bottom:32px;}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;}
+.step:not(:last-child)::after{content:'';position:absolute;top:16px;left:60%;width:80%;height:2px;background:var(--border);z-index:0;}
+.step.done:not(:last-child)::after{background:var(--accent);}
+.step-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:var(--border);color:var(--muted);z-index:1;position:relative;}
+.step.active .step-num{background:var(--accent);color:#fff;}
+.step.done .step-num{background:var(--green);color:#fff;}
+.step-label{font-size:11px;color:var(--muted);text-align:center;line-height:1.3;}
+.step.active .step-label{color:var(--text);font-weight:600;}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px;}
+.card-title{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+
+/* Badges */
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;}
+.badge-blue{background:#1d4ed8;color:#bfdbfe;}
+.badge-green{background:#166534;color:#bbf7d0;}
+.badge-yellow{background:#854d0e;color:#fef08a;}
+.badge-gray{background:#374151;color:#9ca3af;}
+.badge-orange{background:#7c2d12;color:#fed7aa;}
+
+/* Upload */
+.drop-zone{border:2px dashed var(--border);border-radius:8px;padding:40px;text-align:center;cursor:pointer;transition:all .2s;}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:rgba(59,130,246,.06);}
+.drop-zone .icon{font-size:40px;margin-bottom:12px;}
+.drop-zone p{color:var(--muted);font-size:13px;}
+#fileInput{display:none;}
+
+/* Buttons */
+.btn{padding:9px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-success{background:var(--green);color:#fff;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn:hover:not(:disabled){opacity:.85;}
+
+/* Sheet cards */
+.sheet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;}
+.sheet-card{border:2px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:all .15s;position:relative;user-select:none;}
+.sheet-card:hover{border-color:var(--accent);}
+.sheet-card.checked{border-color:var(--accent);background:rgba(59,130,246,.08);}
+.sheet-card.sheet-card-dup{border-color:#854d0e;background:rgba(133,77,14,.07);}
+.sheet-card.sheet-card-dup.checked{border-color:var(--accent);background:rgba(59,130,246,.08);}
+.sheet-card input[type=checkbox]{position:absolute;top:10px;right:10px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
+.sheet-name{font-weight:600;font-size:13px;margin-bottom:6px;padding-right:22px;word-break:break-all;}
+.sheet-meta{font-size:12px;color:var(--muted);}
+
+/* Column mapping */
+.col-table{width:100%;border-collapse:collapse;font-size:13px;}
+.col-table th{text-align:left;padding:8px 10px;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;font-size:12px;}
+.col-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.col-table tr:last-child td{border-bottom:none;}
+.col-header{font-family:'Courier New',monospace;font-size:12px;word-break:break-word;max-width:200px;}
+.sel{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:12px;cursor:pointer;}
+.sel:focus{outline:none;border-color:var(--accent);}
+
+/* Extraction rules */
+.ext-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;}
+.ext-row select,.ext-row input{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:4px 8px;font-size:12px;}
+.ext-row input[type=number]{width:58px;}
+.ext-row input[type=text]{width:50px;}
+.ext-lbl{font-size:11px;color:var(--muted);white-space:nowrap;}
+.ext-arrow{color:var(--muted);font-size:16px;flex-shrink:0;}
+
+/* Preview */
+.preview-wrap{overflow-x:auto;}
+.preview-table{border-collapse:collapse;font-size:12px;white-space:nowrap;}
+.preview-table th{background:var(--surface2);padding:6px 10px;text-align:left;border:1px solid var(--border);color:var(--muted);font-family:monospace;font-size:11px;}
+.preview-table td{padding:5px 10px;border:1px solid var(--border);max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+.preview-table tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+
+/* Stats */
+.stats-row{display:flex;gap:14px;flex-wrap:wrap;}
+.stat-box{background:var(--surface2);border-radius:8px;padding:12px 18px;border:1px solid var(--border);min-width:110px;text-align:center;}
+.stat-box .val{font-size:28px;font-weight:800;}
+.stat-box .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+.stat-green .val{color:var(--green);}
+.stat-blue .val{color:var(--accent);}
+.stat-yellow .val{color:var(--yellow);}
+.stat-red .val{color:var(--red);}
+
+/* Alerts */
+.alert{border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:10px;}
+.alert-info{background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:#93c5fd;}
+.alert-warn{background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);color:#fde68a;}
+.alert-err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;}
+.alert-ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;}
+
+/* Log table */
+.log-table{width:100%;border-collapse:collapse;font-size:13px;}
+.log-table th{background:var(--surface2);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);color:var(--muted);font-size:12px;}
+.log-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.log-table tr:last-child td{border-bottom:none;}
+
+/* Visual pipeline */
+.pipeline{display:flex;align-items:center;gap:0;}
+.pip-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);background:var(--bg);cursor:pointer;position:relative;flex-shrink:0;transition:transform .15s;}
+.pip-dot:hover{transform:scale(1.25);}
+.pip-line{flex:1;height:2px;background:var(--border);min-width:8px;}
+.pip-line.done{background:var(--accent);}
+.pip-dot .tip{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;border:1px solid var(--border);border-radius:4px;padding:3px 7px;font-size:10px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:10;}
+.pip-dot:hover .tip{opacity:1;}
+
+/* Misc */
+.sep{height:1px;background:var(--border);margin:20px 0;}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px;}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px;}
+input[type=text],textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px;}
+input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent);}
+textarea{resize:vertical;min-height:60px;}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;font-size:12px;}
+
+/* Sheet tabs in step 3 */
+.s3-tab{padding:10px 18px;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;}
+.s3-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(59,130,246,.06);}
+.s3-tab:hover:not(.active){color:var(--text);}
+
+#step-1,#step-2,#step-3,#step-35,#step-4{display:none;}
+#step-1{display:block;}
+.elect-badge{display:inline-block;background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;vertical-align:middle;}
+.elect-icon{font-size:13px;vertical-align:middle;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span style="font-size:20px;">📊</span>
+  <h1>MEDFUT</h1>
+  <span>· Importador de Leads Meta Ads</span>
+  <a href="dashboard_local.html">← Electoral</a>
+  <a href="leads_analytics.html"  style="margin-left:6px;">📊 Analítica</a>
+  <a href="c98geo_dashboard.html" style="margin-left:6px;">🗺️ Geografía</a>
+</div>
+
+<div class="container">
+
+<!-- Stepper -->
+<div class="stepper">
+  <div class="step active" id="stp1"><div class="step-num">1</div><div class="step-label">Subir archivo</div></div>
+  <div class="step" id="stp2"><div class="step-num">2</div><div class="step-label">Hojas</div></div>
+  <div class="step" id="stp3"><div class="step-num">3</div><div class="step-label">Columnas</div></div>
+  <div class="step" id="stp4"><div class="step-num">4</div><div class="step-label">Confirmar</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ STEP 1 -->
+<div id="step-1">
+  <div id="dep-alert"></div>
+
+  <!-- Resumen de base de datos -->
+  <div id="stats-bar" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+    <div class="card" style="padding:14px 18px;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:700;color:var(--green);" id="stat-nuevos">—</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">✅ Nuevos leads</div>
+    </div>
+    <div class="card" style="padding:14px 18px;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:700;color:#f59e0b;" id="stat-dup">—</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">⚠️ Duplicados</div>
+    </div>
+    <div class="card" style="padding:14px 18px;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:700;color:var(--red,#ef4444);" id="stat-err">—</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">❌ Errores</div>
+    </div>
+    <div class="card" style="padding:14px 18px;text-align:center;overflow:hidden;">
+      <div style="font-size:.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);" id="stat-ultima">—</div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:2px;" id="stat-ultima-fecha"></div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">🕐 Última importación</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📁 Subir archivo Excel de Meta Ads</div>
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">📂</div>
+      <p><strong>Arrastra aquí tu archivo .xlsx</strong> o haz clic para seleccionar</p>
+      <p style="margin-top:8px;font-size:12px;">Formatos: .xlsx · .xls · .ods</p>
+    </div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.ods">
+
+    <div id="file-info" style="margin-top:14px;display:none;">
+      <div class="row">
+        <span style="font-size:18px;">📄</span>
+        <span id="file-name" style="font-weight:600;"></span>
+        <span id="file-size" style="color:var(--muted);font-size:12px;"></span>
+        <button class="btn btn-primary" id="btn-upload" style="margin-left:auto;">Analizar archivo →</button>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="upload-progress" style="width:0%"></div></div>
+    </div>
+
+    <div id="s1-err" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <div class="card-title" style="margin:0;">📋 Historial de importaciones</div>
+      <button class="btn btn-outline btn-sm" onclick="loadLogs()" style="margin-left:auto;">↻ Actualizar</button>
+      <button class="btn btn-outline btn-sm" onclick="confirmResetDB()" style="color:var(--red);border-color:var(--red);">🗑 Limpiar BD</button>
+    </div>
+    <div id="log-container"><div class="spinner" style="margin:8px 0;"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ STEP 2 -->
+<div id="step-2">
+  <div class="card">
+    <div class="card-title">📊 Seleccionar hojas a importar</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;" id="sheets-total"></p>
+    <div class="sheet-grid" id="sheet-grid"></div>
+    <div id="s2-err" style="margin-top:10px;"></div>
+    <div class="sep"></div>
+    <div class="row">
+      <button class="btn btn-outline" onclick="goStep(1)">← Volver</button>
+      <span id="s2-selected" style="color:var(--accent);font-size:13px;font-weight:600;"></span>
+      <button class="btn btn-primary" id="s2-cont" disabled style="margin-left:auto;" onclick="loadPreviewAndGoS3()">
+        Continuar →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ STEP 3 -->
+<div id="step-3">
+  <!-- Tabbed column mapping: one tab per sheet -->
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+    <div id="s3-tab-bar" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface2);overflow-x:auto;"></div>
+    <div style="padding:24px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+        <div class="card-title" style="margin:0;">🗺️ Columnas no fijas</div>
+        <div id="s3-stats" style="display:flex;gap:6px;"></div>
+        <span id="s3-fixed-count" style="font-size:12px;color:var(--small);margin-left:auto;"></span>
+      </div>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+        Mapeo individual por hoja. Columnas fijas de Meta Ads y siempre-ignoradas se excluyen automáticamente.
+      </p>
+      <div id="s3-leadid-warn"></div>
+      <div id="s3-null-meta-warn"></div>
+      <div style="overflow-x:auto;">
+        <table class="col-table">
+          <thead><tr>
+            <th>Columna en Excel</th>
+            <th style="width:160px;">Acción</th>
+            <th style="width:190px;">Campo destino</th>
+          </tr></thead>
+          <tbody id="col-map-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+      <div class="card-title" style="margin:0;">🧭 Extracción automática de ubicación</div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-left:auto;cursor:pointer;">
+        <input type="checkbox" id="autogeo-toggle" onchange="toggleAutoGeo(this.checked)">
+        Activar
+      </label>
+    </div>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
+      Apagado por defecto. Si el formulario no trae columnas de ubicación, puedes activar esto
+      para que el sistema intente reconocer región/departamento/municipio/zona/comuna/barrio
+      dentro del texto de una columna (ej. nombre del adset). Elige tú de qué columna y qué
+      niveles — no se hace nada si no lo activas.
+    </p>
+    <div id="autogeo-body" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <span class="ext-lbl">Columna origen</span>
+        <select id="autogeo-source" onchange="state.autoGeo.source=this.value"></select>
+      </div>
+      <div id="autogeo-levels" style="display:flex;flex-wrap:wrap;gap:14px;"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <div class="card-title" style="margin:0;">⚙️ Reglas de extracción manuales</div>
+      <button class="btn btn-outline btn-sm" onclick="addExtraction()">+ Agregar regla</button>
+    </div>
+    <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
+      Parsea el nombre de campaña / adset / anuncio para rellenar campos opcionales.
+      Ej.: <code>adset_name</code> = <em>"Medellín_18-35_Estratos2-3"</em> → separador <code>_</code>, posición <code>0</code> → <code>municipio_zona</code>
+    </p>
+    <div id="extractions-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">👁️ Vista previa (primeras 5 filas)</div>
+    <div class="preview-wrap" id="preview-container"></div>
+  </div>
+
+  <div class="row" style="margin-bottom:24px;">
+    <button class="btn btn-outline" onclick="goStep(2)">← Volver</button>
+    <button class="btn btn-primary" id="btn-go-step4" onclick="goToStep4()" style="margin-left:auto;">Revisar y aprobar →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ STEP 3.5 — ELECTORAL -->
+<div id="step-35">
+  <!-- ── A. METADATOS BASE ─────────────────────────────────── -->
+  <div class="card" style="border-color:#f59e0b55;margin-bottom:14px;">
+    <div class="card-title" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      🗳️ Contexto electoral
+      <span class="elect-badge">REQUERIDO</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Tipo de encuesta <span style="color:var(--red)">*</span></label>
+        <select id="s35-tipo" style="width:100%;">
+          <option value="">— Selecciona —</option>
+          <option value="intencion_voto">🗳️ Intención de voto</option>
+          <option value="imagen">📊 Imagen / Reputación</option>
+          <option value="conocimiento">🔍 Conocimiento de candidatos</option>
+          <option value="evaluacion">⭐ Evaluación de gestión</option>
+          <option value="exit_poll">🚪 Exit poll</option>
+          <option value="omnibus">📋 Omnibus / General</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Lista de elección</label>
+        <select id="s35-candidatura" style="width:100%;" onchange="onS35TipoChange()">
+          <option value="">— Sin especificar —</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Nivel</label>
+        <select id="s35-nivel" style="width:100%;" onchange="onS35TipoChange()">
+          <option value="">— Sin especificar —</option>
+          <option value="nacional">🌎 Nacional</option>
+          <option value="departamental">🏛️ Departamental</option>
+          <option value="municipal">🏙️ Municipal</option>
+          <option value="local">📍 Local</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── B. GRID DE VALORES POR COLUMNA ELECTORAL ──────────── -->
+  <div class="card" style="border-color:#f59e0b33;margin-bottom:14px;padding:0;overflow:hidden;">
+    <div style="padding:12px 16px;background:rgba(245,158,11,.06);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+      <span style="font-size:13px;font-weight:600;">📊 Mapeo de respuestas electorales</span>
+      <span style="font-size:11px;color:var(--muted);margin-left:4px;">Asigna cada respuesta del archivo a un candidato en la base de datos</span>
+      <span id="s35-loading-badge" style="margin-left:auto;font-size:11px;color:var(--muted);display:none;">⏳ Cargando...</span>
+    </div>
+    <div id="s35-value-grids" style="padding:12px 16px;">
+      <span style="color:var(--muted);font-size:12px;">Cargando columnas detectadas...</span>
+    </div>
+  </div>
+
+  <div id="s35-err" style="margin-bottom:12px;"></div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <button class="btn btn-outline" onclick="goStep(3)">← Revisar mapeo</button>
+    <button class="btn btn-primary" id="btn-s35-next" onclick="proceedFromElectoral()">Continuar → Confirmar</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ STEP 4 -->
+<div id="step-4">
+  <div class="card">
+    <div class="card-title">📋 Resumen de importación</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:.05em;">HOJAS SELECCIONADAS</div>
+        <div id="appr-sheets"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:.05em;">CAMPOS MAPEADOS</div>
+        <div id="appr-fields"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;letter-spacing:.05em;">EAV + EXTRACCIONES</div>
+        <div id="appr-eavs-exts"></div>
+      </div>
+    </div>
+
+    <!-- Contexto electoral (solo visible si state.electoralCtx existe) -->
+    <div id="appr-electoral-wrap" style="display:none;margin-bottom:16px;border:1px solid #f59e0b44;border-radius:6px;overflow:hidden;">
+      <div style="background:rgba(245,158,11,.07);padding:8px 14px;font-size:11px;font-weight:700;color:#f59e0b;letter-spacing:.05em;border-bottom:1px solid #f59e0b33;">
+        🗳️ CONTEXTO ELECTORAL
+        <button onclick="state.electoralCtx=null;renderStep35();goStep(35);"
+          style="float:right;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0;">✏️ Editar</button>
+      </div>
+      <div id="appr-electoral" style="padding:10px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px;"></div>
+    </div>
+
+    <!-- campos ocultos para el log (no visibles al usuario) -->
+    <input type="hidden" id="appr-archivo">
+    <input type="hidden" id="appr-url-archivo">
+    <input type="hidden" id="appr-url">
+    <input type="hidden" id="appr-notas">
+
+    <div class="sep"></div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn btn-outline" onclick="goStep(3)">← Revisar mapeo</button>
+      <span id="appr-spinner" style="display:none;align-items:center;gap:8px;color:var(--muted);">
+        <div class="spinner"></div> Importando...
+      </span>
+      <button class="btn btn-success" id="btn-confirm">✅ Confirmar e importar</button>
+    </div>
+
+    <div id="appr-result" style="margin-top:20px;"></div>
+  </div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+const API = 'http://localhost/medfut/leads_importer.php';
+
+// Tipos fijos: auto-mapeados por el servidor, NO se muestran en Step 3.
+// lead_id = columna 0 de cualquier archivo (siempre, sin importar el header).
+const FIXED_TYPES = new Set([
+  'lead_id','created_time',
+  'ad_id','ad_name','adset_id','adset_name',
+  'campaign_id','campaign_name','form_id','form_name',
+  'is_organic','platform','lead_status','retailer_item_id'
+]);
+
+const OPT_FIELDS = [
+  // lead_id ya NO aparece aquí — detectado por header 'id', o col 0 como fallback
+  ['nombre','👤 Nombre'],['email','✉️ Email'],['telefono','📞 Teléfono'],
+  ['sexo','⚥ Sexo'],['rango_edad','🎂 Rango edad'],['estrato','🏠 Estrato'],
+  ['afiliacion_politica','🗳️ Afiliación política'],
+  ['nivel_educativo','🎓 Nivel educativo'],
+  // Geografía
+  ['geo_departamento','🏔️ Departamento'],
+  ['subregion','🗺️ Subregión'],
+  ['municipio','🏙️ Municipio'],
+  ['zona','📍 Zona'],
+  ['comuna_localidad','🏛️ Comuna/Localidad'],
+  ['barrio','🏘️ Barrio'],
+  // ── Electoral ─────────────────────────────────────────────
+  ['intencion_voto','🗳️ Intención de voto'],
+  ['simpatia_partido','🎗️ Simpatía de partido'],
+  ['conocimiento_candidato','🔍 Conocimiento de candidato'],
+  ['evaluacion_candidato','⭐ Evaluación de candidato'],
+  ['participacion_electoral','✋ Participación electoral'],
+  ['imagen_candidato','📊 Imagen de candidato'],
+];
+
+// Campos que activan la clasificación electoral en el import
+const ELECTORAL_FIELDS = new Set([
+  'intencion_voto','simpatia_partido','conocimiento_candidato',
+  'evaluacion_candidato','participacion_electoral','imagen_candidato',
+]);
+
+const EXT_SOURCES = [
+  ['campaign_name','🏷️ Campaign name'],['adset_name','🎯 Adset name'],
+  ['ad_name','📣 Ad name'],['form_name','📋 Form name'],
+];
+
+const ETAPAS = [
+  {val:'importado',  label:'📥 Importado',  color:'#64748b'},
+  {val:'validando',  label:'🔍 Validando',  color:'#f59e0b'},
+  {val:'enriquecido',label:'✨ Enriquecido',color:'#8b5cf6'},
+  {val:'analizado',  label:'📊 Analizado',  color:'#3b82f6'},
+  {val:'reportado',  label:'📤 Reportado',  color:'#10b981'},
+  {val:'archivado',  label:'🗄️ Archivado',  color:'#475569'},
+];
+
+let state = {
+  tempId:null, file:null, sheets:[],
+  importedSheets:{},       // {sheetName → {ultima_carga, leads_ins, url_archivo, url_carpeta}}
+  selectedSheets:[],
+  // columns/previewData = active sheet alias (set on tab switch)
+  columns:[], previewData:[],
+  // Per-sheet: {sheetName: {columns,previewData,colActions,colFields,loaded}}
+  sheetMappings:{},
+  activeMapSheet:'',
+  extractions:[],
+  electoralCtx: null,
+  // Apagado por defecto — el usuario debe activarlo explícitamente por nivel.
+  autoGeo: { enabled:false, source:'adset_name', levels:[] },
+};
+
+const GEO_LEVELS = [
+  ['geo_departamento', '🏔️ Departamento'],
+  ['subregion',        '🗺️ Subregión'],
+  ['municipio',        '🏙️ Municipio'],
+  ['zona',             '📍 Zona'],
+  ['comuna_localidad', '🏛️ Comuna/Localidad'],
+  ['barrio',           '🏘️ Barrio'],
+];
+
+// ─── Utils ────────────────────────────────────────────────────────────────
+function h(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function goStep(n){
+  // n puede ser 1,2,3,35,4
+  [1,2,3,35,4].forEach(i=>{
+    document.getElementById('step-'+i).style.display = i===n?'block':'none';
+  });
+  // Stepper visual: trata step 35 como "entre 3 y 4"
+  const stepperN = n===35 ? 3.5 : n;
+  [1,2,3,4].forEach(i=>{
+    const stp=document.getElementById('stp'+i);
+    if(!stp) return;
+    stp.className='step'+(i<stepperN?' done':i===Math.ceil(stepperN)?' active':'');
+  });
+}
+
+// ─── Check deps ────────────────────────────────────────────────────────────
+async function checkDeps(){
+  try{
+    const d=await fetch(API+'?action=check').then(r=>r.json());
+    const el=document.getElementById('dep-alert');
+    if(!d.ok)
+      el.innerHTML=`<div class="alert alert-err">❌ Error al verificar dependencias.</div>`;
+    else if(!d.php_zip||!d.php_xml)
+      el.innerHTML=`<div class="alert alert-err">❌ PHP: falta extensión ZipArchive o SimpleXML. Verifica la instalación de XAMPP.</div>`;
+    else if(d.c98_geo&&d.c98_geo.startsWith('error'))
+      el.innerHTML=`<div class="alert alert-warn">⚠️ c98_geo no accesible: <code>${d.c98_geo}</code></div>`;
+  }catch{
+    document.getElementById('dep-alert').innerHTML=`<div class="alert alert-err">❌ No se puede conectar con el API. ¿Está corriendo Apache?</div>`;
+  }
+}
+
+async function loadStats(){
+  try{
+    const d=await fetch(API+'?action=stats').then(r=>r.json());
+    if(!d.ok) return;
+    document.getElementById('stat-nuevos').textContent=d.total_nuevos.toLocaleString();
+    document.getElementById('stat-dup').textContent=d.total_dup.toLocaleString();
+    document.getElementById('stat-err').textContent=d.total_err.toLocaleString();
+    if(d.ultima_imp){
+      const arch=(d.ultima_imp.archivo||'').split(/[\\/]/).pop().replace(/\.[^.]+$/,'');
+      const fecha=(d.ultima_imp.importado_en||'').substring(0,10);
+      document.getElementById('stat-ultima').textContent=arch||'(sin nombre)';
+      document.getElementById('stat-ultima').title=d.ultima_imp.archivo||'';
+      document.getElementById('stat-ultima-fecha').textContent=fecha;
+    } else {
+      document.getElementById('stat-ultima').textContent='Sin importaciones';
+      document.getElementById('stat-ultima-fecha').textContent='';
+    }
+  }catch{ /* silencioso */ }
+}
+
+// ─── Step 1: Upload ────────────────────────────────────────────────────────
+const dropZone=document.getElementById('dropZone');
+const fileInput=document.getElementById('fileInput');
+dropZone.addEventListener('click',()=>fileInput.click());
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('drag');if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0]);});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])setFile(fileInput.files[0]);});
+
+function setFile(f){
+  state.file=f;
+  document.getElementById('file-name').textContent=f.name;
+  document.getElementById('file-size').textContent=(f.size/1024).toFixed(0)+' KB';
+  document.getElementById('file-info').style.display='block';
+}
+
+document.getElementById('btn-upload').addEventListener('click',async()=>{
+  if(!state.file)return;
+  const btn=document.getElementById('btn-upload');
+  btn.disabled=true; btn.textContent='Analizando...';
+  document.getElementById('upload-progress').style.width='40%';
+  const fd=new FormData(); fd.append('file',state.file);
+  try{
+    const d=await fetch(API+'?action=get_sheets',{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok)throw new Error(d.error||'Error desconocido');
+    document.getElementById('upload-progress').style.width='100%';
+    state.tempId=d.temp_id;
+    state.sheets=d.sheets; // [{name,rows,cols}]
+    // importedSheets: {sheetName → {ultima_carga, leads_ins, url_archivo, url_carpeta}}
+    state.importedSheets={};
+    (d.imported_sheets||[]).forEach(r=>{ state.importedSheets[r.hoja]=r; });
+    state.selectedSheets=[];
+    state.extractions=[];
+    renderSheetSelector();
+    goStep(2);
+  }catch(e){
+    document.getElementById('s1-err').innerHTML=`<div class="alert alert-err">❌ ${h(e.message)}</div>`;
+  }finally{
+    btn.disabled=false; btn.textContent='Analizar archivo →';
+  }
+});
+
+// ─── Step 2: Sheet selection ────────────────────────────────────────────────
+function renderSheetSelector(){
+  const total=state.sheets.reduce((s,sh)=>s+(sh.rows||0),0);
+  const prevCount=Object.keys(state.importedSheets||{}).length;
+  document.getElementById('sheets-total').innerHTML=
+    `Se encontraron <strong style="color:var(--text)">${state.sheets.length}</strong> hoja(s) · ≈${total.toLocaleString()} filas en total.`+
+    (prevCount ? ` <span class="badge badge-yellow">${prevCount} ya cargada${prevCount!==1?'s':''}</span>` : '')+
+    ` Selecciona las que quieres importar:`;
+  document.getElementById('sheet-grid').innerHTML=state.sheets.map((sh,i)=>{
+    const imp=state.importedSheets[sh.name];
+    const fecha=imp ? (imp.ultima_carga||'').replace('T',' ').substring(0,10) : '';
+    return `<div class="sheet-card${imp?' sheet-card-dup':''}" id="shcard-${i}" onclick="toggleSheet(${i})">
+      <input type="checkbox" id="shchk-${i}" onclick="event.stopPropagation();toggleSheet(${i})">
+      <div class="sheet-name">${h(sh.name)}</div>
+      <div class="sheet-meta">${(sh.rows||0).toLocaleString()} filas &nbsp;·&nbsp; ${sh.cols||0} col</div>
+      ${imp ? `<div style="margin-top:6px;"><span class="badge badge-yellow">✓ Ya cargado</span><span style="font-size:10px;color:var(--muted);margin-left:6px;">${fecha} · ${(imp.leads_ins||0).toLocaleString()} leads</span></div>` : ''}
+    </div>`;
+  }).join('');
+  document.getElementById('s2-cont').disabled=true;
+  document.getElementById('s2-selected').textContent='';
+}
+
+function toggleSheet(i){
+  const name=state.sheets[i].name;
+  const card=document.getElementById('shcard-'+i);
+  const chk=document.getElementById('shchk-'+i);
+  const idx=state.selectedSheets.indexOf(name);
+  if(idx===-1){state.selectedSheets.push(name);card.classList.add('checked');chk.checked=true;}
+  else{state.selectedSheets.splice(idx,1);card.classList.remove('checked');chk.checked=false;}
+  const n=state.selectedSheets.length;
+  document.getElementById('s2-cont').disabled=n===0;
+  document.getElementById('s2-selected').textContent=n>0?`${n} seleccionada${n!==1?'s':''}` :'';
+}
+
+// ─── Step 2 → 3: Load and init per-sheet mappings ─────────────────────────
+async function loadPreviewAndGoS3(){
+  const btn=document.getElementById('s2-cont');
+  btn.disabled=true; btn.textContent='Analizando columnas...';
+
+  // Init per-sheet mapping state
+  state.sheetMappings={};
+  state.selectedSheets.forEach(name=>{
+    state.sheetMappings[name]={columns:[],previewData:[],colActions:{},colFields:{},loaded:false};
+  });
+  state.activeMapSheet=state.selectedSheets[0];
+
+  try{
+    await loadSheetMapping(state.selectedSheets[0]);
+    syncActiveSheetToState();
+    renderS3Tabs();
+    renderColumnMap(); renderExtractions(); renderPreview();
+    document.getElementById('autogeo-toggle').checked = state.autoGeo.enabled;
+    document.getElementById('autogeo-body').style.display = state.autoGeo.enabled ? 'block' : 'none';
+    if(state.autoGeo.enabled) renderAutoGeoUI();
+    updateGoStep4Btn();
+    goStep(3);
+  }catch(e){
+    document.getElementById('s2-err').innerHTML=`<div class="alert alert-err">❌ ${h(e.message)}</div>`;
+  }finally{
+    btn.disabled=false; btn.textContent='Continuar →';
+  }
+}
+
+async function loadSheetMapping(sheetName){
+  const sm=state.sheetMappings[sheetName];
+  if(sm.loaded) return;
+  const fd=new FormData(); fd.append('temp_id',state.tempId); fd.append('sheet',sheetName);
+  const d=await fetch(API+'?action=preview',{method:'POST',body:fd}).then(r=>r.json());
+  if(!d.ok) throw new Error(d.error);
+  sm.columns=d.columns; sm.previewData=d.preview; sm.loaded=true;
+  // Init actions: columna 0 es lead_id (FIXED_TYPES) — oculta del mapping.
+  // Las demás: auto-mapeadas por tipo detectado.
+  sm.columns.filter(c=>!FIXED_TYPES.has(c.type)&&c.type!=='__skip'&&c.header!==null).forEach(col=>{
+    if(OPT_FIELDS.some(([v])=>v===col.type)){ sm.colActions[col.index]='field'; sm.colFields[col.index]=col.type; }
+    else if(col.type==='__eav'){ sm.colActions[col.index]='eav'; }
+    else { sm.colActions[col.index]='skip'; }
+  });
+}
+
+function syncActiveSheetToState(){
+  const sm=state.sheetMappings[state.activeMapSheet];
+  if(sm){ state.columns=sm.columns; state.previewData=sm.previewData; }
+}
+
+// ─── Step 3: Tab rendering ─────────────────────────────────────────────────
+function renderS3Tabs(){
+  document.getElementById('s3-tab-bar').innerHTML=state.selectedSheets.map(name=>{
+    const sh=state.sheets.find(s=>s.name===name);
+    const active=name===state.activeMapSheet;
+    const sm=state.sheetMappings[name];
+    const loaded=sm&&sm.loaded;
+    return `<button class="s3-tab${active?' active':''}" data-sheet="${h(name)}" onclick="switchMapTab(this.dataset.sheet)">
+      ${h(name)}
+      <span class="badge ${active?'badge-blue':'badge-gray'}">${(sh?.rows||0).toLocaleString()}</span>
+      ${!loaded&&!active?'<span style="font-size:10px;color:var(--yellow)">●</span>':''}
+    </button>`;
+  }).join('');
+}
+
+async function switchMapTab(sheetName){
+  if(sheetName===state.activeMapSheet) return;
+  state.activeMapSheet=sheetName;
+  // Update tabs active state
+  document.querySelectorAll('.s3-tab').forEach(t=>{
+    const active=t.dataset.sheet===sheetName;
+    t.classList.toggle('active',active);
+    const badge=t.querySelector('.badge');
+    if(badge){ badge.className='badge '+(active?'badge-blue':'badge-gray'); }
+  });
+  const sm=state.sheetMappings[sheetName];
+  if(!sm.loaded){
+    document.getElementById('col-map-body').innerHTML=
+      `<tr><td colspan="3" style="text-align:center;padding:24px;color:var(--muted);"><div class="spinner" style="margin:0 auto;"></div><br>Cargando columnas...</td></tr>`;
+    try{ await loadSheetMapping(sheetName); }
+    catch(e){
+      document.getElementById('col-map-body').innerHTML=
+        `<tr><td colspan="3"><div class="alert alert-err">❌ ${h(e.message)}</div></td></tr>`;
+      return;
+    }
+  }
+  syncActiveSheetToState();
+  renderColumnMap(); renderPreview();
+  updateGoStep4Btn();
+}
+
+// ─── Step 3: Column mapping ─────────────────────────────────────────────────
+const OPT_FIELD_GROUPS = [
+  { label:'👤 Datos del lead',  fields:['nombre','email','telefono','sexo','rango_edad','estrato','afiliacion_politica','nivel_educativo'] },
+  { label:'🗺️ Geográfico',      fields:['geo_departamento','subregion','municipio','zona','comuna_localidad','barrio'] },
+  { label:'🗳️ Electoral',       fields:['intencion_voto','simpatia_partido','conocimiento_candidato','evaluacion_candidato','participacion_electoral','imagen_candidato'] },
+];
+function optOpts(sel=''){
+  return OPT_FIELD_GROUPS.map(g=>{
+    const opts = g.fields.map(v=>{
+      const f = OPT_FIELDS.find(([fv])=>fv===v);
+      if(!f) return '';
+      return `<option value="${f[0]}" ${f[0]===sel?'selected':''}>${f[1]}</option>`;
+    }).filter(Boolean).join('');
+    return opts ? `<optgroup label="${g.label}">${opts}</optgroup>` : '';
+  }).join('');
+}
+
+function renderColumnMap(){
+  const sm=state.sheetMappings[state.activeMapSheet];
+  if(!sm||!sm.loaded) return;
+  // Excluir: columnas fijas (FIXED_TYPES) + columnas siempre-ignoradas (__skip como lead_status)
+  const nonFixed=sm.columns.filter(c=>!FIXED_TYPES.has(c.type)&&c.type!=='__skip'&&c.header!==null);
+  const fixedCnt=sm.columns.filter(c=>FIXED_TYPES.has(c.type)||c.type==='__skip').length;
+  document.getElementById('s3-fixed-count').textContent=`${fixedCnt} columnas fijas/ignoradas auto-mapeadas`;
+
+  // Columna con type=lead_id (detectada por header, o col 0 como fallback)
+  const idCol = sm.columns.find(c=>c.type==='lead_id');
+  const warnEl = document.getElementById('s3-leadid-warn');
+  if(warnEl && idCol){
+    const idHeader = idCol.header || '(sin nombre)';
+    const iIdx = idCol.index;
+    const isFallback = iIdx === 0 && !sm.columns.slice(1).some(c=>c.type==='lead_id');
+    const vals = sm.previewData.map(r=>String(r[iIdx]??'')).filter(v=>v&&v!=='null');
+    const uniq = new Set(vals).size;
+    const total = vals.length;
+    const pct = total ? Math.round(uniq/total*100) : 0;
+    const badgeColor = pct>=80?'badge-green':(pct>=50?'badge-yellow':'badge-orange');
+    const sample = vals.slice(0,4).map(v=>`<code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px;">${h(String(v).substring(0,40))}</code>`).join(' ');
+    const emptyRows = sm.previewData.filter(r=>!r[iIdx]||String(r[iIdx]).trim()==='').length;
+    const emptyNote = emptyRows>0
+      ? `<span style="color:var(--yellow);margin-left:8px;">⚠️ ${emptyRows} filas sin ID → se generará ID automático</span>`
+      : '';
+    const colLabel = isFallback ? `col 0 (fallback)` : `col ${iIdx}`;
+    warnEl.innerHTML=`<div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;">
+      <strong>🔑 ID → <code>${h(idHeader)}</code></strong>
+      <span style="color:var(--muted);font-size:11px;margin-left:4px;">(${colLabel})</span>
+      <span style="margin:0 8px;color:var(--muted)">|</span>
+      <span class="badge ${badgeColor}">${uniq}/${total} únicos (${pct}%)</span>${emptyNote}
+      ${total>0?`<div style="margin-top:6px;color:var(--muted);">Muestra: ${sample}</div>`:''}
+    </div>`;
+  }
+
+  // ── Aviso filas fantasma: ad_id + adset_id + campaign_id + form_id todos vacíos ──
+  const nullMetaWarnEl = document.getElementById('s3-null-meta-warn');
+  if(nullMetaWarnEl){
+    const NULL_META_FIELDS = ['ad_id','adset_id','campaign_id','form_id'];
+    const nmCols = NULL_META_FIELDS.map(f=>sm.columns.find(c=>c.type===f)).filter(Boolean);
+    if(nmCols.length > 0 && sm.previewData.length > 0){
+      const isEmpty = v => v===null||v===undefined||String(v).trim()===''||String(v).toLowerCase()==='null';
+      const ghostRows = sm.previewData.filter(row=>nmCols.every(c=>isEmpty(row[c.index]))).length;
+      if(ghostRows > 0){
+        const pct = Math.round(ghostRows/sm.previewData.length*100);
+        nullMetaWarnEl.innerHTML=`<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">⛔</span>
+          <span><strong>${ghostRows} de ${sm.previewData.length} filas en preview</strong> tienen
+          <code>ad_id</code>, <code>adset_id</code>, <code>campaign_id</code> y <code>form_id</code> vacíos simultáneamente.
+          Estas filas serán <strong style="color:#ef4444;">omitidas</strong> en la importación — no representan leads válidos de Meta Ads.</span>
+        </div>`;
+      } else {
+        nullMetaWarnEl.innerHTML='';
+      }
+    } else {
+      nullMetaWarnEl.innerHTML='';
+    }
+  }
+
+  if(!nonFixed.length){
+    document.getElementById('col-map-body').innerHTML=
+      `<tr><td colspan="3" style="color:var(--muted);padding:16px;">Todas las columnas son campos fijos de Meta Ads.</td></tr>`;
+  } else {
+    document.getElementById('col-map-body').innerHTML=nonFixed.map(col=>{
+      const action=sm.colActions[col.index]||'skip';
+      const field=sm.colFields[col.index]||OPT_FIELDS[0][0];
+      return `<tr>
+        <td class="col-header">${h(col.header??'')}</td>
+        <td>
+          <select class="sel" onchange="setColAction(${col.index},this.value)">
+            <option value="skip"  ${action==='skip' ?'selected':''}>⏭️ Ignorar</option>
+            <option value="eav"   ${action==='eav'  ?'selected':''}>❓ Pregunta EAV</option>
+            <option value="field" ${action==='field'?'selected':''}>🏷️ Campo →</option>
+          </select>
+        </td>
+        <td id="colfld-${col.index}">
+          ${action==='field'?`<select class="sel" style="width:100%;" onchange="setColField(${col.index},this.value)">${optOpts(field)}</select>`:''}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  updateS3Stats();
+}
+
+function setColAction(idx,action){
+  const sm=state.sheetMappings[state.activeMapSheet];
+  if(!sm) return;
+  sm.colActions[idx]=action;
+  const td=document.getElementById('colfld-'+idx);
+  const field=sm.colFields[idx]||OPT_FIELDS[0][0];
+  td.innerHTML=action==='field'?`<select class="sel" style="width:100%;" onchange="setColField(${idx},this.value)">${optOpts(field)}</select>`:'';
+  updateS3Stats();
+}
+function setColField(idx,v){
+  const sm=state.sheetMappings[state.activeMapSheet];
+  if(sm) sm.colFields[idx]=v;
+}
+
+function updateS3Stats(){
+  const sm=state.sheetMappings[state.activeMapSheet];
+  if(!sm) return;
+  const nf=sm.columns.filter(c=>!FIXED_TYPES.has(c.type)&&c.type!=='__skip'&&c.header!==null);
+  const f=nf.filter(c=>sm.colActions[c.index]==='field').length;
+  const e=nf.filter(c=>sm.colActions[c.index]==='eav').length;
+  const s=nf.filter(c=>sm.colActions[c.index]==='skip').length;
+  document.getElementById('s3-stats').innerHTML=
+    `<span class="badge badge-green">${f} campos</span>
+     <span class="badge badge-blue">${e} EAV</span>
+     <span class="badge badge-gray">${s} ignorados</span>`;
+
+  // Re-renderizar info banner del ID (reutiliza lógica de renderColumnMap)
+  const idCol2=sm.columns.find(c=>c.type==='lead_id');
+  const warnEl2=document.getElementById('s3-leadid-warn');
+  if(warnEl2 && idCol2 && sm.previewData?.length){
+    const iIdx2=idCol2.index;
+    const vals=sm.previewData.map(r=>String(r[iIdx2]??'')).filter(v=>v&&v!=='null');
+    const uniq=new Set(vals).size;
+    const total=vals.length;
+    const pct=total?Math.round(uniq/total*100):0;
+    const bc=pct>=80?'badge-green':(pct>=50?'badge-yellow':'badge-orange');
+    const sample=vals.slice(0,4).map(v=>`<code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px;">${h(String(v).substring(0,40))}</code>`).join(' ');
+    const emptyRows=sm.previewData.filter(r=>!r[iIdx2]||String(r[iIdx2]).trim()==='').length;
+    const emptyNote=emptyRows>0?`<span style="color:var(--yellow);margin-left:8px;">⚠️ ${emptyRows} filas sin ID → generación automática</span>`:'';
+    const colLabel2=`col ${iIdx2}`;
+    warnEl2.innerHTML=`<div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;">
+      <strong>🔑 ID → <code>${h(idCol2.header||'(sin nombre)')}</code></strong>
+      <span style="color:var(--muted);font-size:11px;margin-left:4px;">(${colLabel2})</span>
+      <span style="margin:0 8px;color:var(--muted)">|</span>
+      <span class="badge ${bc}">${uniq}/${total} únicos (${pct}%)</span>${emptyNote}
+      <div style="margin-top:6px;color:var(--muted);">Muestra: ${sample}</div>
+    </div>`;
+  }
+}
+
+// ─── Extracción automática de ubicación (opt-in, apagado por defecto) ────────
+function toggleAutoGeo(checked){
+  state.autoGeo.enabled = checked;
+  document.getElementById('autogeo-body').style.display = checked ? 'block' : 'none';
+  if(checked) renderAutoGeoUI();
+}
+function toggleAutoGeoLevel(level, checked){
+  const idx = state.autoGeo.levels.indexOf(level);
+  if(checked && idx===-1) state.autoGeo.levels.push(level);
+  if(!checked && idx!==-1) state.autoGeo.levels.splice(idx,1);
+}
+function renderAutoGeoUI(){
+  const srcSel = document.getElementById('autogeo-source');
+  srcSel.innerHTML = EXT_SOURCES.map(([v,l])=>
+    `<option value="${v}" ${v===state.autoGeo.source?'selected':''}>${l}</option>`).join('');
+  document.getElementById('autogeo-levels').innerHTML = GEO_LEVELS.map(([v,l])=>`
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+      <input type="checkbox" ${state.autoGeo.levels.includes(v)?'checked':''}
+             onchange="toggleAutoGeoLevel('${v}',this.checked)">
+      ${l}
+    </label>`).join('');
+}
+
+// ─── Extraction rules ────────────────────────────────────────────────────────
+function addExtraction(){
+  state.extractions.push({from:'adset_name',delimiter:'_',position:0,target:OPT_FIELDS[0][0]});
+  renderExtractions();
+}
+function removeExtraction(i){ state.extractions.splice(i,1); renderExtractions(); }
+function updExt(i,f,v){ state.extractions[i][f]=f==='position'?parseInt(v)||0:v; }
+
+function renderExtractions(){
+  const el=document.getElementById('extractions-list');
+  if(!state.extractions.length){
+    el.innerHTML=`<p style="color:var(--muted);font-size:13px;">Sin reglas. Agrega una para parsear campaign/adset/ad names y rellenar campos opcionales automáticamente.</p>`;
+    return;
+  }
+  el.innerHTML=state.extractions.map((ex,i)=>`
+    <div class="ext-row">
+      <span class="ext-lbl">Desde</span>
+      <select onchange="updExt(${i},'from',this.value)">
+        ${EXT_SOURCES.map(([v,l])=>`<option value="${v}" ${v===ex.from?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <span class="ext-lbl">Separador</span>
+      <input type="text" value="${h(ex.delimiter)}" maxlength="5" oninput="updExt(${i},'delimiter',this.value)">
+      <span class="ext-lbl">Posición</span>
+      <input type="number" value="${ex.position}" min="0" max="20" oninput="updExt(${i},'position',this.value)">
+      <span class="ext-arrow">→</span>
+      <span class="ext-lbl">Campo</span>
+      <select onchange="updExt(${i},'target',this.value)">
+        ${OPT_FIELDS.map(([v,l])=>`<option value="${v}" ${v===ex.target?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <button class="btn btn-outline btn-sm" style="margin-left:auto;color:var(--red);border-color:var(--red);" onclick="removeExtraction(${i})">✕</button>
+    </div>`).join('');
+}
+
+function renderPreview(){
+  // Uses synced state.columns / state.previewData (set by syncActiveSheetToState)
+  const visible=state.columns.filter(c=>c.header!==null);
+  const thRow=visible.map(c=>{
+    const fixed=FIXED_TYPES.has(c.type)||c.type==='__skip';
+    return `<th style="${fixed?'color:var(--muted);':'color:var(--accent);'}" title="${h(c.header??'')}">${h((c.header??'').substring(0,22))}</th>`;
+  }).join('');
+  const visIdx=visible.map(c=>c.index);
+  const dataRows=state.previewData.map(row=>
+    `<tr>${visIdx.map(i=>`<td>${h(String(row[i]??''))}</td>`).join('')}</tr>`
+  ).join('');
+  document.getElementById('preview-container').innerHTML=
+    `<table class="preview-table"><thead><tr>${thRow}</tr></thead><tbody>${dataRows}</tbody></table>`;
+}
+
+function updateGoStep4Btn(){
+  const btn = document.getElementById('btn-go-step4');
+  if(!btn) return;
+  const hasPending = state.selectedSheets.some(name => !state.sheetMappings[name]?.loaded);
+  btn.disabled = hasPending;
+  if(hasPending){
+    btn.style.background  = '#f59e0b';
+    btn.style.color       = '#1a1a1a';
+    btn.style.borderColor = '#f59e0b';
+    btn.style.opacity     = '1';
+    btn.style.cursor      = 'not-allowed';
+    btn.textContent       = '⚠️ Hojas sin revisar';
+  } else {
+    btn.style.background  = '';
+    btn.style.color       = '';
+    btn.style.borderColor = '';
+    btn.style.opacity     = '';
+    btn.style.cursor      = '';
+    btn.textContent       = 'Revisar y aprobar →';
+  }
+}
+
+// ─── Electoral helpers ─────────────────────────────────────────────────────
+function hasElectoralFields(){
+  return state.selectedSheets.some(name => {
+    const sm = state.sheetMappings[name];
+    if(!sm || !sm.loaded) return false;
+    return sm.columns.some(col => {
+      const act = sm.colActions[col.index] || 'skip';
+      const fld = sm.colFields[col.index] || '';
+      return act === 'field' && ELECTORAL_FIELDS.has(fld);
+    });
+  });
+}
+
+// ─── Step 3.5: Electoral context ─────────────────────────────────────────────
+let _s35Dims = null;           // cache dims {dim_candidato, dim_candidatura, ...}
+let _s35ElectoralCols = [];    // [{sheetName, col, field, label, values:[]}]
+
+// Normalización para auto-match: sin acentos, lowercase, sin puntuación
+function normStr(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9\s]/g,'').trim();
+}
+
+// Intenta encontrar candidato en dim_candidato cuyo nombre coincida con `value`
+function autoMatchCandidato(value, candidatos){
+  const vn = normStr(value);
+  if(!vn || vn.length < 2) return null;
+  // Exacto
+  let m = candidatos.find(c => normStr(c.nombre) === vn);
+  if(m) return m;
+  // Contiene el valor completo o viceversa
+  m = candidatos.find(c => { const cn=normStr(c.nombre); return cn.includes(vn)||vn.includes(cn); });
+  if(m) return m;
+  // Coincide alguna palabra ≥4 chars
+  const words = vn.split(/\s+/).filter(w=>w.length>=4);
+  m = candidatos.find(c => { const cn=normStr(c.nombre); return words.some(w=>cn.includes(w)); });
+  return m || null;
+}
+
+async function renderStep35(){
+  document.getElementById('s35-err').innerHTML = '';
+  const badge = document.getElementById('s35-loading-badge');
+  if(badge) badge.style.display='inline';
+  document.getElementById('s35-value-grids').innerHTML =
+    '<div style="color:var(--muted);font-size:12px;padding:4px;">⏳ Cargando dims...</div>';
+
+  // 1. Cargar dims desde API
+  try{
+    const d = await fetch(API+'?action=get_dims').then(r=>r.json());
+    if(d.ok) _s35Dims = d.dims;
+  }catch(e){ console.warn('renderStep35 loadDims:', e.message); }
+
+  // 2. Llenar selects de contexto general
+  const fillSel = (id, items, def) => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    sel.innerHTML = `<option value="">${def}</option>` +
+      (items||[]).map(it=>`<option value="${it.id}">${h(String(it.nombre||''))}</option>`).join('');
+  };
+  // Llenar "Lista de elección" con tipos_eleccion
+  const tipoSel = document.getElementById('s35-candidatura');
+  if(tipoSel){
+    const tipos = _s35Dims?.tipos_eleccion || [];
+    // Agrupar por tipo (mostrar cada tipo una sola vez)
+    const seen = new Set();
+    tipoSel.innerHTML = '<option value="">— Sin especificar —</option>' +
+      tipos.filter(t=>{ if(seen.has(t.tipo)) return false; seen.add(t.tipo); return true; })
+           .map(t=>`<option value="${h(t.tipo)}">${h(t.tipo)}</option>`).join('');
+  }
+
+  // 3. Extraer columnas electorales + valores únicos de previewData
+  _s35ElectoralCols = [];
+  state.selectedSheets.forEach(shName => {
+    const sm = state.sheetMappings[shName];
+    if(!sm || !sm.loaded) return;
+    sm.columns.forEach(col => {
+      const act = sm.colActions[col.index] || 'skip';
+      const fld = sm.colFields[col.index] || '';
+      if(act !== 'field' || !ELECTORAL_FIELDS.has(fld)) return;
+      // Extraer valores únicos del preview
+      const valSet = new Set();
+      (sm.previewData||[]).forEach(row => {
+        const v = String(row[col.index] ?? '').trim();
+        if(v && v.toLowerCase() !== 'null' && v !== '') valSet.add(v);
+      });
+      const label = OPT_FIELDS.find(([v]) => v === fld)?.[1] || fld;
+      _s35ElectoralCols.push({ sheetName:shName, col, field:fld, label, values:[...valSet].sort() });
+    });
+  });
+
+  if(badge) badge.style.display='none';
+
+  // 4. Renderizar grids
+  renderS35ValueGrids();
+}
+
+// Mapa nivel → tipos de elección que contiene
+const NIVEL_TIPOS = {
+  nacional:      ['PRESIDENCIAL', 'SENADO', 'CAMARA'],
+  departamental: ['GOBERNADOR', 'TERRITORIAL'],
+  municipal:     ['ALCALDE', 'TERRITORIAL'],
+  local:         ['ALCALDE'],
+};
+
+// Filtra candidatos según Lista de elección y/o Nivel seleccionados
+function getS35Candidatos(){
+  const tipo  = document.getElementById('s35-candidatura')?.value || '';
+  const nivel = document.getElementById('s35-nivel')?.value || '';
+  const todos = _s35Dims?.dim_candidato || [];
+  const porTipo = _s35Dims?.candidatos_por_tipo || {};
+
+  // IDs válidos según Lista de elección (si seleccionado)
+  let tipoIds = null;
+  if(tipo) {
+    const arr = porTipo[tipo] || [];
+    if(arr.length) tipoIds = new Set(arr);
+  }
+
+  // IDs válidos según Nivel (si seleccionado)
+  let nivelIds = null;
+  if(nivel) {
+    const tipos = NIVEL_TIPOS[nivel] || [];
+    const merged = tipos.flatMap(t => porTipo[t] || []);
+    if(merged.length) nivelIds = new Set(merged);
+  }
+
+  // Sin filtros: mostrar todos
+  if(!tipoIds && !nivelIds) return todos;
+
+  // Intersección de ambos filtros (o uno solo si el otro es null)
+  return todos.filter(c => {
+    const id = Number(c.id);
+    if(tipoIds  && !tipoIds.has(id))  return false;
+    if(nivelIds && !nivelIds.has(id)) return false;
+    return true;
+  });
+}
+
+// Re-renderiza grids cuando cambia Lista de elección o Nivel
+function onS35TipoChange(){
+  renderS35ValueGrids();
+}
+
+function renderS35ValueGrids(){
+  const candidatos = getS35Candidatos();
+  const multiSheet = state.selectedSheets.length > 1;
+
+  if(!_s35ElectoralCols.length){
+    document.getElementById('s35-value-grids').innerHTML =
+      '<p style="color:var(--muted);font-size:12px;padding:4px;">Sin columnas electorales con datos en la vista previa.</p>';
+    return;
+  }
+
+  const html = _s35ElectoralCols.map((ec, gi) => {
+    const { sheetName, col, field, label, values } = ec;
+
+    const rows = values.length ? values.map((val, ri) => {
+      const match = autoMatchCandidato(val, candidatos);
+      const candOpts = `<option value="">— Ignorar —</option>` +
+        candidatos.map(c =>
+          `<option value="${c.id}" ${c.id==match?.id?'selected':''}>${h(c.nombre)}${c.partido?' · '+h(c.partido):''}</option>`
+        ).join('') +
+        `<option value="__nuevo__">➕ Agregar candidato nuevo...</option>`;
+      const pty = match?.partido || '';
+      const ptyHtml = pty
+        ? `<span style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;">${h(pty)}</span>`
+        : '<span style="color:var(--muted);font-size:11px;">—</span>';
+      const autoTag = match
+        ? `<span style="font-size:9px;color:var(--green);margin-left:4px;vertical-align:middle;">✓ auto</span>` : '';
+      return `<tr style="border-top:1px solid var(--border);">
+        <td style="padding:6px 10px;font-size:12px;"><code style="background:var(--bg);padding:2px 6px;border-radius:3px;">${h(val)}</code></td>
+        <td style="padding:4px 8px;">
+          <select class="sel" style="width:100%;font-size:12px;"
+            id="s35-vm-${gi}-${ri}"
+            onchange="onS35CandSelect(this,${gi},${ri})">${candOpts}</select>${autoTag}
+        </td>
+        <td id="s35-vm-pty-${gi}-${ri}" style="padding:4px 10px;">${ptyHtml}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="3" style="padding:10px;font-size:12px;color:var(--muted);">Sin datos en la vista previa para esta columna.</td></tr>`;
+
+    return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+      <div style="background:var(--surface);padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);">
+        <span class="elect-badge" style="font-size:10px;">${h(label)}</span>
+        <code style="font-size:11px;color:var(--muted);">${h(col.header||field)}</code>
+        ${multiSheet?`<span style="color:var(--muted);font-size:11px;">· ${h(sheetName)}</span>`:''}
+        <span style="margin-left:auto;font-size:11px;color:var(--muted);">${values.length} valor${values.length!==1?'es únicos':'único'}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="font-size:10px;color:var(--muted);background:var(--bg);text-transform:uppercase;letter-spacing:.05em;">
+          <th style="padding:5px 10px;text-align:left;font-weight:500;">Respuesta en archivo</th>
+          <th style="padding:5px 8px;text-align:left;font-weight:500;">→ Candidato</th>
+          <th style="padding:5px 10px;text-align:left;font-weight:500;">Partido</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  document.getElementById('s35-value-grids').innerHTML = html;
+}
+
+// Actualiza celda de partido al cambiar candidato en el grid
+function onS35CandSelect(sel, gi, ri){
+  if(sel.value === '__nuevo__'){
+    sel.value = '';
+    openAddCandidatoModal(gi, ri);
+    return;
+  }
+  const candidatos = _s35Dims?.dim_candidato || [];
+  const cand = candidatos.find(c => String(c.id) === sel.value);
+  const ptyEl = document.getElementById(`s35-vm-pty-${gi}-${ri}`);
+  if(!ptyEl) return;
+  ptyEl.innerHTML = cand?.partido
+    ? `<span style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;">${h(cand.partido)}</span>`
+    : '<span style="color:var(--muted);font-size:11px;">—</span>';
+}
+
+// ── Modal: agregar candidato nuevo ───────────────────────────────────────────
+let _addCandTarget = null; // {gi, ri}
+
+function openAddCandidatoModal(gi, ri){
+  _addCandTarget = {gi, ri};
+  const partidos = _s35Dims?.dim_partido || [];
+  const tipo = document.getElementById('s35-candidatura')?.value || '';
+  const anio = (_s35Dims?.tipos_eleccion||[]).find(t=>t.tipo===tipo)?.anio || new Date().getFullYear();
+  const ptOpts = partidos.map(p=>`<option value="${p.id}">${h(p.nombre)}</option>`).join('');
+
+  let modal = document.getElementById('modal-add-cand');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'modal-add-cand';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;width:380px;max-width:95vw;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:16px;">➕ Agregar candidato</div>
+      <div style="display:grid;gap:10px;">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Nombre completo <span style="color:var(--red)">*</span></label>
+          <input id="nc-nombre" type="text" style="width:100%;" placeholder="Ej: Juan Pérez García">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Partido</label>
+          <select id="nc-partido" style="width:100%;"><option value="">— Sin partido —</option>${ptOpts}</select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Espectro político</label>
+          <select id="nc-espectro" style="width:100%;">
+            <option value="">— Sin especificar —</option>
+            <option value="DERECHA">Derecha</option>
+            <option value="CENTRO-DERECHA">Centro-Derecha</option>
+            <option value="CENTRO">Centro</option>
+            <option value="CENTRO-IZQUIERDA">Centro-Izquierda</option>
+            <option value="IZQUIERDA">Izquierda</option>
+            <option value="INDEPENDIENTE">Independiente</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Tipo elección</label>
+            <input id="nc-tipo" type="text" value="${h(tipo)}" style="width:100%;" placeholder="PRESIDENCIAL">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Año</label>
+            <input id="nc-anio" type="number" value="${anio}" style="width:100%;" min="2020" max="2040">
+          </div>
+        </div>
+        <div id="nc-err" style="font-size:12px;color:var(--red);display:none;"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn btn-outline" onclick="document.getElementById('modal-add-cand').style.display='none'">Cancelar</button>
+        <button class="btn btn-primary" id="nc-btn-save" onclick="saveNuevoCandidato()">Guardar</button>
+      </div>
+    </div>`;
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('nc-nombre')?.focus(), 50);
+}
+
+async function saveNuevoCandidato(){
+  const nombre = document.getElementById('nc-nombre')?.value.trim();
+  const partido = document.getElementById('nc-partido')?.value;
+  const tipo = document.getElementById('nc-tipo')?.value.trim();
+  const anio = document.getElementById('nc-anio')?.value;
+  const errEl = document.getElementById('nc-err');
+  if(!nombre){ errEl.style.display=''; errEl.textContent='El nombre es requerido.'; return; }
+
+  const btn = document.getElementById('nc-btn-save');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+
+  const espectro = document.getElementById('nc-espectro')?.value || '';
+  const fd = new FormData();
+  fd.append('nombre', nombre);
+  if(partido)   fd.append('id_partido', partido);
+  if(espectro)  fd.append('espectro', espectro);
+  if(tipo)      fd.append('tipo_eleccion', tipo);
+  if(anio)      fd.append('anio_eleccion', anio);
+
+  try {
+    const d = await fetch(API+'?action=add_candidato', {method:'POST', body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error al guardar');
+
+    // Agregar al cache local
+    const ptNombre = (_s35Dims?.dim_partido||[]).find(p=>String(p.id)===String(partido))?.nombre || '';
+    const newCand = {id: d.id, nombre: d.nombre, partido_id: partido||null, partido: ptNombre, sigla:null};
+    if(!_s35Dims) _s35Dims = {};
+    if(!_s35Dims.dim_candidato) _s35Dims.dim_candidato = [];
+    _s35Dims.dim_candidato.push(newCand);
+    _s35Dims.dim_candidato.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+    // Asignar al select que lo disparó
+    if(_addCandTarget){
+      const {gi, ri} = _addCandTarget;
+      const sel = document.getElementById(`s35-vm-${gi}-${ri}`);
+      if(sel){
+        const opt = document.createElement('option');
+        opt.value = d.id; opt.textContent = d.nombre + (ptNombre?' · '+ptNombre:'');
+        // Insertar antes de la opción __nuevo__
+        const nuevoOpt = [...sel.options].find(o=>o.value==='__nuevo__');
+        sel.insertBefore(opt, nuevoOpt||null);
+        sel.value = String(d.id);
+        onS35CandSelect(sel, gi, ri);
+      }
+    }
+    document.getElementById('modal-add-cand').style.display='none';
+  } catch(e){
+    errEl.style.display=''; errEl.textContent = e.message;
+    btn.disabled=false; btn.textContent='Guardar';
+  }
+}
+
+function proceedFromElectoral(){
+  const tipo  = document.getElementById('s35-tipo').value;
+  const errEl = document.getElementById('s35-err');
+  if(!tipo){
+    errEl.innerHTML = '<div class="alert alert-err">⚠️ Selecciona el tipo de encuesta.</div>';
+    return;
+  }
+  errEl.innerHTML = '';
+
+  // Recopilar value_maps desde el grid: {shName::colIdx → {respuesta: {candidato_id, partido_id}}}
+  const value_maps = {};
+  // col_meta: {shName::colIdx → {field, pregunta}} — para que PHP sepa el tipo y header de cada col
+  const col_meta = {};
+  _s35ElectoralCols.forEach((ec, gi) => {
+    const key = `${ec.sheetName}::${ec.col.index}`;
+    value_maps[key] = {};
+    col_meta[key] = {
+      field:    ec.field,
+      pregunta: ec.col.header ?? `col_${ec.col.index}`,
+    };
+    ec.values.forEach((val, ri) => {
+      const sel = document.getElementById(`s35-vm-${gi}-${ri}`);
+      if(!sel || !sel.value) return;
+      const cand = (_s35Dims?.dim_candidato||[]).find(c => String(c.id) === sel.value);
+      value_maps[key][val] = {
+        candidato_id: parseInt(sel.value),
+        partido_id:   cand?.partido_id || null,
+      };
+    });
+  });
+
+  state.electoralCtx = {
+    tipo_encuesta:     tipo,
+    tipo_eleccion_sel: document.getElementById('s35-candidatura').value || null,
+    nivel:             document.getElementById('s35-nivel').value        || null,
+    value_maps,
+    col_meta,
+  };
+  goStep(4);
+}
+
+// ─── Step 4: Approval ──────────────────────────────────────────────────────
+function goToStep4(){
+  // Sheets summary
+  const shhtml=state.sheets.filter(sh=>state.selectedSheets.includes(sh.name))
+    .map(sh=>{
+      const sm=state.sheetMappings[sh.name];
+      const fieldCnt=sm?Object.values(sm.colActions).filter(v=>v==='field').length:0;
+      const eavCnt  =sm?Object.values(sm.colActions).filter(v=>v==='eav').length:0;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <code>${h(sh.name)}</code>
+        <span style="display:flex;gap:6px;align-items:center;">
+          <span style="color:var(--muted)">${(sh.rows||0).toLocaleString()} filas</span>
+          ${fieldCnt?`<span class="badge badge-green">${fieldCnt} campos</span>`:''}
+          ${eavCnt?`<span class="badge badge-blue">${eavCnt} EAV</span>`:''}
+          ${!sm?.loaded?`<span class="badge badge-yellow">pendiente</span>`:''}
+        </span>
+      </div>`;
+    }).join('');
+  document.getElementById('appr-sheets').innerHTML=shhtml||'—';
+
+  // Fields summary — aggregate from all sheets (by header → field)
+  const fieldMap={};
+  const eavSet=new Set();
+  state.selectedSheets.forEach(name=>{
+    const sm=state.sheetMappings[name];
+    if(!sm||!sm.loaded) return;
+    sm.columns.filter(c=>!FIXED_TYPES.has(c.type)&&c.type!=='__skip'&&c.header!==null).forEach(col=>{
+      const act=sm.colActions[col.index]||'skip';
+      const fld=sm.colFields[col.index]||'';
+      if(act==='field' && fld) fieldMap[col.header??col.index]=fld;
+      if(act==='eav') eavSet.add(col.header??String(col.index));
+    });
+  });
+  document.getElementById('appr-fields').innerHTML=
+    Object.entries(fieldMap).map(([hdr,fld])=>`<div style="font-size:12px;padding:2px 0;"><code>${h(hdr)}</code> → <span style="color:var(--green)">${h(fld)}</span></div>`).join('')
+    || '<span style="color:var(--muted);font-size:12px;">Ninguno</span>';
+
+  const eavRows=[...eavSet].map(hdr=>`<div style="font-size:12px;padding:2px 0;"><code>${h(hdr)}</code> → <span style="color:var(--accent2)">EAV</span></div>`).join('');
+  const extRows=state.extractions.map(ex=>
+    `<div style="font-size:12px;padding:2px 0;"><span style="color:var(--orange)">${h(ex.from)}</span>[${h(ex.delimiter)},${ex.position}] → <span style="color:var(--green)">${h(ex.target)}</span></div>`)
+    .join('');
+  const autoGeoRow = state.autoGeo.enabled && state.autoGeo.levels.length
+    ? `<div style="font-size:12px;padding:2px 0;">🧭 Auto desde <span style="color:var(--orange)">${h(state.autoGeo.source)}</span> → <span style="color:var(--green)">${state.autoGeo.levels.map(h).join(', ')}</span></div>`
+    : '';
+  document.getElementById('appr-eavs-exts').innerHTML=(eavRows+extRows+autoGeoRow)||'<span style="color:var(--muted);font-size:12px;">Ninguno</span>';
+
+  // Resumen de contexto electoral
+  const electoralWrap = document.getElementById('appr-electoral-wrap');
+  if(state.electoralCtx){
+    const ec = state.electoralCtx;
+    // Contar candidatos mapeados en value_maps
+    let mappedCount = 0;
+    Object.values(ec.value_maps||{}).forEach(m => { mappedCount += Object.keys(m).length; });
+    const kv = (label, val) => val
+      ? `<div><div style="font-size:10px;color:var(--muted);font-weight:600;">${label}</div><div style="margin-top:2px;">${h(String(val))}</div></div>`
+      : '';
+    document.getElementById('appr-electoral').innerHTML =
+      kv('Tipo encuesta',    ec.tipo_encuesta) +
+      kv('Lista de elección',ec.candidatura_id) +
+      kv('Nivel',           ec.nivel) +
+      (mappedCount > 0
+        ? `<div><div style="font-size:10px;color:var(--muted);font-weight:600;">Respuestas mapeadas</div><div style="margin-top:2px;"><span class="badge badge-green">${mappedCount} candidatos</span></div></div>` : '');
+    electoralWrap.style.display='block';
+  } else {
+    electoralWrap.style.display='none';
+  }
+
+  // Pre-fill hidden fields
+  document.getElementById('appr-archivo').value=state.file?.name||'';
+  document.getElementById('appr-url-archivo').value='';
+  document.getElementById('appr-url').value='';
+  document.getElementById('appr-notas').value='';
+
+  // Reset result area
+  document.getElementById('appr-result').innerHTML='';
+  document.getElementById('appr-spinner').style.display='none';
+
+  // Deshabilitar "Confirmar" si hay hojas pendientes (sin mapeo cargado)
+  const hasPending = state.selectedSheets.some(name => !state.sheetMappings[name]?.loaded);
+  const btnConfirm = document.getElementById('btn-confirm');
+  btnConfirm.style.display='';
+  btnConfirm.disabled = hasPending;
+  btnConfirm.title = hasPending ? '⚠️ Hay hojas sin mapear — regresa y carga todas las hojas antes de importar' : '';
+  btnConfirm.style.opacity = hasPending ? '0.4' : '';
+  btnConfirm.style.cursor  = hasPending ? 'not-allowed' : '';
+
+  // Routing: si hay campos electorales y aún no se pasó por el step 3.5 → ir a 3.5 primero
+  if(hasElectoralFields() && !state.electoralCtx){
+    renderStep35();
+    goStep(35);
+  } else {
+    goStep(4);
+  }
+}
+
+document.getElementById('btn-confirm').addEventListener('click', async()=>{
+  const btn=document.getElementById('btn-confirm');
+  // Guardia: bloquear si hay hojas pendientes (por si el disabled fue ignorado por caché)
+  if(btn.disabled) return;
+  btn.style.display='none';
+  document.getElementById('appr-spinner').style.display='flex';
+
+  // Build per-sheet mappings {sheetName: {colIndex: 'field'|'__eav'|'__skip'}}
+  const sheetMappingsPayload={};
+  state.selectedSheets.forEach(name=>{
+    const sm=state.sheetMappings[name];
+    if(!sm||!sm.loaded) return;
+    const m={};
+    sm.columns.filter(c=>!FIXED_TYPES.has(c.type)&&c.type!=='__skip'&&c.header!==null).forEach(col=>{
+      const act=sm.colActions[col.index]||'skip';
+      if(act==='skip')  m[col.index]='__skip';
+      else if(act==='eav')  m[col.index]='__eav';
+      else if(act==='field') m[col.index]=sm.colFields[col.index]||'__skip';
+    });
+    sheetMappingsPayload[name]=m;
+  });
+
+  const fd=new FormData();
+  fd.append('temp_id',state.tempId);
+  fd.append('sheets',JSON.stringify(state.selectedSheets));
+  fd.append('archivo',document.getElementById('appr-archivo').value||state.tempId);
+  fd.append('notas',document.getElementById('appr-notas').value);
+  fd.append('url_archivo',document.getElementById('appr-url-archivo').value);
+  fd.append('url_carpeta',document.getElementById('appr-url').value);
+  fd.append('sheet_mappings',JSON.stringify(sheetMappingsPayload));
+  fd.append('extractions',JSON.stringify(state.extractions));
+  fd.append('auto_geo_enabled', state.autoGeo.enabled && state.autoGeo.levels.length ? '1' : '0');
+  fd.append('auto_geo_source', state.autoGeo.source);
+  fd.append('auto_geo_levels', JSON.stringify(state.autoGeo.levels));
+  if(state.electoralCtx) fd.append('electoral_ctx',JSON.stringify(state.electoralCtx));
+
+  try{
+    const d=await fetch(API+'?action=import',{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok)throw new Error(d.error||'Error en la importación');
+    renderImportResults(d);
+    loadLogs(); loadStats();
+  }catch(e){
+    document.getElementById('appr-result').innerHTML=`<div class="alert alert-err">❌ ${h(e.message)}</div>`;
+    btn.style.display='';
+  }finally{
+    document.getElementById('appr-spinner').style.display='none';
+  }
+});
+
+function renderImportResults(d){
+  const res=d.results||[];
+  const totProc   = res.reduce((s,r)=>s+(r.procesadas||0),0);
+  const totIns    = res.reduce((s,r)=>s+(r.insertadas||0),0);
+  const totDupFile= res.reduce((s,r)=>s+(r.dup_file||0),0);
+  const totDupDb  = res.reduce((s,r)=>s+(r.dup_db||0),0);
+  const totDup    = totDupFile + totDupDb;
+  const totErr    = res.reduce((s,r)=>s+(r.errores||0),0);
+
+  const perSheet=res.map(r=>{
+    const dupFile=r.dup_file||0;
+    const dupDb  =r.dup_db||0;
+    const dupTip = [
+      dupFile ? `${dupFile} en archivo` : '',
+      dupDb   ? `${dupDb} en BD` : '',
+    ].filter(Boolean).join(' · ') || '0';
+    return `<tr>
+      <td style="font-family:monospace;font-size:12px;">${h(r.sheet)}</td>
+      <td>${r.ok?'✅':'❌ '+h(r.error||'')}</td>
+      <td>${r.procesadas||0}</td>
+      <td style="color:var(--green);font-weight:700">${r.insertadas||0}</td>
+      <td style="color:${(r.dup_file||0)>0?'var(--orange)':'var(--muted)'};" title="Duplicados dentro del archivo">${dupFile} 📄</td>
+      <td style="color:${(r.dup_db||0)>0?'var(--yellow)':'var(--muted)'};" title="Ya existían en BD">${dupDb} 🗄️</td>
+      <td style="color:${(r.errores||0)>0?'var(--red)':'var(--muted)'}">${r.errores||0}</td>
+      <td style="color:var(--small)">#${r.import_id||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Alerta contextual según tipo de duplicados
+  let dupAlert='';
+  if(totDupFile>0){
+    const pctDup=totProc?Math.round(totDupFile/totProc*100):0;
+    dupAlert+=`<div class="alert alert-warn" style="margin-top:8px;">
+      ⚠️ <strong>${totDupFile} filas duplicadas dentro del archivo (${pctDup}%)</strong> — el Excel tiene registros repetidos con el mismo ID.
+      ${pctDup>=80 ? `<br><span style="font-size:12px;color:var(--yellow);">
+        🔎 <strong>Alta tasa de duplicados:</strong> verifica que la columna mapeada como Lead ID sea la correcta.<br>
+        Posibles causas: (1) columna incorrecta mapeada como ID, (2) IDs de 17+ dígitos con pérdida de precisión en Excel —
+        usa <strong>formato Texto</strong> en la columna de IDs o exporta como CSV.
+      </span>` : ''}
+    </div>`;
+  }
+  if(totDupDb>0)
+    dupAlert+=`<div class="alert alert-info" style="margin-top:8px;">
+      ℹ️ <strong>${totDupDb} leads ya existían en BD</strong> — importados en sesiones anteriores, no se sobreescriben.
+    </div>`;
+  const totNullMeta = res.reduce((s,r)=>s+(r.null_meta||0),0);
+  if(totNullMeta>0)
+    dupAlert+=`<div class="alert alert-warn" style="margin-top:8px;">
+      ⚠️ <strong>${totNullMeta} filas omitidas</strong> — sin IDs Meta Ads (ad_id / campaign_id / form_id). Si es una encuesta externa, verifica que el tipo de import sea <em>Electoral</em>.
+    </div>`;
+
+  document.getElementById('appr-result').innerHTML=`
+    <div class="sep"></div>
+    <div class="stats-row" style="margin-bottom:16px;">
+      <div class="stat-box stat-blue"><div class="val">${totProc}</div><div class="lbl">Filas leídas</div></div>
+      <div class="stat-box stat-green"><div class="val">${totIns}</div><div class="lbl">Nuevos leads</div></div>
+      <div class="stat-box" style="background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.4);">
+        <div class="val" style="color:#fb923c;">${totDupFile}</div><div class="lbl">Dup. archivo</div></div>
+      <div class="stat-box stat-yellow"><div class="val">${totDupDb}</div><div class="lbl">Dup. BD</div></div>
+      <div class="stat-box stat-red"><div class="val">${totErr}</div><div class="lbl">Errores</div></div>
+    </div>
+    <div class="alert alert-ok">✅ <strong>${totIns} leads importados</strong> de ${res.length} hoja${res.length!==1?'s':''} procesadas</div>
+    ${dupAlert}
+    <div style="overflow-x:auto;margin-top:12px;">
+      <table class="log-table">
+        <thead><tr>
+          <th>Hoja</th><th>Estado</th><th>Proc</th><th>Nuevos</th>
+          <th title="Duplicados dentro del archivo">Dup 📄</th>
+          <th title="Ya en BD">Dup 🗄️</th>
+          <th>Err</th><th>Import ID</th>
+        </tr></thead>
+        <tbody>${perSheet}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="resetAll()">+ Nueva importación</button>
+    </div>`;
+}
+
+// ─── History ────────────────────────────────────────────────────────────────
+
+async function confirmResetDB(){
+  const total=document.querySelectorAll('#log-container tbody tr').length;
+  const ok=confirm(
+    `⚠️ LIMPIAR BASE DE DATOS\n\nEsto eliminará:\n• Todos los leads\n• Todo el historial de importaciones (${total} registros visibles)\n• Todas las respuestas EAV\n\n¿Estás seguro? Esta acción NO se puede deshacer.`
+  );
+  if(!ok) return;
+  const ok2=confirm('Confirma una vez más: ¿Eliminar TODOS los datos?');
+  if(!ok2) return;
+  const fd=new FormData();
+  fd.append('confirm','BORRAR_TODO');
+  try{
+    const d=await fetch(API+'?action=reset_db',{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error);
+    alert('✅ '+d.message);
+    loadLogs();
+  }catch(e){
+    alert('❌ Error: '+e.message);
+  }
+}
+
+function renderPipeline(logId, currentEtapa){
+  const curIdx=ETAPAS.findIndex(e=>e.val===currentEtapa);
+  let html='<div class="pipeline" id="pip-'+logId+'">';
+  ETAPAS.forEach((e,i)=>{
+    const done=i<=curIdx;
+    html+=`<div class="pip-dot" style="${done?`background:${e.color};border-color:${e.color};`:''}"
+      onclick="pipClick(${logId},'${e.val}')" title="${e.label}">
+      <span class="tip">${e.label}</span></div>`;
+    if(i<ETAPAS.length-1)
+      html+=`<div class="pip-line${i<curIdx?' done':''}"></div>`;
+  });
+  html+='</div>';
+  return html;
+}
+
+async function pipClick(logId, etapa){
+  const fd=new FormData(); fd.append('id',logId); fd.append('etapa',etapa);
+  try{
+    const d=await fetch(API+'?action=set_etapa',{method:'POST',body:fd}).then(r=>r.json());
+    if(d.ok){
+      const old=document.getElementById('pip-'+logId);
+      if(old){
+        const tmp=document.createElement('div');
+        tmp.innerHTML=renderPipeline(logId,etapa);
+        old.parentNode.replaceChild(tmp.firstChild,old);
+      }
+    }
+  }catch(e){console.error(e);}
+}
+
+async function saveUrl(logId, value){
+  const fd=new FormData(); fd.append('id',logId); fd.append('url',value);
+  try{ await fetch(API+'?action=set_url_carpeta',{method:'POST',body:fd}); }
+  catch(e){console.error(e);}
+}
+
+async function saveUrlArchivo(logId, value){
+  const fd=new FormData(); fd.append('id',logId); fd.append('url',value);
+  try{ await fetch(API+'?action=set_url_archivo',{method:'POST',body:fd}); }
+  catch(e){console.error(e);}
+}
+
+// Convierte ruta local Windows a href válido
+// G:\Mi unidad\archivo.xlsx  →  file:///G:/Mi unidad/archivo.xlsx
+function toFileHref(url){
+  if(!url) return '#';
+  if(/^https?:\/\//i.test(url)) return url;  // ya es URL web
+  // Ruta Windows (C:\, G:\, \\servidor, etc.)
+  let p = url.replace(/\\/g, '/');
+  if(/^[A-Za-z]:\//.test(p)) return 'file:///'+p;
+  if(p.startsWith('//')) return 'file:'+p;
+  return url; // dejar como está si no se reconoce
+}
+
+// Diálogo inline para pegar ruta de archivo y/o carpeta
+async function promptUrl(logId, tipo){
+  if(tipo==='ambos'){
+    const ua = prompt('📄 Ruta del ARCHIVO (local o URL):\nEj: G:\\Mi unidad\\archivo.xlsx\nhttps://drive.google.com/...');
+    if(ua === null) return; // canceló
+    const uc = prompt('📁 Ruta de la CARPETA (local o URL):\nEj: G:\\Mi unidad\\Leads\\');
+    if(uc === null) return;
+    await Promise.all([
+      saveUrlArchivo(logId, ua.trim()),
+      saveUrl(logId, uc.trim()),
+    ]);
+  } else if(tipo==='archivo'){
+    const u = prompt('📄 Ruta del ARCHIVO:\nEj: G:\\Mi unidad\\archivo.xlsx\nhttps://drive.google.com/...');
+    if(u === null || u.trim()==='' ) return;
+    await saveUrlArchivo(logId, u.trim());
+  } else {
+    const u = prompt('📁 Ruta de la CARPETA:\nEj: G:\\Mi unidad\\Leads\\');
+    if(u === null || u.trim()==='') return;
+    await saveUrl(logId, u.trim());
+  }
+  loadLogs(); // refresca para mostrar los íconos activos
+}
+
+async function loadLogs(){
+  const el=document.getElementById('log-container');
+  try{
+    const d=await fetch(API+'?action=logs').then(r=>r.json());
+    if(!d.logs||!d.logs.length){
+      el.innerHTML='<p style="color:var(--muted);font-size:13px;">Sin importaciones previas.</p>'; return;
+    }
+    const rows=d.logs.map(l=>{
+      // Botón eliminar importación
+      const btnDel = `<button onclick="deleteImport(${l.id},'${h(l.archivo)}','${h(l.hoja)}')"
+        title="Eliminar esta importación y sus leads"
+        style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:0 2px;line-height:1;opacity:.7;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">🗑</button>`;
+      const btnEnrich = `<button onclick="enrichImport(${l.id},this)"
+        title="Enriquecer geo/sexo/edad desde adset_name"
+        style="background:none;border:none;cursor:pointer;font-size:13px;padding:0 2px;line-height:1;opacity:.7;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.7">🔁</button>`;
+      const tipoIcon = l.tipo === 'electoral'
+        ? `<span title="Encuesta electoral" style="font-size:13px;">🗳️</span>`
+        : `<span title="Leads" style="font-size:13px;opacity:.35;">📋</span>`;
+      return `<tr>
+        <td style="color:var(--muted);font-size:12px;">${l.id}</td>
+        <td style="text-align:center;">${tipoIcon}</td>
+        <td style="font-family:monospace;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${h(l.archivo)}">${h(l.archivo)}</td>
+        <td style="font-size:12px;">${h(l.hoja)}</td>
+        <td style="font-size:12px;color:var(--muted)">${(l.importado_en||'').replace('T',' ').substring(0,16)}</td>
+        <td style="color:var(--green);font-weight:700">${l.filas_ins}</td>
+        <td style="color:${(l.filas_dup||0)>0?'var(--yellow)':'var(--muted)'}">${l.filas_dup}</td>
+        <td style="color:${(l.filas_err||0)>0?'var(--red)':'var(--muted)'}">${l.filas_err}</td>
+        <td style="font-weight:700">${l.leads_en_bd}</td>
+        <td style="text-align:center;">${btnEnrich}${btnDel}</td>
+      </tr>`;
+    }).join('');
+    el.innerHTML=`<div style="overflow-x:auto;">
+      <table class="log-table" style="white-space:nowrap;">
+        <thead><tr>
+          <th>#</th><th title="Tipo">T</th><th>Archivo</th><th>Hoja</th><th>Fecha</th>
+          <th>Nuevos</th><th>Dup</th><th>Err</th><th>BD</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }catch{
+    el.innerHTML='<p style="color:var(--muted);font-size:13px;">No se pudo cargar el historial.</p>';
+  }
+}
+
+async function enrichImport(importId, btn){
+  const orig = btn.textContent;
+  btn.textContent = '⏳'; btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('import_id', importId);
+    const d = await fetch(API+'?action=enrich_existing', {method:'POST', body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error');
+    btn.title = `✅ ${d.actualizados} actualizados / ${d.revisados} revisados`;
+    btn.textContent = d.actualizados > 0 ? '✅' : '➖';
+    btn.style.opacity = '1';
+    setTimeout(()=>{ btn.textContent=orig; btn.disabled=false; }, 3000);
+  } catch(e) {
+    btn.textContent = '❌'; btn.disabled = false;
+    btn.title = e.message;
+    setTimeout(()=>{ btn.textContent=orig; }, 3000);
+  }
+}
+
+async function deleteImport(id, archivo, hoja){
+  const ok=confirm(`🗑 Eliminar importación #${id}\n\nArchivo: ${archivo}\nHoja: ${hoja}\n\nSe eliminarán los leads y respuestas EAV asociados.\n¿Continuar?`);
+  if(!ok) return;
+  const fd=new FormData(); fd.append('id',id);
+  try{
+    const d=await fetch(API+'?action=delete_import',{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error);
+    loadLogs();
+  }catch(e){
+    alert('❌ Error: '+e.message);
+  }
+}
+
+function resetAll(){
+  state={
+    tempId:null,file:null,sheets:[],
+    importedSheets:{},
+    selectedSheets:[],
+    columns:[],previewData:[],
+    sheetMappings:{},activeMapSheet:'',
+    extractions:[],
+    electoralCtx: null,
+    autoGeo: { enabled:false, source:'adset_name', levels:[] },
+  };
+  fileInput.value='';
+  document.getElementById('file-info').style.display='none';
+  document.getElementById('upload-progress').style.width='0%';
+  goStep(1); loadLogs(); loadStats();
+}
+
+checkDeps();
+loadStats();
+loadLogs();
+</script>
+</body>
+</html>

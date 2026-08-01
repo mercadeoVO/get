@@ -1,0 +1,1278 @@
+{
+  "ALDEA PABLO VI": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "CARPINELO": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "EL COMPROMISO": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "GRANIZAL": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "LA AVANZADA": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "LA ESPERANZA NO.2": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "MOSCÚ NO.2": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "POPULAR": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "SAN PABLO": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "SANTO DOMINGO SAVIO NO.1": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "SANTO DOMINGO SAVIO NO.2": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "VILLA GUADALUPE": {
+    "com": "1 POPULAR",
+    "zona": "NORORIENTAL"
+  },
+  "ANDALUCÍA": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "LA FRANCIA": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "LA FRONTERA": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "LA ISLA": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "LA ROSA": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "MOSCÚ NO.1": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "PABLO VI": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "PLAYÓN DE LOS COMUNEROS": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "SANTA CRUZ": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "VILLA DEL SOCORRO": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "VILLA NIZA": {
+    "com": "2 SANTA CRUZ",
+    "zona": "NORORIENTAL"
+  },
+  "CAMPO VALDÉS NO.2": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "EL POMAR": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "EL RAIZAL": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "LA CRUZ": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "LA SALLE": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "LAS GRANJAS": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "MANRIQUE CENTRAL NO.2": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "MANRIQUE ORIENTAL": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "MARÍA CANO-CARAMBOLAS": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "ORIENTE": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "SAN JOSÉ LA CIMA NO.1": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "SAN JOSÉ LA CIMA NO.2": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "SANTA INÉS": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "VERSALLES NO.1": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "VERSALLES NO.2": {
+    "com": "3 MANRIQUE",
+    "zona": "NORORIENTAL"
+  },
+  "ARANJUEZ": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "BERLÍN": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "BERMEJAL-LOS ÁLAMOS": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "BRASILIA": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "CAMPO VALDÉS NO.1": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "JARDÍN BOTÁNICO": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "LA PIÑUELA": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "LAS ESMERALDAS": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "MANRIQUE CENTRAL NO.1": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "MIRANDA": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "MORAVIA": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "PALERMO": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "PARQUE NORTE": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "SAN ISIDRO": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "SAN PEDRO": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "SEVILLA": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "UNIVERSIDAD DE ANTIOQUIA": {
+    "com": "4 ARANJUEZ",
+    "zona": "NORORIENTAL"
+  },
+  "ALFONSO LÓPEZ": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "BELALCÁZAR": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "BOYACÁ": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "CARIBE": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "CASTILLA": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "CEMENTERIO UNIVERSAL": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "EL PROGRESO": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "FLORENCIA": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "FRANCISCO ANTONIO ZEA": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "GIRARDOT": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "HÉCTOR ABAD GÓMEZ": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "LAS BRISAS": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "OLEODUCTO": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "PLAZA DE FERIAS": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "TEJELO": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "TERMINAL DE TRANSPORTE": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "TOSCANA": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "TRICENTENARIO": {
+    "com": "5 CASTILLA",
+    "zona": "NOROCCIDENTAL"
+  },
+  "DOCE DE OCTUBRE NO.1": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "DOCE DE OCTUBRE NO.2": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "EL TRIUNFO": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "KENNEDY": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "LA ESPERANZA": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "MIRADOR DEL DOCE": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "PEDREGAL": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "PICACHITO": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "PICACHO": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "PROGRESO NO.2": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "SAN MARTÍN DE PORRES": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "SANTANDER": {
+    "com": "6 DOCE DE OCTUBRE",
+    "zona": "NOROCCIDENTAL"
+  },
+  "ALTAMIRA": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "AURES NO.1": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "AURES NO.2": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "B. CERRO EL VOLADOR": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "BELLO HORIZONTE": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "BOSQUES DE SAN PABLO": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "CÓRDOBA": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "CUCARACHO": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "ECOPARQUE CERRO EL VOLADOR": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "EL DIAMANTE": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "FACULTAD DE MINAS": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "FACULTAD DE MINAS U. NACIONAL": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "FACULTAD VETERINARIA Y ZOOTECNIA U.DE.A.": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "FUENTE CLARA": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "LA PILARICA": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "LÓPEZ DE  MESA": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "MONTECLARO": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "NUEVA VILLA DE LA IGUANÁ": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "OLAYA HERRERA": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "PAJARITO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "PALENQUE": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "ROBLEDO": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "SAN GERMÁN": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "SANTA MARGARITA": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "UNIVERSIDAD NACIONAL": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "VILLA FLORA": {
+    "com": "7 ROBLEDO",
+    "zona": "NOROCCIDENTAL"
+  },
+  "BATALLÓN GIRARDOT": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "EL PINAL": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "ENCISO": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "LA LADERA": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "LA LIBERTAD": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "LA MANSIÓN": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "LA SIERRA": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "LAS ESTANCIAS": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "LLANADITAS": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "LOS MANGOS": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "SAN ANTONIO": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "SAN MIGUEL": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "SUCRE": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "TRECE DE NOVIEMBRE": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "VILLA HERMOSA": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "VILLA LILLIAM": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "VILLA TURBAY": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "VILLATINA": {
+    "com": "8 VILLA HERMOSA",
+    "zona": "CENTROORIENTE"
+  },
+  "ALEJANDRO ECHAVARRÍA": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "ASOMADERA NO.1": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "ASOMADERA NO.2": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "ASOMADERA NO.3": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "BARRIO CAICEDO": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "BARRIOS DE JESÚS": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "BOMBONÁ NO.2": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "BUENOS AIRES": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "CATALUÑA": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "EL SALVADOR": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "GERONA": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "JUAN PABLO II": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "LA MILAGROSA": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "LORETO": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "LOS CERROS EL VERGEL": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "MIRAFLORES": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "OCHO DE MARZO": {
+    "com": "9 BUENOS AIRES",
+    "zona": "CENTROORIENTE"
+  },
+  "BARRIO COLÓN": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "BOMBONÁ NO.1": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "BOSTON": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "CALLE NUEVA": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "CENTRO ADMINISTRATIVO": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "CORAZÓN DE JESÚS": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "EL CHAGUALO": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "ESTACIÓN VILLA": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "GUAYAQUIL": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "HOSPITAL SAN VICENTE DE PAÚL": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "JESÚS NAZARENO": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "LA ALPUJARRA": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "LA CANDELARIA": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "LAS PALMAS": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LOS ÁNGELES": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "PERPETUO SOCORRO": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "PRADO": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "SAN BENITO": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "SAN DIEGO": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "VILLA NUEVA": {
+    "com": "10 LA CANDELARIA",
+    "zona": "CENTROORIENTE"
+  },
+  "BATALLÓN CUARTA BRIGADA": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "BOLIVARIANA": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "CARLOS E. RESTREPO": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "CUARTA BRIGADA": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "EL VELÓDROMO": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "ESTADIO": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "FLORIDA NUEVA": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LA CASTELLANA": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LAS ACACIAS": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LAURELES": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LORENA": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LOS COLORES": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LOS CONQUISTADORES": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "NARANJAL": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "SAN JOAQUÍN": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "SURAMERICANA": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "U.D. ATANASIO GIRARDOT": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "U.P.B": {
+    "com": "11 LAURELES",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "BARRIO CRISTÓBAL": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "CALASANZ": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "CALASANZ PARTE ALTA": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "CAMPO ALEGRE": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "EL DANUBIO": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "FERRINI": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LA AMÉRICA": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LA FLORESTA": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LOS PINOS": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "SANTA LUCÍA": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "SANTA MÓNICA": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "SANTA TERESITA": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "SIMÓN BOLÍVAR": {
+    "com": "12 LA AMÉRICA",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "ANTONIO NARIÑO": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "BELENCITO": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "BETANIA": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "BLANQUIZAL": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "EDUARDO SANTOS": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL CORAZÓN": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "EL PESEBRE": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "EL SALADO": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL SOCORRO": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "JUAN XXIII LA QUIEBRA": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LA PRADERA": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LAS INDEPENDENCIAS": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "LOS ALCÁZARES": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "METROPOLITANO": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "NUEVOS CONQUISTADORES": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "SAN JAVIER NO.1": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "SAN JAVIER NO.2": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "SANTA ROSA DE LIMA": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "VEINTE DE JULIO": {
+    "com": "13 SAN JAVIER",
+    "zona": "CENTROOCCIDENTE"
+  },
+  "ALEJANDRÍA": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "ALTOS DEL POBLADO": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "ASTORGA": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "BARRIO COLOMBIA": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "CASTROPOL": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "EL CASTILLO": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "EL DIAMANTE NO.2": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "EL POBLADO": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "EL TESORO": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "LA AGUACATALA": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "LA FLORIDA": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LALINDE": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "LAS LOMAS NO.1": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "LAS LOMAS NO.2": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "LOS BALSOS NO.1": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "LOS BALSOS NO.2": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "LOS NARANJOS": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "MANILA": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "PATIO BONITO": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "SAN LUCAS": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "SANTA MARÍA DE LOS ÁNGELES": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "VILLA CARLOTA": {
+    "com": "14 EL POBLADO",
+    "zona": "SURORIENTE"
+  },
+  "CAMPO AMOR": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "CRISTO REY": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "EL RODEO": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "GUAYABAL": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "LA COLINA": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "PARQUE JUAN PABLO II": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "SANTA FÉ": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "TENCHE": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "TRINIDAD": {
+    "com": "15 GUAYABAL",
+    "zona": "SUROCCIDENTE"
+  },
+  "ALTAVISTA": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "BELÉN": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "CERRO NUTIBARA": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "DIEGO ECHAVARRÍA": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "EL NOGAL-LOS ALMENDROS": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "EL RINCÓN": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "FÁTIMA": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "GRANADA": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "LA GLORIA": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "LA HONDONADA": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "LA LOMA DE LOS BERNAL": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "LA MOTA": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "LA PALMA": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LAS MERCEDES": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "LAS PLAYAS": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LAS VIOLETAS": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "LOS ALPES": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "MIRAVALLE": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "NUEVA VILLA DEL ABURRÁ": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "ROSALES": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "SAN BERNARDO": {
+    "com": "16 BELÉN",
+    "zona": "SUROCCIDENTE"
+  },
+  "LA ALDEA": {
+    "com": "50 PALMITAS",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LA FRISOLA": {
+    "com": "50 PALMITAS",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LA SUCIA": {
+    "com": "50 PALMITAS",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LA SUIZA": {
+    "com": "50 PALMITAS",
+    "zona": "CORREGIMIENTOS"
+  },
+  "PALMITAS SECTOR CENTRAL": {
+    "com": "50 PALMITAS",
+    "zona": "CORREGIMIENTOS"
+  },
+  "POTRERA MISERENGA": {
+    "com": "50 PALMITAS",
+    "zona": "CORREGIMIENTOS"
+  },
+  "URQUITÁ": {
+    "com": "50 PALMITAS",
+    "zona": "CORREGIMIENTOS"
+  },
+  "VOLCANA GUAYABAL": {
+    "com": "50 PALMITAS",
+    "zona": "CORREGIMIENTOS"
+  },
+  "ÁREA DE EXPANSIÓN PAJARITO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "ÁREA DE EXPANSIÓN SAN CRISTÓBAL": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "BOQUERÓN": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "CABECERA URBANA CORREGIMIENTO SAN CRISTÓBAL": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL CARMELO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL LLANO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL PATIO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL PICACHO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL UVITO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LA CUCHILLA": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LA ILUSIÓN": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LA LOMA": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "PEDREGAL ALTO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "SAN JOSÉ DE LA MONTAÑA": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "TRAVESÍAS": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "YOLOMBO": {
+    "com": "60 S.CRISTÓBAL",
+    "zona": "CORREGIMIENTOS"
+  },
+  "AGUAS FRÍAS": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "ALTAVISTA SECTOR CENTRAL": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "ÁREA DE EXPANSIÓN ALTAVISTA": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "ÁREA DE EXPANSIÓN BELÉN RINCÓN": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "ÁREA DE EXPANSIÓN EL NORAL": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "BUGA PATIO BONITO": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL CORAZÓN EL MORRO": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL JARDÍN": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "SAN JOSÉ DEL MANZANILLO": {
+    "com": "70 ALTAVISTA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "ÁREA DE EXPANSIÓN SAN ANTONIO DE PRADO": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL ASTILLERO": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "LA VERDE": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "MONTAÑITA": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "POTRERITO": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "SAN ANTONIO DE PRADO": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "SAN JOSÉ": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "YARUMALITO": {
+    "com": "80 S.ANTONIO",
+    "zona": "CORREGIMIENTOS"
+  },
+  "BARRO BLANCO": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL CERRO": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL LLANO SE": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL PLACER": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "EL PLAN": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "MAZO": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "MEDIA LUNA": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "PIEDRA GORDA": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "PIEDRAS BLANCAS - MATASANO": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  },
+  "SANTA ELENA SECTOR CENTRAL": {
+    "com": "90 S.ELENA",
+    "zona": "CORREGIMIENTOS"
+  }
+}

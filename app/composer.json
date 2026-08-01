@@ -1,0 +1,17 @@
+{
+    "name": "medfut/leads-importer",
+    "description": "MEDFUT – Importador de leads Meta Ads",
+    "require": {
+        "phpoffice/phpspreadsheet": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Medfut\\": "src/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.1"
+        }
+    }
+}

@@ -1,0 +1,333 @@
+﻿codigo_barrio,nombre_barrio,tipo,codigo_comuna,nombre_comuna,tipo_division,municipio,departamento
+0109,Aldea Pablo VI,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0112,Carpinelo,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0108,El Compromiso,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0104,Granizal,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0111,La Avanzada,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0110,La Esperanza No.2,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0105,Moscú No.2,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0103,Popular,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0107,San Pablo,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0101,Santo Domingo Savio No.1,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0102,Santo Domingo Savio No.2,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0106,Villa Guadalupe,Barrio,01,Popular,Comuna,Medellin,Antioquia
+0206,Andalucía,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0205,La Francia,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0204,La Frontera,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0201,La Isla,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0211,La Rosa,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0209,Moscú No.1,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0203,Pablo VI,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0202,Playón de Los Comuneros,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0210,Santa Cruz,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0208,Villa Niza,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0207,Villa del Socorro,Barrio,02,Santa Cruz,Comuna,Medellin,Antioquia
+0303,Campo Valdés No.2,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0306,El Pomar,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0305,El Raizal,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0311,La Cruz,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0301,La Salle,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0302,Las Granjas,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0307,Manrique Central No.2,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0308,Manrique Oriental,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0313,María Cano-Carambolas,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0312,Oriente,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0314,San José La Cima No.1,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0315,San José La Cima No.2,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0304,Santa Inés,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0309,Versalles No.1,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0310,Versalles No.2,Barrio,03,Manrique,Comuna,Medellin,Antioquia
+0413,Aranjuez,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0401,Berlín,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0404,Bermejal-Los Álamos,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0414,Brasilia,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0410,Campo Valdés No.1,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+Inst_10,Jardín Botánico,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0412,La Piñuela,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0411,Las Esmeraldas,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0409,Manrique Central No.1,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0415,Miranda,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0405,Moravia,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0403,Palermo,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+Inst_9,Parque Norte,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0402,San Isidro,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0408,San Pedro,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0407,Sevilla,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+Inst_11,Universidad de Antioquia,Barrio,04,Aranjuez,Comuna,Medellin,Antioquia
+0514,Alfonso López,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0508,Belalcázar,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0505,Boyacá,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0517,Caribe,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0511,Castilla,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+Inst_3,Cementerio Universal,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0519,El Progreso,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0503,Florencia,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0513,Francisco Antonio Zea,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0509,Girardot,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0507,Héctor Abad Gómez,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0502,Las Brisas,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+Inst_2,Oleoducto,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+Inst_1,Plaza de Ferias,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0504,Tejelo,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+Inst_4,Terminal de Transporte,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0501,Toscana,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0510,Tricentenario,Barrio,05,Castilla,Comuna,Medellin,Antioquia
+0602,Doce de Octubre No.1,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0603,Doce de Octubre No.2,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0612,El Triunfo,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0607,Kennedy,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0605,La Esperanza,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0610,Mirador del Doce,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0604,Pedregal,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0609,Picachito,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0608,Picacho,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0611,Progreso No.2,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0606,San Martín de Porres,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0601,Santander,Barrio,06,Doce de Octubre,Comuna,Medellin,Antioquia
+0708,Altamira,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0713,Aures No.1,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0712,Aures No.2,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0702,B. Cerro El Volador,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0714,Bello Horizonte,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0707,Bosques de San Pablo,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0718,Cucaracho,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0709,Córdoba,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+Inst_7,Ecoparque Cerro El Volador,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0711,El Diamante,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+Inst_6,Facultad Veterinaria y Zootecnia U.de.A.,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+Inst_5,Facultad de Minas,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0705,Facultad de Minas U. Nacional,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0719,Fuente Clara,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0706,La Pilarica,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0710,López de  Mesa,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0724,Monteclaro,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0725,Nueva Villa de La Iguaná,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0722,Olaya Herrera,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0723,Pajarito,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0716,Palenque,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0717,Robledo,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0703,San Germán,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0720,Santa Margarita,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+Inst_8,Universidad Nacional,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0715,Villa Flora,Barrio,07,Robledo,Comuna,Medellin,Antioquia
+0805,Batallón Girardot,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0810,El Pinal,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0808,Enciso,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0804,La Ladera,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0812,La Libertad,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0802,La Mansión,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0817,La Sierra,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0815,Las Estancias,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0806,Llanaditas,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0807,Los Mangos,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0814,San Antonio,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0803,San Miguel,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0809,Sucre,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0811,Trece de Noviembre,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0801,Villa Hermosa,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0819,Villa Lilliam,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0816,Villa Turbay,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0813,Villatina,Barrio,08,Villa Hermosa,Comuna,Medellin,Antioquia
+0905,Alejandro Echavarría,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0914,Asomadera No.1,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0915,Asomadera No.2,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0916,Asomadera No.3,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0906,Barrio Caicedo,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0902,Barrios de Jesús,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0903,Bomboná No.2,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0907,Buenos Aires,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0909,Cataluña,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0912,El Salvador,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0911,Gerona,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0901,Juan Pablo II,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0910,La Milagrosa,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0913,Loreto,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0904,Los Cerros El Vergel,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0908,Miraflores,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+0917,Ocho de Marzo,Barrio,09,Buenos Aires,Comuna,Medellin,Antioquia
+1013,Barrio Colón,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1015,Bomboná No.1,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1016,Boston,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1011,Calle Nueva,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+Inst_17,Centro Administrativo,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1008,Corazón de Jesús,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1004,El Chagualo,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1005,Estación Villa,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1007,Guayaquil,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+Inst_12,Hospital San Vicente de Paúl,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1003,Jesús Nazareno,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+Inst_16,La Alpujarra,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1019,La Candelaria,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1014,Las Palmas,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1017,Los Ángeles,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1012,Perpetuo Socorro,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1001,Prado,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1006,San Benito,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1020,San Diego,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+1018,Villa Nueva,Barrio,10,La Candelaria,Comuna,Medellin,Antioquia
+Inst_13,Batallón Cuarta Brigada,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1107,Bolivariana,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1101,Carlos E. Restrepo,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1115,Cuarta Brigada,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1112,El Velódromo,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1113,Estadio,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1117,Florida Nueva,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1110,La Castellana,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1109,Las Acacias,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1108,Laureles,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1111,Lorena,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1114,Los Colores,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1105,Los Conquistadores,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1103,Naranjal,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1104,San Joaquín,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1102,Suramericana,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+Inst_14,U.D. Atanasio Girardot,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+Inst_15,U.P.B,Barrio,11,Laureles-Estadio,Comuna,Medellin,Antioquia
+1210,Barrio Cristóbal,Barrio,12,La America,Comuna,Medellin,Antioquia
+1202,Calasanz,Barrio,12,La America,Comuna,Medellin,Antioquia
+1213,Calasanz Parte Alta,Barrio,12,La America,Comuna,Medellin,Antioquia
+1208,Campo Alegre,Barrio,12,La America,Comuna,Medellin,Antioquia
+1207,El Danubio,Barrio,12,La America,Comuna,Medellin,Antioquia
+1201,Ferrini,Barrio,12,La America,Comuna,Medellin,Antioquia
+1204,La América,Barrio,12,La America,Comuna,Medellin,Antioquia
+1205,La Floresta,Barrio,12,La America,Comuna,Medellin,Antioquia
+1203,Los Pinos,Barrio,12,La America,Comuna,Medellin,Antioquia
+1206,Santa Lucía,Barrio,12,La America,Comuna,Medellin,Antioquia
+1209,Santa Mónica,Barrio,12,La America,Comuna,Medellin,Antioquia
+1212,Santa Teresita,Barrio,12,La America,Comuna,Medellin,Antioquia
+1211,Simón Bolívar,Barrio,12,La America,Comuna,Medellin,Antioquia
+1318,Antonio Nariño,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1311,Belencito,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1312,Betania,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1302,Blanquizal,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1317,Eduardo Santos,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1313,El Corazón,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1301,El Pesebre,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1316,El Salado,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1319,El Socorro,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1307,Juan XXIII La Quiebra,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1306,La Pradera,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1314,Las Independencias,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1304,Los Alcázares,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1305,Metropolitano,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1315,Nuevos Conquistadores,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1309,San Javier No.1,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1308,San Javier No.2,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1303,Santa Rosa de Lima,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1310,Veinte de Julio,Barrio,13,San Javier,Comuna,Medellin,Antioquia
+1416,Alejandría,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1408,Altos del Poblado,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1420,Astorga,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1401,Barrio Colombia,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1404,Castropol,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1414,El Castillo,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1413,El Diamante No.2,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1418,El Poblado,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1409,El Tesoro,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1422,La Aguacatala,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1417,La Florida,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1405,Lalinde,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1406,Las Lomas No.1,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1407,Las Lomas No.2,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1411,Los Balsos No.1,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1415,Los Balsos No.2,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1410,Los Naranjos,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1419,Manila,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1421,Patio Bonito,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1412,San Lucas,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1423,Santa María de Los Ángeles,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1403,Villa Carlota,Barrio,14,El Poblado,Comuna,Medellin,Antioquia
+1507,Campo Amor,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+1509,Cristo Rey,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+Inst_20,El Rodeo,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+1510,Guayabal,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+1511,La Colina,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+Inst_19,Parque Juan Pablo II,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+1504,Santa Fé,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+1502,Tenche,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+1503,Trinidad,Barrio,15,Guayabal,Comuna,Medellin,Antioquia
+1613,Altavista,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1603,Belén,Barrio,16,Belen,Comuna,Medellin,Antioquia
+Inst_18,Cerro Nutibara,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1621,Cerro Nutibara,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1607,Diego Echavarría,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1620,El Nogal-Los Almendros,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1610,El Rincón,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1601,Fátima,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1604,Granada,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1612,La Gloria,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1609,La Hondonada,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1611,La Loma de Los Bernal,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1608,La Mota,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1614,La Palma,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1617,Las Mercedes,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1606,Las Playas,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1616,Las Violetas,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1615,Los Alpes,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1619,Miravalle,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1618,Nueva Villa del Aburrá,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1602,Rosales,Barrio,16,Belen,Comuna,Medellin,Antioquia
+1605,San Bernardo,Barrio,16,Belen,Comuna,Medellin,Antioquia
+5007,La Aldea,Vereda,50,San Sebastian de Palmitas,Corregimiento,Medellin,Antioquia
+5006,La Frisola,Vereda,50,San Sebastian de Palmitas,Corregimiento,Medellin,Antioquia
+5002,La Sucia,Vereda,50,San Sebastian de Palmitas,Corregimiento,Medellin,Antioquia
+5001,La Suiza,Vereda,50,San Sebastian de Palmitas,Corregimiento,Medellin,Antioquia
+5004,Palmitas Sector Central,Vereda,50,San Sebastian de Palmitas,Corregimiento,Medellin,Antioquia
+5008,Potrera Miserenga,Vereda,50,San Sebastian de Palmitas,Corregimiento,Medellin,Antioquia
+5003,Urquitá,Vereda,50,San Sebastian de Palmitas,Corregimiento,Medellin,Antioquia
+5005,Volcana Guayabal,Vereda,50,San Sebastian de Palmitas,Corregimiento,Medellin,Antioquia
+6006,Boquerón,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+AUC1,Cabecera Urbana Corregimiento San Cristóbal,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+AE3,Eduardo Santos,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6010,El Carmelo,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6017,El Llano,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6002,El Patio,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6011,El Picacho,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6003,El Uvito,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6004,La Cuchilla,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6008,La Ilusión,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6014,La Loma,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6001,La Palma,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6015,Las Playas,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6005,Naranjal,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6012,Pajarito,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6013,Pedregal Alto,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6007,San José de La Montaña,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6016,Travesías,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+6009,Yolombo,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+AE1,Área de Expansión Pajarito,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+AE2,Área de Expansión San Cristóbal,Vereda,60,San Cristobal,Corregimiento,Medellin,Antioquia
+7002,Aguas Frías,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+7005,Altavista Sector Central,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+7001,Buga Patio Bonito,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+7003,El Corazón El Morro,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+7008,El Jardín,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+7006,La Esperanza,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+7007,San José del Manzanillo,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+7004,San Pablo,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+AE5,Área de Expansión Altavista,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+AE6,Área de Expansión Belén Rincón,Vereda,70,Altavista,Corregimiento,Medellin,Antioquia
+AE4,Área de Expansión El Noral,Barrio,70,Altavista,Corregimiento,Medellin,Antioquia
+8005,El Astillero,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+8006,El Salado,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+8001,La Florida,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+8007,La Verde,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+8003,Montañita,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+8002,Potrerito,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+AUC2,San Antonio de Prado,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+8008,San José,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+8004,Yarumalito,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+AE7,Área de Expansión San Antonio de Prado,Vereda,80,San Antonio de Prado,Corregimiento,Medellin,Antioquia
+9004,Barro Blanco,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9007,El Cerro,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9008,El Llano SE,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9005,El Placer,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9009,El Plan,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9001,Las Palmas,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9011,Mazo,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9002,Media Luna,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9010,Piedra Gorda,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9003,Piedras Blancas - Matasano,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+9006,Santa Elena Sector Central,Vereda,90,Santa Elena,Corregimiento,Medellin,Antioquia
+SN01,Sin Nombre,Barrio,SN01,Sin Asignar,Sin Asignar,Medellin,Antioquia
+SN02,Sin Nombre,Vereda,SN02,Sin Asignar,Sin Asignar,Medellin,Antioquia

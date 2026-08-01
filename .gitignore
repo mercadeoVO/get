@@ -1,0 +1,20 @@
+# ── MEDFUT (app/) ──────────────────────────────────────────────
+# Excel subidos durante importación — transitorio, no versionar
+app/tmp/
+# Dependencias PHP — reinstalar con `composer install`
+app/vendor/
+# Binario de la herramienta, no una dependencia
+app/composer.phar
+app/__pycache__/
+
+# ── C98_GEO (geo/) ─────────────────────────────────────────────
+# Descargas crudas de fuentes externas (DANE MGN2025) — 382 MB, reproducibles.
+# URLs y proceso documentados en geo/docs/diccionario_datos.md sección 5-bis.
+geo/data_dane/
+
+# ── Config local de Claude Code (específica de esta máquina) ────
+**/.claude/settings.local.json
+
+# ── Sistema ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

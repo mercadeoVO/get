@@ -1,0 +1,333 @@
+﻿codigo,nombre,localidad,Abelardo,Cepeda,Fajardo,Paloma,Total_votos,Ganador,Pct_ganador,Fuente
+0101,Santo Domingo Savio No.1,Popular,6078,4419,916,1032,13648,Abelardo,44.5,directo
+0102,Santo Domingo Savio No.2,Popular,911,1515,212,142,3057,Cepeda,49.6,directo
+0103,Popular,Popular,3094,2918,647,491,8653,Abelardo,35.8,directo
+0104,Granizal,Popular,2649,2815,577,400,7050,Cepeda,39.9,directo
+0105,,,,,,,,Cepeda,39.9,interpolado
+0106,Villa Guadalupe,Popular,3799,2265,617,739,7998,Abelardo,47.5,directo
+0107,San Pablo,Popular,2362,1436,358,458,5048,Abelardo,46.8,directo
+0108,,,,,,,,Abelardo,46.8,interpolado
+0109,,,,,,,,Cepeda,42.9,interpolado
+0110,La Esperanza No.2,Popular,1787,1644,287,433,4551,Abelardo,39.3,directo
+0111,La Avanzada,Popular,326,425,66,93,1031,Cepeda,41.2,directo
+0112,Carpinelo,Popular,435,565,62,114,1317,Cepeda,42.9,directo
+0201,,,,,,,,Abelardo,35.8,interpolado
+0202,,,,,,,,Abelardo,44.1,interpolado
+0203,,,,,,,,Abelardo,44.1,interpolado
+0204,La Frontera,Santa Cruz,4729,3451,973,826,10720,Abelardo,44.1,directo
+0205,,,,,,,,Abelardo,43.6,interpolado
+0206,Andalucía,Santa Cruz,3745,2987,684,585,8581,Abelardo,43.6,directo
+0207,Villa del Socorro,Santa Cruz,2248,1545,346,365,4930,Abelardo,45.6,directo
+0208,,,,,,,,Abelardo,43.6,interpolado
+0209,Moscú No.1,Santa Cruz,5624,3808,1046,859,12145,Abelardo,46.3,directo
+0210,,,,,,,,Abelardo,46.3,interpolado
+0211,La Rosa,Santa Cruz,2823,2027,474,384,6092,Abelardo,46.3,directo
+0301,La Salle,Manrique,4817,3197,836,704,10121,Abelardo,47.6,directo
+0302,Las Granjas,Manrique,4079,2790,724,801,9115,Abelardo,44.8,directo
+0303,,,,,,,,Abelardo,48.7,interpolado
+0304,Santa Inés,Manrique,3479,2495,660,508,7694,Abelardo,45.2,directo
+0305,El Raizal,Manrique,2884,3171,614,473,7741,Cepeda,41.0,directo
+0306,El Pomar,Manrique,5477,3265,1121,841,11245,Abelardo,48.7,directo
+0307,,,,,,,,Abelardo,52.4,interpolado
+0308,Manrique Oriental,Manrique,5145,2365,759,923,9813,Abelardo,52.4,directo
+0309,Versalles No.1,Manrique,3867,2869,700,597,8655,Abelardo,44.7,directo
+0310,,,,,,,,Abelardo,44.7,interpolado
+0311,,,,,,,,Cepeda,43.5,interpolado
+0312,Oriente,Manrique,378,478,54,68,1099,Cepeda,43.5,directo
+0313,,,,,,,,Cepeda,42.9,interpolado
+0314,,,,,,,,Abelardo,46.8,interpolado
+0315,,,,,,,,Abelardo,44.8,interpolado
+0401,Berlín,Aranjuez,4753,1864,677,787,8496,Abelardo,55.9,directo
+0402,San Isidro,Aranjuez,4742,2910,914,633,9707,Abelardo,48.9,directo
+0403,Palermo,Aranjuez,544,497,118,59,1286,Abelardo,42.3,directo
+0404,,,,,,,,Cepeda,43.2,interpolado
+0405,Moravia,Aranjuez,1612,1872,313,244,4330,Cepeda,43.2,directo
+0407,Sevilla,Aranjuez,3159,3234,824,491,8083,Cepeda,40.0,directo
+0408,,,,,,,,Cepeda,40.0,interpolado
+0409,Manrique Central No.1,Aranjuez,2826,1619,538,414,5648,Abelardo,50.0,directo
+0410,Campo Valdés No.1,Aranjuez,7345,3790,1324,1094,14222,Abelardo,51.6,directo
+0411,,,,,,,,Abelardo,51.6,interpolado
+0412,,,,,,,,Abelardo,51.6,interpolado
+0413,Aranjuez,Aranjuez,4888,2506,824,693,9314,Abelardo,52.5,directo
+0414,,,,,,,,Abelardo,51.6,interpolado
+0415,Miranda,Aranjuez,6093,3598,973,936,12329,Abelardo,49.4,directo
+0501,Toscana,Castilla,873,683,192,116,1971,Abelardo,44.3,directo
+0502,,,,,,,,Abelardo,44.3,interpolado
+0503,,,,,,,,Abelardo,55.7,interpolado
+0504,Tejelo,Castilla,6353,2716,1141,765,11402,Abelardo,55.7,directo
+0505,Boyacá,Castilla,4736,1498,647,624,7753,Abelardo,61.1,directo
+0507,Héctor Abad Gómez,Castilla,3564,2059,739,399,7131,Abelardo,50.0,directo
+0508,,,,,,,,Abelardo,50.2,interpolado
+0509,Girardot,Castilla,5463,3226,1056,707,11008,Abelardo,49.6,directo
+0510,Tricentenario,Castilla,2841,2030,672,404,6205,Abelardo,45.8,directo
+0511,,,,,,,,Abelardo,45.8,interpolado
+0513,Francisco Antonio Zea,Castilla,4979,2385,825,777,9453,Abelardo,52.7,directo
+0514,Alfonso López,Castilla,6528,3321,1127,932,12533,Abelardo,52.1,directo
+0517,,,,,,,,Abelardo,40.8,interpolado
+0519,,,,,,,,Abelardo,40.8,interpolado
+0601,Santander,Doce de Octubre,6290,2932,952,1059,11843,Abelardo,53.1,directo
+0602,Doce de Octubre No.1,Doce de Octubre,3225,1983,519,522,6729,Abelardo,47.9,directo
+0603,Doce de Octubre No.2,Doce de Octubre,4280,2769,985,624,9177,Abelardo,46.6,directo
+0604,Pedregal,Doce de Octubre,9378,4689,1647,1268,17890,Abelardo,52.4,directo
+0605,La Esperanza,Doce de Octubre,1222,845,257,158,2628,Abelardo,46.5,directo
+0606,San Martín de Porres,Doce de Octubre,2362,1137,366,389,4490,Abelardo,52.6,directo
+0607,Kennedy,Doce de Octubre,7740,3864,1260,1277,15016,Abelardo,51.5,directo
+0608,Picacho,Doce de Octubre,1556,1319,338,248,3656,Abelardo,42.6,directo
+0609,,,,,,,,Abelardo,42.6,interpolado
+0610,,,,,,,,Abelardo,46.6,interpolado
+0611,,,,,,,,Abelardo,47.9,interpolado
+0612,,,,,,,,Abelardo,47.9,interpolado
+0702,,,,,,,,Abelardo,52.4,interpolado
+0703,San Germán,Robledo,2027,950,422,329,3871,Abelardo,52.4,directo
+0705,,,,,,,,Abelardo,40.2,interpolado
+0706,,,,,,,,Abelardo,52.9,interpolado
+0707,,,,,,,,Abelardo,52.9,interpolado
+0708,Altamira,Robledo,7821,3693,1676,1129,14782,Abelardo,52.9,directo
+0709,,,,,,,,Abelardo,52.1,interpolado
+0710,,,,,,,,Abelardo,51.5,interpolado
+0711,El Diamante,Robledo,6110,3124,1103,834,11735,Abelardo,52.1,directo
+0712,Aures No.2,Robledo,1750,1269,370,257,3967,Abelardo,44.1,directo
+0713,Aures No.1,Robledo,7405,4483,1413,995,15181,Abelardo,48.8,directo
+0714,,,,,,,,Abelardo,52.1,interpolado
+0715,,,,,,,,Abelardo,40.2,interpolado
+0716,Palenque,Robledo,4375,2955,1091,509,9319,Abelardo,46.9,directo
+0717,Robledo,Robledo,6145,2871,913,859,11282,Abelardo,54.5,directo
+0718,,,,,,,,Abelardo,43.8,interpolado
+0719,Fuente Clara,Robledo,1090,831,249,149,2491,Abelardo,43.8,directo
+0720,Santa Margarita,Robledo,2133,1585,374,379,4898,Abelardo,43.5,directo
+0722,Olaya Herrera,Robledo,419,505,106,82,1242,Cepeda,40.7,directo
+0723,,,,,,,,Abelardo,43.8,interpolado
+0724,,,,,,,,Abelardo,48.8,interpolado
+0725,,,,,,,,Abelardo,54.9,interpolado
+0801,Villa Hermosa,Villa Hermosa,3532,1312,496,467,6018,Abelardo,58.7,directo
+0802,La Mansión,Villa Hermosa,2273,1172,413,285,4287,Abelardo,53.0,directo
+0803,San Miguel,Villa Hermosa,1928,685,285,305,3324,Abelardo,58.0,directo
+0804,La Ladera,Villa Hermosa,882,724,205,86,1989,Abelardo,44.3,directo
+0805,,,,,,,,Abelardo,58.7,interpolado
+0806,,,,,,,,Cepeda,42.2,interpolado
+0807,Los Mangos,Villa Hermosa,2578,2849,485,366,6746,Cepeda,42.2,directo
+0808,Enciso,Villa Hermosa,5574,3166,750,983,11207,Abelardo,49.7,directo
+0809,Sucre,Villa Hermosa,1012,1017,267,130,2554,Cepeda,39.8,directo
+0810,El Pinal,Villa Hermosa,2414,1614,409,398,5186,Abelardo,46.5,directo
+0811,Trece de Noviembre,Villa Hermosa,621,788,121,105,1781,Cepeda,44.2,directo
+0812,,,,,,,,Abelardo,46.5,interpolado
+0813,Villatina,Villa Hermosa,5189,3296,699,874,10891,Abelardo,47.6,directo
+0814,,,,,,,,Abelardo,47.6,interpolado
+0815,,,,,,,,Cepeda,43.1,interpolado
+0816,Villa Turbay,Villa Hermosa,919,972,181,212,2566,Cepeda,37.9,directo
+0817,,,,,,,,Cepeda,37.9,interpolado
+0819,Villa Lilliam,Villa Hermosa,300,348,53,37,808,Cepeda,43.1,directo
+0901,,,,,,,,Cepeda,37.9,interpolado
+0902,Barrios de Jesús,Buenos Aires,817,811,163,115,2051,Abelardo,39.8,directo
+0903,Bomboná No.2,Buenos Aires,3571,2030,661,532,7120,Abelardo,50.2,directo
+0904,Los Cerros El Vergel,Buenos Aires,3858,1830,641,614,7312,Abelardo,52.8,directo
+0905,Alejandro Echavarría,Buenos Aires,1433,1079,266,179,3109,Abelardo,46.1,directo
+0906,Barrio Caicedo,Buenos Aires,2817,1745,477,366,5701,Abelardo,49.4,directo
+0907,Buenos Aires,Buenos Aires,8301,3249,1377,1146,14564,Abelardo,57.0,directo
+0908,Miraflores,Buenos Aires,732,817,237,81,1956,Cepeda,41.8,directo
+0909,Cataluña,Buenos Aires,1297,795,307,169,2682,Abelardo,48.4,directo
+0910,La Milagrosa,Buenos Aires,10080,4473,1706,1328,18360,Abelardo,54.9,directo
+0911,,,,,,,,Abelardo,55.6,interpolado
+0912,El Salvador,Buenos Aires,4760,2073,777,613,8566,Abelardo,55.6,directo
+0913,Loreto,Buenos Aires,3391,1936,613,482,6802,Abelardo,49.9,directo
+0914,,,,,,,,Abelardo,66.9,interpolado
+0915,,,,,,,,Abelardo,49.9,interpolado
+0916,,,,,,,,Abelardo,49.9,interpolado
+0917,,,,,,,,Abelardo,39.8,interpolado
+1001,,,,,,,,Abelardo,53.0,interpolado
+1003,Jesús Nazareno,La Candelaria,3965,2252,531,744,7797,Abelardo,50.9,directo
+1004,El Chagualo,La Candelaria,464,1092,327,94,2050,Cepeda,53.3,directo
+1005,,,,,,,,Abelardo,54.8,interpolado
+1006,San Benito,La Candelaria,2015,988,189,310,3677,Abelardo,54.8,directo
+1007,,,,,,,,Abelardo,56.1,interpolado
+1008,,,,,,,,Abelardo,58.8,interpolado
+1011,,,,,,,,Abelardo,56.1,interpolado
+1012,,,,,,,,Abelardo,66.9,interpolado
+1013,,,,,,,,Abelardo,56.1,interpolado
+1014,,,,,,,,Abelardo,55.6,interpolado
+1015,,,,,,,,Abelardo,55.6,interpolado
+1016,Boston,La Candelaria,15850,8864,2334,2811,30877,Abelardo,51.3,directo
+1017,Los Ángeles,La Candelaria,1291,625,140,239,2373,Abelardo,54.4,directo
+1018,,,,,,,,Abelardo,54.4,interpolado
+1019,,,,,,,,Abelardo,54.8,interpolado
+1020,San Diego,La Candelaria,6737,1360,635,1174,10076,Abelardo,66.9,directo
+1101,Carlos E. Restrepo,Laureles Estadio,3624,1457,617,746,6603,Abelardo,54.9,directo
+1102,Suramericana,Laureles Estadio,5495,1878,872,868,9348,Abelardo,58.8,directo
+1103,,,,,,,,Abelardo,58.8,interpolado
+1104,San Joaquín,Laureles Estadio,5649,1062,641,876,8378,Abelardo,67.4,directo
+1105,,,,,,,,Abelardo,67.4,interpolado
+1107,,,,,,,,Abelardo,56.7,interpolado
+1108,Laureles,Laureles Estadio,4169,710,579,693,6255,Abelardo,66.7,directo
+1109,,,,,,,,Abelardo,66.7,interpolado
+1110,La Castellana,Laureles Estadio,3539,753,569,400,5378,Abelardo,65.8,directo
+1111,Lorena,Laureles Estadio,7601,848,540,1200,10351,Abelardo,73.4,directo
+1112,El Velódromo,Laureles Estadio,7481,1677,881,1110,11360,Abelardo,65.9,directo
+1113,,,,,,,,Abelardo,65.9,interpolado
+1114,Los Colores,Laureles Estadio,5446,1385,1027,742,8752,Abelardo,62.2,directo
+1115,Cuarta Brigada,Laureles Estadio,169,89,20,17,304,Abelardo,55.6,directo
+1117,,,,,,,,Abelardo,65.9,interpolado
+1201,Ferrini,La América,3225,1285,453,512,5733,Abelardo,56.3,directo
+1202,Calasanz,La América,3033,1356,722,400,5675,Abelardo,53.4,directo
+1203,,,,,,,,Abelardo,51.8,interpolado
+1204,La América,La América,1231,458,307,200,2377,Abelardo,51.8,directo
+1205,La Floresta,La América,10786,3253,1615,1746,17867,Abelardo,60.4,directo
+1206,Santa Lucía,La América,6841,2370,1135,872,11619,Abelardo,58.9,directo
+1207,,,,,,,,Abelardo,58.9,interpolado
+1208,Campo Alegre,La América,1269,813,303,186,2664,Abelardo,47.6,directo
+1209,Santa Mónica,La América,1509,633,349,232,2805,Abelardo,53.8,directo
+1210,Barrio Cristóbal,La América,9955,2337,1371,1318,15284,Abelardo,65.1,directo
+1211,Simón Bolívar,La América,2734,637,507,334,4310,Abelardo,63.4,directo
+1212,Santa Teresita,La América,3570,690,301,538,5186,Abelardo,68.8,directo
+1213,,,,,,,,Abelardo,60.4,interpolado
+1301,,,,,,,,Abelardo,54.5,interpolado
+1302,Blanquizal,San Javier,1510,1514,256,261,3830,Cepeda,39.5,directo
+1303,Santa Rosa de Lima,San Javier,2516,874,271,337,4165,Abelardo,60.4,directo
+1304,,,,,,,,Abelardo,58.9,interpolado
+1305,,,,,,,,Abelardo,60.4,interpolado
+1306,La Pradera,San Javier,1707,1302,389,209,3808,Abelardo,44.8,directo
+1307,Juan XXIII La Quiebra,San Javier,581,509,122,105,1421,Abelardo,40.9,directo
+1308,,,,,,,,Abelardo,54.3,interpolado
+1309,San Javier No.1,San Javier,10305,4573,1568,1607,18969,Abelardo,54.3,directo
+1310,Veinte de Julio,San Javier,4883,3044,801,924,10397,Abelardo,47.0,directo
+1311,,,,,,,,Abelardo,53.8,interpolado
+1312,,,,,,,,Abelardo,68.8,interpolado
+1313,El Corazón,San Javier,4280,2076,624,594,8156,Abelardo,52.5,directo
+1314,,,,,,,,Abelardo,47.0,interpolado
+1315,,,,,,,,Abelardo,52.5,interpolado
+1316,,,,,,,,Abelardo,45.8,interpolado
+1317,Eduardo Santos,San Javier,1522,1070,295,240,3322,Abelardo,45.8,directo
+1318,Antonio Nariño,San Javier,1366,1245,384,156,3405,Abelardo,40.1,directo
+1319,El Socorro,San Javier,2393,725,230,321,3871,Abelardo,61.8,directo
+1401,,,,,,,,Abelardo,66.9,interpolado
+1403,,,,,,,,Abelardo,65.6,interpolado
+1404,,,,,,,,Abelardo,65.6,interpolado
+1405,,,,,,,,Abelardo,65.6,interpolado
+1406,,,,,,,,Abelardo,79.0,interpolado
+1407,,,,,,,,Abelardo,79.0,interpolado
+1408,,,,,,,,Abelardo,79.0,interpolado
+1409,El Tesoro,El Poblado,9394,410,594,1428,11892,Abelardo,79.0,directo
+1410,,,,,,,,Abelardo,79.0,interpolado
+1411,,,,,,,,Abelardo,78.3,interpolado
+1412,San Lucas,El Poblado,4430,240,301,654,5656,Abelardo,78.3,directo
+1413,,,,,,,,Abelardo,78.9,interpolado
+1414,El Castillo,El Poblado,6210,309,282,1017,7867,Abelardo,78.9,directo
+1415,,,,,,,,Abelardo,78.9,interpolado
+1416,,,,,,,,Abelardo,72.3,interpolado
+1417,,,,,,,,Abelardo,65.6,interpolado
+1418,,,,,,,,Abelardo,65.6,interpolado
+1419,,,,,,,,Abelardo,65.6,interpolado
+1420,Astorga,El Poblado,1399,209,186,310,2131,Abelardo,65.6,directo
+1421,Patio Bonito,El Poblado,12659,2139,1636,2357,19037,Abelardo,66.5,directo
+1422,La Aguacatala,El Poblado,14331,1134,1417,2778,19821,Abelardo,72.3,directo
+1423,,,,,,,,Abelardo,72.3,interpolado
+1502,,,,,,,,Abelardo,60.3,interpolado
+1503,Trinidad,Guayabal,6494,2040,923,933,10766,Abelardo,60.3,directo
+1504,,,,,,,,Abelardo,60.3,interpolado
+1507,Campo Amor,Guayabal,3570,1066,654,421,5895,Abelardo,60.6,directo
+1509,Cristo Rey,Guayabal,5744,1692,844,793,9339,Abelardo,61.5,directo
+1510,,,,,,,,Abelardo,57.5,interpolado
+1511,La Colina,Guayabal,6526,2372,1049,1017,11354,Abelardo,57.5,directo
+1601,Fátima,Belén,7707,1453,870,1114,11368,Abelardo,67.8,directo
+1602,Rosales,Belén,1922,686,437,331,3455,Abelardo,55.6,directo
+1603,Belén,Belén,6235,2163,1171,857,10714,Abelardo,58.2,directo
+1604,Granada,Belén,1647,532,350,219,2796,Abelardo,58.9,directo
+1605,San Bernardo,Belén,3904,1206,563,476,6330,Abelardo,61.7,directo
+1606,Las Playas,Belén,14569,3334,2118,1742,22194,Abelardo,65.6,directo
+1607,,,,,,,,Abelardo,65.6,interpolado
+1608,,,,,,,,Abelardo,55.0,interpolado
+1609,La Hondonada,Belén,2046,781,441,274,3684,Abelardo,55.5,directo
+1610,El Rincón,Belén,6531,2772,1022,832,11865,Abelardo,55.0,directo
+1611,,,,,,,,Abelardo,68.5,interpolado
+1612,La Gloria,Belén,5675,883,757,837,8284,Abelardo,68.5,directo
+1613,Altavista,Belén,4729,1197,769,561,7445,Abelardo,63.5,directo
+1614,La Palma,Belén,4721,1229,503,657,7351,Abelardo,64.2,directo
+1615,,,,,,,,Abelardo,64.2,interpolado
+1616,Las Violetas,Belén,8380,2475,1194,1214,13835,Abelardo,60.6,directo
+1617,Las Mercedes,Belén,6299,2190,1173,817,10813,Abelardo,58.3,directo
+1618,,,,,,,,Abelardo,58.2,interpolado
+1619,,,,,,,,Abelardo,58.2,interpolado
+1620,El Nogal-Los Almendros,Belén,7575,1322,661,1163,10925,Abelardo,69.3,directo
+1621,,,,,,,,Abelardo,67.8,interpolado
+5001,,,,,,,,Abelardo,55.4,interpolado
+5002,,,,,,,,Abelardo,55.4,interpolado
+5003,,,,,,,,Abelardo,55.4,interpolado
+5004,Palmitas Sector Central,Corregimiento de San Sebastián de Palmitas,914,339,93,175,1649,Abelardo,55.4,directo
+5005,,,,,,,,Abelardo,55.4,interpolado
+5006,,,,,,,,Abelardo,55.4,interpolado
+5007,,,,,,,,Abelardo,55.4,interpolado
+5008,,,,,,,,Abelardo,55.4,interpolado
+6001,,,,,,,,Abelardo,45.8,interpolado
+6002,,,,,,,,Abelardo,45.8,interpolado
+6003,,,,,,,,Abelardo,45.8,interpolado
+6004,,,,,,,,Abelardo,55.4,interpolado
+6005,,,,,,,,Abelardo,55.4,interpolado
+6006,,,,,,,,Abelardo,55.4,interpolado
+6007,,,,,,,,Abelardo,43.5,interpolado
+6008,,,,,,,,Abelardo,43.5,interpolado
+6009,,,,,,,,Abelardo,48.8,interpolado
+6010,,,,,,,,Abelardo,44.1,interpolado
+6011,,,,,,,,Abelardo,42.6,interpolado
+6012,,,,,,,,Abelardo,48.8,interpolado
+6013,,,,,,,,Abelardo,43.5,interpolado
+6014,,,,,,,,Abelardo,45.8,interpolado
+6015,,,,,,,,Abelardo,45.8,interpolado
+6016,,,,,,,,Abelardo,43.5,interpolado
+6017,,,,,,,,Abelardo,43.5,interpolado
+7001,,,,,,,,Abelardo,47.8,interpolado
+7002,,,,,,,,Abelardo,49.5,interpolado
+7003,El Corazón El Morro,Corregimiento de Altavista,109,60,17,22,220,Abelardo,49.5,directo
+7004,San Pablo,Corregimiento de Altavista,250,116,19,51,468,Abelardo,53.4,directo
+7005,Altavista Sector Central,Corregimiento de Altavista,2546,1656,372,357,5331,Abelardo,47.8,directo
+7006,,,,,,,,Abelardo,47.8,interpolado
+7007,San José del Manzanillo,Corregimiento de Altavista,553,146,62,76,876,Abelardo,63.1,directo
+7008,,,,,,,,Abelardo,63.1,interpolado
+8001,,,,,,,,Abelardo,41.2,interpolado
+8002,,,,,,,,Abelardo,41.2,interpolado
+8003,,,,,,,,Abelardo,41.2,interpolado
+8004,,,,,,,,Abelardo,49.5,interpolado
+8005,,,,,,,,Abelardo,49.5,interpolado
+8006,,,,,,,,Abelardo,41.2,interpolado
+8007,,,,,,,,Abelardo,41.2,interpolado
+8008,,,,,,,,Abelardo,41.2,interpolado
+9001,Las Palmas,Corregimiento de Santa Elena,1425,82,105,171,1803,Abelardo,79.0,directo
+9002,Media Luna,Corregimiento de Santa Elena,100,35,11,15,165,Abelardo,60.6,directo
+9003,,,,,,,,Cepeda,43.5,interpolado
+9004,Barro Blanco,Corregimiento de Santa Elena,205,134,44,40,428,Abelardo,47.9,directo
+9005,,,,,,,,Abelardo,50.2,interpolado
+9006,Santa Elena Sector Central,Corregimiento de Santa Elena,2803,1473,499,577,5585,Abelardo,50.2,directo
+9007,,,,,,,,Abelardo,50.2,interpolado
+9008,,,,,,,,Abelardo,50.2,interpolado
+9009,,,,,,,,Abelardo,79.0,interpolado
+9010,,,,,,,,Abelardo,47.9,interpolado
+9011,,,,,,,,Abelardo,60.6,interpolado
+AE1,,,,,,,,Abelardo,43.5,interpolado
+AE2,,,,,,,,Abelardo,60.4,interpolado
+AE3,,,,,,,,Abelardo,45.8,interpolado
+AE4,,,,,,,,Abelardo,65.8,interpolado
+AE5,,,,,,,,Abelardo,63.5,interpolado
+AE6,,,,,,,,Abelardo,55.0,interpolado
+AE7,,,,,,,,Abelardo,41.2,interpolado
+AUC1,,,,,,,,Abelardo,43.5,interpolado
+AUC2,San Antonio de Prado,Corregimiento de San Antonio de Prado,2302,2031,459,378,5583,Abelardo,41.2,directo
+Inst_1,Plaza de Ferias,Castilla,1082,660,174,118,2155,Abelardo,50.2,directo
+Inst_10,,,,,,,,Cepeda,40.0,interpolado
+Inst_11,,,,,,,,Cepeda,40.0,interpolado
+Inst_12,,,,,,,,Cepeda,40.0,interpolado
+Inst_13,,,,,,,,Abelardo,62.2,interpolado
+Inst_14,,,,,,,,Abelardo,65.9,interpolado
+Inst_15,U.P.B,Laureles Estadio,6067,2001,1482,952,10695,Abelardo,56.7,directo
+Inst_16,,,,,,,,Abelardo,56.1,interpolado
+Inst_17,Centro Administrativo,La Candelaria,4437,1909,468,807,7913,Abelardo,56.1,directo
+Inst_18,,,,,,,,Abelardo,67.8,interpolado
+Inst_19,,,,,,,,Abelardo,65.6,interpolado
+Inst_2,,,,,,,,Abelardo,42.3,interpolado
+Inst_20,,,,,,,,Abelardo,57.5,interpolado
+Inst_3,,,,,,,,Abelardo,40.8,interpolado
+Inst_4,Terminal de Transporte,Castilla,680,621,152,124,1667,Abelardo,40.8,directo
+Inst_5,Facultad de Minas,Robledo,1672,1418,648,286,4160,Abelardo,40.2,directo
+Inst_6,,,,,,,,Abelardo,40.2,interpolado
+Inst_7,,,,,,,,Abelardo,52.4,interpolado
+Inst_8,,,,,,,,Abelardo,54.9,interpolado
+Inst_9,,,,,,,,Abelardo,49.4,interpolado
+SN01,,,,,,,,Abelardo,53.8,interpolado
+SN02,,,,,,,,Abelardo,58.3,interpolado
