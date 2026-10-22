@@ -264,3 +264,16 @@ main{padding:20px 24px!important}
 /* ── Barra superior: seis pestañas caben en una fila desde 1100px; debajo no se fija ── */
 .v-link{padding:10px 16px}
 @media(max-width:1100px){.v-nav{position:static}}
+
+/* ── Segmentación: dos bloques — filtros a la izquierda, resultados a la derecha ── */
+@media(min-width:1000px){
+  main:has(>.panel){display:grid!important;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:20px!important;align-items:start}
+}
+.panel{flex-direction:column!important;flex-wrap:nowrap!important;gap:16px!important}
+.panel>.card,#card-demo{flex:none!important;width:100%}
+.results{flex-direction:column!important;gap:20px!important}
+.results>.rcard{flex:none!important;width:100%}
+.map-wrap{height:clamp(480px,70vh,720px)!important;min-height:480px!important;flex:none!important}
+.panel>.card{padding:6px 8px!important}
+.tiles.cols6{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.tile .lbl{word-break:normal!important;overflow-wrap:break-word}
