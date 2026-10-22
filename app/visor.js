@@ -2,12 +2,12 @@
    Uso: <div id="v-nav" data-page="analitica" data-refresh="load()"></div> + <script src="visor.js"> */
 (function(){
   var PAGES = [
-    ['electoral',    'Electoral',    'dashboard_local.html'],
-    ['analitica',    'Analítica',    'leads_analytics.html'],
     ['segmentacion', 'Segmentación', 'leads_segmentacion.html'],
-    ['geografia',    'Geografía',    'c98geo_dashboard.html'],
+    ['analitica',    'Analítica',    'leads_analytics.html'],
+    ['electoral',    'Electoral',    'dashboard_local.html'],
     ['importar',     'Importar',     'leads_import.html'],
-    ['temas',        'Temas pendientes', 'leads_temas_pendientes.html']
+    ['temas',        'Temas pendientes', 'leads_temas_pendientes.html'],
+    ['geografia',    'Geografía',    'c98geo_dashboard.html']
   ];
   var KEY = 'visor-theme';
   var root = document.documentElement;
@@ -45,7 +45,7 @@
     }).join('');
     host.className = 'v-nav';
     host.innerHTML =
-      '<a class="v-brand" href="leads_analytics.html"><span class="v-dots"><i></i><i></i><i></i></span>MEDFUT</a>' +
+      '<a class="v-brand" href="leads_segmentacion.html"><span class="v-dots"><i></i><i></i><i></i></span>MEDFUT</a>' +
       '<nav class="v-links" aria-label="Secciones">'+links+'</nav>' +
       '<div class="v-tools">' +
         (refresh ? '<button type="button" class="v-refresh" id="v-refresh">'+SYNC+'Actualizar</button>' : '') +
