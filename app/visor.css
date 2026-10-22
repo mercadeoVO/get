@@ -277,3 +277,4 @@ main{padding:20px 24px!important}
 .panel>.card{padding:6px 8px!important}
 .tiles.cols6{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 .tile .lbl{word-break:normal!important;overflow-wrap:break-word}
+.results>.rcard:has(#map){order:-1}
