@@ -145,8 +145,8 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
 .elect-badge{display:inline-block;background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;vertical-align:middle;}
 .elect-icon{font-size:13px;vertical-align:middle;}
 </style>
-<link rel="stylesheet" href="visor.css?v=8">
-<script src="visor.js?v=2"></script>
+<link rel="stylesheet" href="visor.css?v=10">
+<script src="visor.js?v=9"></script>
 <script>const ic = V.icon;</script>
 </head>
 <body>
@@ -161,7 +161,8 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
   <div class="step active" id="stp1"><div class="step-num">1</div><div class="step-label">Subir archivo</div></div>
   <div class="step" id="stp2"><div class="step-num">2</div><div class="step-label">Hojas</div></div>
   <div class="step" id="stp3"><div class="step-num">3</div><div class="step-label">Columnas</div></div>
-  <div class="step" id="stp4"><div class="step-num">4</div><div class="step-label">Confirmar</div></div>
+  <div class="step" id="stp4"><div class="step-num">4</div><div class="step-label">Temas</div></div>
+  <div class="step" id="stp5"><div class="step-num">5</div><div class="step-label">Confirmar</div></div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ STEP 1 -->
@@ -169,7 +170,7 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
   <div id="dep-alert"></div>
 
   <!-- Resumen de base de datos -->
-  <div id="stats-bar" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+  <div id="stats-bar" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
     <div class="card" style="padding:14px 18px;text-align:center;">
       <div style="font-size:1.6rem;font-weight:700;color:var(--green);" id="stat-nuevos">—</div>
       <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">Nuevos leads</div>
@@ -187,16 +188,20 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
       <div style="font-size:.68rem;color:var(--muted);margin-top:2px;" id="stat-ultima-fecha"></div>
       <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">Última importación</div>
     </div>
+    <a href="leads_temas_pendientes.html" class="card" style="padding:14px 18px;text-align:center;text-decoration:none;cursor:pointer;">
+      <div style="font-size:1.6rem;font-weight:700;color:var(--purple);" id="stat-temas-pend">—</div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">Temas pendientes</div>
+    </a>
   </div>
 
   <div class="card">
     <div class="card-title">Subir archivo Excel de Meta Ads</div>
     <div class="drop-zone" id="dropZone">
       <div class="icon"><svg class="ic" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></div>
-      <p><strong>Arrastra aquí tu archivo .xlsx</strong> o haz clic para seleccionar</p>
-      <p style="margin-top:8px;font-size:12px;">Formatos: .xlsx · .xls · .ods</p>
+      <p><strong>Arrastra aquí tu archivo</strong> o haz clic para seleccionar</p>
+      <p style="margin-top:8px;font-size:12px;">Formatos: .xlsx · .xls · .csv · .ods</p>
     </div>
-    <input type="file" id="fileInput" accept=".xlsx,.xls,.ods">
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.ods">
 
     <div id="file-info" style="margin-top:14px;display:none;">
       <div class="row">
@@ -310,7 +315,7 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
 
   <div class="row" style="margin-bottom:24px;">
     <button class="btn btn-outline" onclick="goStep(2)">← Volver</button>
-    <button class="btn btn-primary" id="btn-go-step4" onclick="goToStep4()" style="margin-left:auto;">Revisar y aprobar →</button>
+    <button class="btn btn-primary" id="btn-go-step4" onclick="goToStepTemas()" style="margin-left:auto;">Revisar y aprobar →</button>
   </div>
 </div>
 
@@ -373,8 +378,27 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════ STEP 4 -->
+<!-- ═══════════════════════════════════════════════════════ STEP 4 — TEMAS -->
 <div id="step-4">
+  <div class="card">
+    <div class="card-title">Temas y subtemas de las preguntas nuevas</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+      El clasificador automático ya sugirió un tema para cada pregunta nueva de esta encuesta
+      (ver <code>app/docs/taxonomia_temas_subtemas.md</code>). Confírmalo o corrígelo antes de
+      importar — lo que no confirmes aquí queda igual en la cola de
+      <a href="leads_temas_pendientes.html" target="_blank" style="color:var(--accent);">Temas pendientes</a>.
+    </p>
+    <div id="temas-body"><div class="spinner" style="margin:8px 0;"></div></div>
+  </div>
+  <div class="row" style="margin-bottom:24px;">
+    <button class="btn btn-outline" onclick="goStep(3)">← Volver</button>
+    <span id="temas-count" style="color:var(--muted);font-size:13px;"></span>
+    <button class="btn btn-primary" onclick="goToStep5()" style="margin-left:auto;">Continuar →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ STEP 5 — CONFIRMAR -->
+<div id="step-5">
   <div class="card">
     <div class="card-title">Resumen de importación</div>
 
@@ -411,7 +435,7 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
     <div class="sep"></div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <button class="btn btn-outline" onclick="goStep(3)">← Revisar mapeo</button>
+      <button class="btn btn-outline" onclick="goStep(4)">← Revisar temas</button>
       <span id="appr-spinner" style="display:none;align-items:center;gap:8px;color:var(--muted);">
         <div class="spinner"></div> Importando...
       </span>
@@ -505,13 +529,12 @@ const GEO_LEVELS = [
 // ─── Utils ────────────────────────────────────────────────────────────────
 function h(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function goStep(n){
-  // n puede ser 1,2,3,35,4
-  [1,2,3,35,4].forEach(i=>{
+  // n puede ser 1,2,3,35,4,5 (4=Temas, 5=Confirmar; 35=Electoral, sub-paso entre 3 y 4)
+  [1,2,3,35,4,5].forEach(i=>{
     document.getElementById('step-'+i).style.display = i===n?'block':'none';
   });
-  // Stepper visual: trata step 35 como "entre 3 y 4"
   const stepperN = n===35 ? 3.5 : n;
-  [1,2,3,4].forEach(i=>{
+  [1,2,3,4,5].forEach(i=>{
     const stp=document.getElementById('stp'+i);
     if(!stp) return;
     stp.className='step'+(i<stepperN?' done':i===Math.ceil(stepperN)?' active':'');
@@ -532,6 +555,14 @@ async function checkDeps(){
   }catch{
     document.getElementById('dep-alert').innerHTML=`<div class="alert alert-err">No se puede conectar con el API. ¿Está corriendo Apache?</div>`;
   }
+}
+
+async function loadTemasPendientesCount(){
+  try{
+    const d=await fetch(API+'?action=temas_pendientes').then(r=>r.json());
+    if(!d.ok) return;
+    document.getElementById('stat-temas-pend').textContent=(d.sugeridas.length+d.sin_tema.length).toLocaleString();
+  }catch{ /* silencioso — no bloquea el dashboard */ }
 }
 
 async function loadStats(){
@@ -1005,6 +1036,49 @@ function autoMatchCandidato(value, candidatos){
   return m || null;
 }
 
+// Campos donde el candidato se identifica por el ENCABEZADO de la pregunta
+// (no por el valor de la respuesta, que es positiva/negativa/lo conoce/etc.)
+const HEADER_CANDIDATE_FIELDS = new Set([
+  'imagen_candidato', 'evaluacion_candidato', 'conocimiento_candidato',
+]);
+
+// Predice el candidato a partir del encabezado de la columna.
+// Ej: "4._¿tiene_una_imagen_positiva_o_negativa_de_carlos_fernando_galán?"
+//      → candidato "Carlos Fernando Galán"
+function matchCandidatoFromHeader(header, candidatos){
+  const hn = normStr(String(header||'').replace(/_/g,' '));
+  if(!hn || !(candidatos||[]).length) return null;
+
+  let best = null, bestLen = 0;
+  for(const c of candidatos){
+    const cn = normStr(c.nombre);
+    if(cn.length < 3) continue;
+    // 1. Nombre completo contenido en el encabezado (gana el más largo)
+    if(hn.includes(cn) && cn.length > bestLen){ best = c; bestLen = cn.length; continue; }
+    // 2. Combinaciones nombre+apellido cuando el header no trae el nombre completo
+    const parts = cn.split(/\s+/).filter(Boolean);
+    if(parts.length >= 2){
+      const combos = [
+        parts.slice(0,2).join(' '),                    // primer nombre + primer apellido
+        parts[0] + ' ' + parts[parts.length-1],        // primer nombre + último apellido
+        parts.slice(-2).join(' '),                     // dos apellidos
+      ];
+      for(const combo of combos){
+        if(combo.length > bestLen && hn.includes(combo)){ best = c; bestLen = combo.length; }
+      }
+    }
+  }
+  // 3. Último recurso: un solo candidato con un apellido (token ≥5) presente en el header
+  if(!best){
+    const hits = candidatos.filter(c => {
+      const toks = normStr(c.nombre).split(/\s+/).filter(w=>w.length>=5);
+      return toks.some(w=>hn.includes(w));
+    });
+    if(hits.length === 1) best = hits[0];
+  }
+  return best;
+}
+
 async function renderStep35(){
   document.getElementById('s35-err').innerHTML = '';
   const badge = document.getElementById('s35-loading-badge');
@@ -1121,9 +1195,11 @@ function renderS35ValueGrids(){
 
   const html = _s35ElectoralCols.map((ec, gi) => {
     const { sheetName, col, field, label, values } = ec;
+    const byHeader   = HEADER_CANDIDATE_FIELDS.has(field);
+    const headerCand = byHeader ? matchCandidatoFromHeader(col.header||'', candidatos) : null;
 
     const rows = values.length ? values.map((val, ri) => {
-      const match = autoMatchCandidato(val, candidatos);
+      const match = headerCand || autoMatchCandidato(val, candidatos);
       const candOpts = `<option value="">— Ignorar —</option>` +
         candidatos.map(c =>
           `<option value="${c.id}" ${c.id==match?.id?'selected':''}>${h(c.nombre)}${c.partido?' · '+h(c.partido):''}</option>`
@@ -1134,7 +1210,7 @@ function renderS35ValueGrids(){
         ? `<span style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;">${h(pty)}</span>`
         : '<span style="color:var(--muted);font-size:11px;">—</span>';
       const autoTag = match
-        ? `<span style="font-size:9px;color:var(--green);margin-left:4px;vertical-align:middle;">auto</span>` : '';
+        ? `<span style="font-size:9px;color:var(--green);margin-left:4px;vertical-align:middle;">${headerCand?'encabezado':'auto'}</span>` : '';
       return `<tr style="border-top:1px solid var(--border);">
         <td style="padding:6px 10px;font-size:12px;"><code style="background:var(--bg);padding:2px 6px;border-radius:3px;">${h(val)}</code></td>
         <td style="padding:4px 8px;">
@@ -1153,6 +1229,15 @@ function renderS35ValueGrids(){
         ${multiSheet?`<span style="color:var(--muted);font-size:11px;">· ${h(sheetName)}</span>`:''}
         <span style="margin-left:auto;font-size:11px;color:var(--muted);">${values.length} valor${values.length!==1?'es únicos':'único'}</span>
       </div>
+      ${byHeader ? `<div style="background:var(--bg);padding:7px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap;">Candidato de la pregunta</span>
+        <select class="sel" style="font-size:12px;min-width:230px;" id="s35-hdr-${gi}" onchange="onS35HeaderCandChange(${gi})">
+          <option value="">— Elegir candidato —</option>
+          ${candidatos.map(c => `<option value="${c.id}" ${headerCand&&c.id==headerCand.id?'selected':''}>${h(c.nombre)}${c.partido?' · '+h(c.partido):''}</option>`).join('')}
+          <option value="__nuevo__">Agregar candidato nuevo...</option>
+        </select>
+        <span style="font-size:10px;color:${headerCand?'var(--green)':'var(--muted)'};">${headerCand?'detectado del encabezado · puedes cambiarlo':'no se detectó · selecciónalo una vez y se aplica a todas las filas'}</span>
+      </div>` : ''}
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr style="font-size:10px;color:var(--muted);background:var(--bg);text-transform:uppercase;letter-spacing:.05em;">
           <th style="padding:5px 10px;text-align:left;font-weight:500;">Respuesta en archivo</th>
@@ -1183,8 +1268,26 @@ function onS35CandSelect(sel, gi, ri){
     : '<span style="color:var(--muted);font-size:11px;">—</span>';
 }
 
+// Selector a nivel de columna: aplica el candidato elegido a TODAS las filas del grupo
+function onS35HeaderCandChange(gi){
+  const hdr = document.getElementById('s35-hdr-'+gi);
+  if(!hdr) return;
+  if(hdr.value === '__nuevo__'){
+    hdr.value = '';
+    openAddCandidatoModal(gi, '__hdr__');
+    return;
+  }
+  const ec = _s35ElectoralCols[gi];
+  (ec?.values || []).forEach((_v, ri) => {
+    const sel = document.getElementById(`s35-vm-${gi}-${ri}`);
+    if(!sel) return;
+    sel.value = hdr.value;
+    onS35CandSelect(sel, gi, ri);
+  });
+}
+
 // ── Modal: agregar candidato nuevo ───────────────────────────────────────────
-let _addCandTarget = null; // {gi, ri}
+let _addCandTarget = null; // {gi, ri}  (ri === '__hdr__' → selector de columna)
 
 function openAddCandidatoModal(gi, ri){
   _addCandTarget = {gi, ri};
@@ -1192,6 +1295,13 @@ function openAddCandidatoModal(gi, ri){
   const tipo = document.getElementById('s35-candidatura')?.value || '';
   const anio = (_s35Dims?.tipos_eleccion||[]).find(t=>t.tipo===tipo)?.anio || new Date().getFullYear();
   const ptOpts = partidos.map(p=>`<option value="${p.id}">${h(p.nombre)}</option>`).join('');
+
+  // Tipos de elección conocidos (desde dims) + "No aplica"
+  const tiposElec = [...new Set((_s35Dims?.tipos_eleccion||[]).map(t=>t.tipo).filter(Boolean))];
+  if(!tiposElec.length) tiposElec.push('PRESIDENCIAL','SENADO','CAMARA','GOBERNADOR','ALCALDE','TERRITORIAL');
+  if(tipo && !tiposElec.includes(tipo)) tiposElec.unshift(tipo);
+  const tipoElecOpts = `<option value="">— No aplica —</option>` +
+    tiposElec.map(t=>`<option value="${h(t)}" ${t===tipo?'selected':''}>${h(t)}</option>`).join('');
 
   let modal = document.getElementById('modal-add-cand');
   if(!modal){
@@ -1210,7 +1320,7 @@ function openAddCandidatoModal(gi, ri){
         </div>
         <div>
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Partido</label>
-          <select id="nc-partido" style="width:100%;"><option value="">— Sin partido —</option>${ptOpts}</select>
+          <select id="nc-partido" style="width:100%;" onchange="onNcPartidoChange()"><option value="">— Sin partido —</option>${ptOpts}<option value="__nuevo_pt__">Agregar partido...</option></select>
         </div>
         <div>
           <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Espectro político</label>
@@ -1227,9 +1337,9 @@ function openAddCandidatoModal(gi, ri){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
           <div>
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Tipo elección</label>
-            <input id="nc-tipo" type="text" value="${h(tipo)}" style="width:100%;" placeholder="PRESIDENCIAL">
+            <select id="nc-tipo" style="width:100%;" onchange="onNcTipoChange()">${tipoElecOpts}</select>
           </div>
-          <div>
+          <div id="nc-anio-wrap">
             <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px;font-weight:600;text-transform:uppercase;">Año</label>
             <input id="nc-anio" type="number" value="${anio}" style="width:100%;" min="2020" max="2040">
           </div>
@@ -1242,14 +1352,61 @@ function openAddCandidatoModal(gi, ri){
       </div>
     </div>`;
   modal.style.display='flex';
+  onNcTipoChange();
   setTimeout(()=>document.getElementById('nc-nombre')?.focus(), 50);
+}
+
+// "Agregar partido..." en el select de Partido → alta rápida y selección
+async function onNcPartidoChange(){
+  const sel = document.getElementById('nc-partido');
+  if(!sel || sel.value !== '__nuevo_pt__') return;
+  sel.value = '';
+  const nombre = (window.prompt('Nombre del partido nuevo:') || '').trim();
+  if(!nombre) return;
+  try{
+    const fd = new FormData();
+    fd.append('nombre', nombre);
+    const d = await fetch(API+'?action=add_partido', {method:'POST', body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error || 'Error al guardar el partido');
+
+    if(!_s35Dims) _s35Dims = {};
+    if(!_s35Dims.dim_partido) _s35Dims.dim_partido = [];
+    if(!d.existing && !_s35Dims.dim_partido.some(p=>String(p.id)===String(d.id))){
+      _s35Dims.dim_partido.push({id: d.id, nombre: d.nombre});
+      _s35Dims.dim_partido.sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));
+    }
+    let opt = [...sel.options].find(o=>String(o.value)===String(d.id));
+    if(!opt){
+      opt = document.createElement('option');
+      opt.value = d.id; opt.textContent = d.nombre;
+      const nuevoOpt = [...sel.options].find(o=>o.value==='__nuevo_pt__');
+      sel.insertBefore(opt, nuevoOpt||null);
+    }
+    sel.value = String(d.id);
+  }catch(e){
+    alert(e.message);
+  }
+}
+
+// "No aplica" en Tipo elección → también ignora el periodo (Año)
+function onNcTipoChange(){
+  const t = document.getElementById('nc-tipo')?.value || '';
+  const anioEl = document.getElementById('nc-anio');
+  const wrap   = document.getElementById('nc-anio-wrap');
+  if(!anioEl) return;
+  const noAplica = (t === '');
+  anioEl.disabled = noAplica;
+  if(wrap){
+    wrap.style.opacity = noAplica ? '.4' : '';
+    wrap.title = noAplica ? 'No aplica: el candidato se guarda sin periodo electoral' : '';
+  }
 }
 
 async function saveNuevoCandidato(){
   const nombre = document.getElementById('nc-nombre')?.value.trim();
   const partido = document.getElementById('nc-partido')?.value;
   const tipo = document.getElementById('nc-tipo')?.value.trim();
-  const anio = document.getElementById('nc-anio')?.value;
+  const anio = tipo ? document.getElementById('nc-anio')?.value : '';  // "No aplica" ignora el periodo
   const errEl = document.getElementById('nc-err');
   if(!nombre){ errEl.style.display=''; errEl.textContent='El nombre es requerido.'; return; }
 
@@ -1261,8 +1418,10 @@ async function saveNuevoCandidato(){
   fd.append('nombre', nombre);
   if(partido)   fd.append('id_partido', partido);
   if(espectro)  fd.append('espectro', espectro);
-  if(tipo)      fd.append('tipo_eleccion', tipo);
-  if(anio)      fd.append('anio_eleccion', anio);
+  if(tipo){
+    fd.append('tipo_eleccion', tipo);
+    if(anio) fd.append('anio_eleccion', anio);
+  }
 
   try {
     const d = await fetch(API+'?action=add_candidato', {method:'POST', body:fd}).then(r=>r.json());
@@ -1279,15 +1438,27 @@ async function saveNuevoCandidato(){
     // Asignar al select que lo disparó
     if(_addCandTarget){
       const {gi, ri} = _addCandTarget;
-      const sel = document.getElementById(`s35-vm-${gi}-${ri}`);
-      if(sel){
+      const addOpt = (s) => {
+        if(!s) return;
         const opt = document.createElement('option');
         opt.value = d.id; opt.textContent = d.nombre + (ptNombre?' · '+ptNombre:'');
-        // Insertar antes de la opción __nuevo__
-        const nuevoOpt = [...sel.options].find(o=>o.value==='__nuevo__');
-        sel.insertBefore(opt, nuevoOpt||null);
-        sel.value = String(d.id);
-        onS35CandSelect(sel, gi, ri);
+        const nuevoOpt = [...s.options].find(o=>o.value==='__nuevo__');
+        s.insertBefore(opt, nuevoOpt||null);
+      };
+      if(ri === '__hdr__'){
+        // Selector de columna: insertar la opción en el select de encabezado y en cada fila
+        const hdr = document.getElementById('s35-hdr-'+gi);
+        addOpt(hdr);
+        (_s35ElectoralCols[gi]?.values||[]).forEach((_v, ri2) =>
+          addOpt(document.getElementById(`s35-vm-${gi}-${ri2}`)));
+        if(hdr){ hdr.value = String(d.id); onS35HeaderCandChange(gi); }
+      } else {
+        const sel = document.getElementById(`s35-vm-${gi}-${ri}`);
+        if(sel){
+          addOpt(sel);
+          sel.value = String(d.id);
+          onS35CandSelect(sel, gi, ri);
+        }
       }
     }
     document.getElementById('modal-add-cand').style.display='none';
@@ -1335,11 +1506,129 @@ function proceedFromElectoral(){
     value_maps,
     col_meta,
   };
-  goStep(4);
+  goToStepTemas();
 }
 
-// ─── Step 4: Approval ──────────────────────────────────────────────────────
-function goToStep4(){
+// ─── Routing hacia el paso 4 (Temas): pasa por Electoral (3.5) si aplica ────
+function goToStepTemas(){
+  if(hasElectoralFields() && !state.electoralCtx){
+    renderStep35();
+    goStep(35);
+  } else {
+    openTemasStep();
+  }
+}
+
+// ─── Step 4: Temas ───────────────────────────────────────────────────────
+async function openTemasStep(){
+  const eavSet = new Set();
+  state.selectedSheets.forEach(name=>{
+    const sm=state.sheetMappings[name];
+    if(!sm||!sm.loaded) return;
+    sm.columns.filter(c=>!FIXED_TYPES.has(c.type)&&c.type!=='__skip'&&c.header!==null).forEach(col=>{
+      const act=sm.colActions[col.index]||'skip';
+      if(act==='eav') eavSet.add(col.header??String(col.index));
+    });
+  });
+  state.temasHeaders=[...eavSet];
+  goStep(4);
+  const body=document.getElementById('temas-body');
+  if(state.temasHeaders.length===0){
+    body.innerHTML='<div class="alert alert-info">Esta importación no tiene columnas mapeadas como Pregunta EAV — nada que clasificar.</div>';
+    document.getElementById('temas-count').textContent='';
+    return;
+  }
+  body.innerHTML='<div class="spinner" style="margin:8px 0;"></div>';
+  try{
+    const fd=new FormData();
+    fd.append('headers', JSON.stringify(state.temasHeaders));
+    const d=await fetch(API+'?action=registrar_preguntas',{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error desconocido');
+    state.temasCatalogo=d.catalogo;
+    state.temasPreguntas=d.preguntas;
+    renderTemasStep();
+  }catch(e){
+    body.innerHTML=`<div class="alert alert-err">${h(e.message)}</div>`;
+  }
+}
+
+function temasCatalogoAgrupado(){
+  const byTema={};
+  (state.temasCatalogo||[]).forEach(t=>{
+    const key=t.dominio+' · '+t.tema;
+    (byTema[key]=byTema[key]||[]).push(t);
+  });
+  return byTema;
+}
+
+function renderTemaEditor(preguntaId, preseleccion){
+  const grupos=temasCatalogoAgrupado();
+  let html='<div class="editor-temas" data-pregunta-id="'+preguntaId+'" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">';
+  Object.keys(grupos).forEach(grupo=>{
+    html+='<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">'+h(grupo)+'</div><div style="display:flex;flex-wrap:wrap;gap:5px;">';
+    grupos[grupo].forEach(t=>{
+      const checked=preseleccion.includes(t.id)?'checked':'';
+      html+='<label style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:3px 9px 3px 7px;font-size:11.5px;cursor:pointer;">'+
+        '<input type="checkbox" value="'+t.id+'" '+checked+' style="accent-color:var(--accent);cursor:pointer;"> '+
+        h(t.codigo)+' '+h(t.subtema)+'</label>';
+    });
+    html+='</div></div>';
+  });
+  html+='<button class="btn btn-success btn-sm" style="margin-top:6px;" onclick="guardarTemaItem('+preguntaId+')">Guardar</button></div>';
+  return html;
+}
+
+async function guardarTemaItem(preguntaId){
+  const editor=document.querySelector('.editor-temas[data-pregunta-id="'+preguntaId+'"]');
+  const ids=Array.from(editor.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value);
+  if(ids.length===0){ alert('Selecciona al menos un tema/subtema.'); return; }
+  const fd=new FormData();
+  fd.append('pregunta_id', preguntaId);
+  fd.append('tema_ids', ids.join(','));
+  const d=await fetch(API+'?action=temas_guardar',{method:'POST',body:fd}).then(r=>r.json());
+  if(!d.ok){ alert('Error: '+d.error); return; }
+  const item=state.temasPreguntas.find(p=>p.pregunta_id==preguntaId);
+  if(item){
+    item.temas=(state.temasCatalogo||[]).filter(t=>ids.includes(String(t.id)))
+      .map(t=>({tema_id:t.id, codigo:t.codigo, tema:t.tema, subtema:t.subtema, pendiente_revision:0}));
+  }
+  renderTemasStep();
+}
+
+function renderTemasStep(){
+  const preguntas=state.temasPreguntas||[];
+  const electorales=preguntas.filter(p=>p.es_electoral);
+  const confirmadas=preguntas.filter(p=>!p.es_electoral && p.temas.length>0 && p.temas.every(t=>!t.pendiente_revision));
+  const pendientes=preguntas.filter(p=>!p.es_electoral && (p.temas.length===0 || p.temas.some(t=>t.pendiente_revision)));
+
+  let html='';
+  if(electorales.length){
+    html+=`<div class="alert alert-info">${electorales.length} pregunta(s) detectadas como Política/Electoral — no necesitan tema, ya usan <code>es_electoral</code>.</div>`;
+  }
+  pendientes.forEach(p=>{
+    const sugerido=p.temas.map(t=>t.tema_id);
+    const sugerenciaTxt=p.temas.length
+      ? p.temas.map(t=>`<span class="badge badge-blue">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')
+      : '<span class="badge badge-yellow">sin sugerencia — elige manualmente</span>';
+    html+=`<div class="pending-item" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+      <div style="font-size:13.5px;margin-bottom:6px;">${h(p.pregunta)}</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${sugerenciaTxt}</div>
+      ${renderTemaEditor(p.pregunta_id, sugerido)}
+    </div>`;
+  });
+  confirmadas.forEach(p=>{
+    html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:13px;flex:1;min-width:200px;">${h(p.pregunta)}</span>
+      ${p.temas.map(t=>`<span class="badge badge-green">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')}
+    </div>`;
+  });
+  document.getElementById('temas-body').innerHTML = html || '<div class="alert alert-info">Nada que revisar.</div>';
+  document.getElementById('temas-count').textContent =
+    pendientes.length ? `${pendientes.length} pendiente(s) de confirmar` : (confirmadas.length ? `${confirmadas.length} confirmada(s)` : '');
+}
+
+// ─── Step 5: Approval ──────────────────────────────────────────────────────
+function goToStep5(){
   // Sheets summary
   const shhtml=state.sheets.filter(sh=>state.selectedSheets.includes(sh.name))
     .map(sh=>{
@@ -1424,13 +1713,7 @@ function goToStep4(){
   btnConfirm.style.opacity = hasPending ? '0.4' : '';
   btnConfirm.style.cursor  = hasPending ? 'not-allowed' : '';
 
-  // Routing: si hay campos electorales y aún no se pasó por el step 3.5 → ir a 3.5 primero
-  if(hasElectoralFields() && !state.electoralCtx){
-    renderStep35();
-    goStep(35);
-  } else {
-    goStep(4);
-  }
+  goStep(5);
 }
 
 document.getElementById('btn-confirm').addEventListener('click', async()=>{
@@ -1750,12 +2033,13 @@ function resetAll(){
   fileInput.value='';
   document.getElementById('file-info').style.display='none';
   document.getElementById('upload-progress').style.width='0%';
-  goStep(1); loadLogs(); loadStats();
+  goStep(1); loadLogs(); loadStats(); loadTemasPendientesCount();
 }
 
 checkDeps();
 loadStats();
 loadLogs();
+loadTemasPendientesCount();
 </script>
 </body>
 </html>

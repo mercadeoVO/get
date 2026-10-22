@@ -9,6 +9,10 @@
 //    ?action=preview      — Cabeceras detectadas + muestra
 //    ?action=import       — Importa todos los registros
 //    ?action=logs         — Historial de importaciones
+//    ?action=temas_pendientes   — Cola de revisión tema/subtema (dim_tema)
+//    ?action=temas_guardar      — Confirma/corrige el tema de una pregunta
+//    ?action=respuestas_muestra — Distribución de respuestas de una pregunta
+//    ?action=crear_tema         — Crea un tema/subtema nuevo en dim_tema
 // ============================================================
 
 require_once __DIR__ . '/config.php';
@@ -39,14 +43,140 @@ function errOut(string $msg, int $code = 400): void {
     jsonOut(['ok' => false, 'error' => $msg]);
 }
 
+// ── Catálogo de preguntas: normalización, es_electoral, tema/subtema ────────
+// Compartido entre el import real (acción 'import') y el paso "Temas" del
+// wizard (acción 'registrar_preguntas') — ver app/docs/taxonomia_temas_subtemas.md §7.4
+const ELECTORAL_KEYWORDS = ['candidat','votar','voto','presiden','alcald','gobernado',
+    'concej','senado','congres','partido pol','elecci','sufrag','confiar',
+    'intencion','imagen candidat','aprueba','campana pol'];
+
+function pregNormalize(string $preg): string {
+    $pregNorm = trim($preg);
+    $pregNorm = str_replace('_', ' ', $pregNorm);
+    $pregNorm = preg_replace('/\s{2,}/u', ' ', $pregNorm);
+    $pregNorm = preg_replace('/^(\d+\.\s+)+/u', '', $pregNorm);
+    return $pregNorm === '' ? $preg : $pregNorm;
+}
+
+function esElectoralPorKeyword(string $pregLower): bool {
+    foreach (ELECTORAL_KEYWORDS as $kw) {
+        if (str_contains($pregLower, $kw)) return true;
+    }
+    return false;
+}
+
+/** @return int[] ids de dim_tema cuyo keyword matchea el texto de la pregunta */
+function clasificarTemaAuto(string $pregLower, array $temaKeywords): array {
+    $matches = [];
+    foreach ($temaKeywords as $temaId => $kwJson) {
+        foreach (json_decode($kwJson, true) as $kw) {
+            if (str_contains($pregLower, $kw)) { $matches[] = (int)$temaId; break; }
+        }
+    }
+    return $matches;
+}
+
+const STOPWORDS_ES = ['que','de','la','el','los','las','un','una','unos','unas','y','o','a',
+    'en','su','sus','se','le','les','es','son','del','al','con','por','para','usted','ha',
+    'como','qué','cuál','cuáles','cuál','cómo','tan','más','muy','este','esta','estos','estas',
+    'lo','si','no','ya','me','te','nos','sobre','entre','sin'];
+
+function tokenizar(string $texto): array {
+    $texto = mb_strtolower($texto, 'UTF-8');
+    preg_match_all('/[a-záéíóúñ]{3,}/u', $texto, $m);
+    return array_values(array_diff(array_unique($m[0]), STOPWORDS_ES));
+}
+
+/**
+ * Sugerencia débil cuando el keyword-matching exacto no encontró nada: similitud
+ * por tokens compartidos entre la pregunta y (tema + subtema + keywords) de cada
+ * fila de dim_tema. Devuelve el top-3 con score > 0 — es una pista, no una
+ * clasificación; siempre requiere confirmación manual.
+ */
+function sugerirTemasDebil(string $pregLower, array $catalogoConKeywords): array {
+    $tokensPreg = tokenizar($pregLower);
+    if (!$tokensPreg) return [];
+    $scored = [];
+    foreach ($catalogoConKeywords as $t) {
+        $textoTema = $t['tema'] . ' ' . $t['subtema'] . ' ' . implode(' ', json_decode($t['keywords'] ?? '[]', true) ?: []);
+        $tokensTema = tokenizar($textoTema);
+        if (!$tokensTema) continue;
+        $comunes = array_intersect($tokensPreg, $tokensTema);
+        if (!$comunes) continue;
+        $score = count($comunes) / count(array_unique(array_merge($tokensPreg, $tokensTema)));
+        $scored[] = ['tema_id' => (int)$t['id'], 'codigo' => $t['codigo'], 'tema' => $t['tema'],
+            'subtema' => $t['subtema'], 'score' => round($score, 3)];
+    }
+    usort($scored, fn($a, $b) => $b['score'] <=> $a['score']);
+    return array_slice($scored, 0, 3);
+}
+
+/**
+ * Registra (o reconoce) una pregunta en el catálogo y, si es nueva y no
+ * electoral, corre el clasificador automático de tema. No pisa una
+ * clasificación manual ya existente.
+ */
+function registrarPregunta(PDO $db, string $pregRaw, array $temaKeywords): array {
+    $pregNorm  = pregNormalize($pregRaw);
+    $pregLower = mb_strtolower($pregNorm, 'UTF-8');
+    $isElectoral = esElectoralPorKeyword($pregLower) ? 1 : 0;
+
+    $db->prepare("INSERT IGNORE INTO import_log_leads_preguntas (pregunta, es_electoral) VALUES (?, ?)")
+       ->execute([$pregNorm, $isElectoral]);
+    $stmt = $db->prepare("SELECT id, es_electoral FROM import_log_leads_preguntas WHERE pregunta = ?");
+    $stmt->execute([$pregNorm]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) return ['pregunta_id' => 0, 'pregunta' => $pregNorm, 'es_electoral' => 0, 'temas' => []];
+
+    $pregId = (int)$row['id'];
+    $esElectoral = (int)$row['es_electoral'];
+
+    if (!$esElectoral) {
+        $yaClasificada = (int)$db->query("SELECT COUNT(*) FROM pregunta_tema WHERE pregunta_id = $pregId")->fetchColumn();
+        if ($yaClasificada === 0) {
+            $temaIds = clasificarTemaAuto($pregLower, $temaKeywords);
+            $stmtPT = $db->prepare(
+                "INSERT IGNORE INTO pregunta_tema (pregunta_id, tema_id, origen, pendiente_revision) VALUES (?, ?, 'auto', 1)"
+            );
+            foreach ($temaIds as $temaId) { $stmtPT->execute([$pregId, $temaId]); }
+        }
+    }
+
+    $temas = $db->prepare("
+        SELECT dt.id AS tema_id, dt.codigo, dt.tema, dt.subtema, pt.pendiente_revision
+        FROM pregunta_tema pt JOIN dim_tema dt ON dt.id = pt.tema_id
+        WHERE pt.pregunta_id = ?
+    ");
+    $temas->execute([$pregId]);
+
+    return [
+        'pregunta_id'  => $pregId,
+        'pregunta'     => $pregNorm,
+        'es_electoral' => $esElectoral,
+        'temas'        => $temas->fetchAll(PDO::FETCH_ASSOC),
+    ];
+}
+
 // ── Wrappers PHP-nativo para lectura Excel (reemplaza Python) ────────────────
+
+/**
+ * Elige el lector según extensión — .xlsx/.xlsm usan el nativo (rápido, sin
+ * dependencias); .xls/.csv/.ods delegan a PhpSpreadsheet. Ver ExcelReaderPhp.php.
+ */
+function makeSpreadsheetReader(string $filePath)
+{
+    $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+    return in_array($ext, ['xlsx', 'xlsm'], true)
+        ? new PhpXlsxReader($filePath)
+        : new PhpSpreadsheetReader($filePath);
+}
 
 /**
  * Retorna info de hojas: [['name'=>'Sheet1','rows'=>int,'cols'=>int], ...]
  */
 function xlsxGetSheets(string $filePath): array
 {
-    $reader = new PhpXlsxReader($filePath);
+    $reader = makeSpreadsheetReader($filePath);
     $sheets = $reader->getSheets();
     $reader->close();
     return $sheets;
@@ -57,7 +187,7 @@ function xlsxGetSheets(string $filePath): array
  */
 function xlsxReadRows(string $filePath, string $sheetName, int $maxRows = 0): array
 {
-    $reader = new PhpXlsxReader($filePath);
+    $reader = makeSpreadsheetReader($filePath);
     $rows   = $reader->readRows($sheetName, $maxRows);
     $reader->close();
     return ['ok' => true, 'rows' => $rows];
@@ -153,6 +283,26 @@ function detectColType(?string $col): string {
     foreach ($map as $pattern => $field) {
         if (mb_strlen($pattern) <= 2) continue;
         if (str_contains($norm, $pattern)) return $field;
+    }
+    // 3. Patrones de preguntas electorales (el candidato va en el encabezado;
+    //    el cruce candidato↔respuesta se resuelve en el paso 3.5 "Contexto electoral")
+    $electoralPatterns = [
+        'imagen_candidato' => [
+            'imagen positiva o negativa', 'imagen negativa o positiva',
+            'imagen favorable o desfavorable', 'opinion favorable o desfavorable',
+            'opinion positiva o negativa',
+        ],
+        'conocimiento_candidato' => [
+            'conoce o ha escuchado', 'ha escuchado hablar de', 'sabe quien es',
+        ],
+        'intencion_voto' => [
+            'por quien votaria', 'intencion de voto', 'si las elecciones fueran hoy',
+        ],
+    ];
+    foreach ($electoralPatterns as $field => $pats) {
+        foreach ($pats as $p) {
+            if (str_contains($norm, $p)) return $field;
+        }
     }
     return '__eav';
 }
@@ -411,6 +561,149 @@ function lookupDepartamentoByName(string $name, \PDO $db): ?array {
 function _nsql(string $col): string {
     return "UPPER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
         $col,'á','a'),'é','e'),'í','i'),'ó','o'),'ú','u'),'ñ','n')))";
+}
+
+// ── Segmentación de leads (acciones segment_dims / segmentar / segmento_export) ──
+// Columnas de import_log_leads permitidas como filtro directo (whitelist estricta).
+const SEGMENT_COLS = ['sexo', 'rango_edad', 'estrato', 'nivel_educativo', 'platform', 'afiliacion_politica'];
+
+// Nivel geográfico → [longitud de prefijo de id_geo, subconsulta de resolución sobre c98_geo].
+// El id_geo es un código DANE jerárquico VARCHAR(15): 2=depto, 5=municipio, 8=zona, 11=comuna, 15=barrio.
+const SEGMENT_GEO_NIVELES = ['region', 'departamento', 'subregion', 'municipio', 'zona', 'comuna', 'barrio'];
+
+/**
+ * Construye el WHERE de segmentación sobre `import_log_leads l` a partir del objeto de filtros.
+ * Todo va parametrizado (placeholders `?` acumulados en $params, por referencia); los nombres
+ * de columna y niveles geográficos se validan contra whitelist — nunca se interpolan del request.
+ *
+ * $f admite:
+ *   sexo, rango_edad, estrato, nivel_educativo, platform, afiliacion_politica : array de valores (IN)
+ *   is_organic        : 0 | 1
+ *   created_desde     : 'YYYY-MM-DD'
+ *   created_hasta     : 'YYYY-MM-DD'  (inclusivo — se suma 1 día)
+ *   import_ids        : array de int
+ *   geo               : { nivel: <SEGMENT_GEO_NIVELES>, ids: [ ... ] }
+ *   preguntas         : [ { pregunta_id: int, valores: [str], op: 'in'|'not_in'|'answered' }, ... ]
+ */
+function buildSegmentWhere(array $f, array &$params): string {
+    $w = ' WHERE 1=1';
+
+    // Columnas simples (IN)
+    foreach (SEGMENT_COLS as $col) {
+        if (empty($f[$col]) || !is_array($f[$col])) continue;
+        $vals = array_values(array_filter($f[$col], fn($v) => $v !== null && $v !== ''));
+        if (!$vals) continue;
+        $ph = implode(',', array_fill(0, count($vals), '?'));
+        $w .= " AND l.`$col` IN ($ph)";
+        foreach ($vals as $v) $params[] = $v;
+    }
+
+    // is_organic
+    if (isset($f['is_organic']) && ($f['is_organic'] === 0 || $f['is_organic'] === 1
+        || $f['is_organic'] === '0' || $f['is_organic'] === '1')) {
+        $w .= ' AND l.is_organic = ?';
+        $params[] = (int)$f['is_organic'];
+    }
+
+    // Rango de fechas sobre created_time
+    if (!empty($f['created_desde'])) {
+        $w .= ' AND l.created_time >= ?';
+        $params[] = $f['created_desde'] . ' 00:00:00';
+    }
+    if (!empty($f['created_hasta'])) {
+        $w .= ' AND l.created_time < (? + INTERVAL 1 DAY)';
+        $params[] = $f['created_hasta'] . ' 00:00:00';
+    }
+
+    // Importaciones
+    if (!empty($f['import_ids']) && is_array($f['import_ids'])) {
+        $ids = array_values(array_unique(array_map('intval', $f['import_ids'])));
+        $ids = array_filter($ids, fn($v) => $v > 0);
+        if ($ids) {
+            $ph = implode(',', array_fill(0, count($ids), '?'));
+            $w .= " AND l.import_id IN ($ph)";
+            foreach ($ids as $v) $params[] = $v;
+        }
+    }
+
+    // Geografía
+    if (!empty($f['geo']['nivel']) && !empty($f['geo']['ids']) && is_array($f['geo']['ids'])) {
+        $nivel = $f['geo']['nivel'];
+        if (in_array($nivel, SEGMENT_GEO_NIVELES, true)) {
+            $ids = array_values(array_filter(array_map('strval', $f['geo']['ids']), fn($v) => $v !== ''));
+            if ($ids) {
+                $ph = implode(',', array_fill(0, count($ids), '?'));
+                $bind = function () use (&$params, $ids) { foreach ($ids as $v) $params[] = $v; };
+                switch ($nivel) {
+                    case 'region':
+                        $w .= " AND LEFT(l.id_geo,2) IN (SELECT id FROM c98_geo.dim_departamento WHERE id_region IN ($ph))";
+                        $bind();
+                        break;
+                    case 'departamento':
+                        $w .= " AND LEFT(l.id_geo,2) IN ($ph)";
+                        $bind();
+                        break;
+                    case 'subregion':
+                        $w .= " AND LEFT(l.id_geo,5) IN (SELECT id FROM c98_geo.dim_municipio WHERE id_subregion IN ($ph))";
+                        $bind();
+                        break;
+                    case 'municipio':
+                        $w .= " AND LEFT(l.id_geo,5) IN ($ph)";
+                        $bind();
+                        break;
+                    case 'zona':
+                        $w .= " AND CHAR_LENGTH(l.id_geo) >= 8 AND LEFT(l.id_geo,8) IN ($ph)";
+                        $bind();
+                        break;
+                    case 'comuna':
+                        $w .= " AND CHAR_LENGTH(l.id_geo) >= 11 AND LEFT(l.id_geo,11) IN ($ph)";
+                        $bind();
+                        break;
+                    case 'barrio':
+                        $w .= " AND l.id_geo IN ($ph)";
+                        $bind();
+                        break;
+                }
+            }
+        }
+    }
+
+    // Condiciones EAV (afinidad de marca / gustos / opinión — preguntas de encuesta)
+    if (!empty($f['preguntas']) && is_array($f['preguntas'])) {
+        foreach ($f['preguntas'] as $cond) {
+            $pid = (int)($cond['pregunta_id'] ?? 0);
+            if ($pid <= 0) continue;
+            $op = $cond['op'] ?? 'in';
+            $valores = (isset($cond['valores']) && is_array($cond['valores']))
+                ? array_values(array_filter(array_map('strval', $cond['valores']), fn($v) => $v !== ''))
+                : [];
+            $neg = ($op === 'not_in');
+            $sub = "SELECT 1 FROM import_log_leads_respuestas r WHERE r.lead_id = l.id_lead AND r.pregunta_id = ?";
+            $bindSub = [$pid];
+            if ($op !== 'answered' && $valores) {
+                $ph = implode(',', array_fill(0, count($valores), '?'));
+                $sub .= " AND r.respuesta IN ($ph)";
+                foreach ($valores as $v) $bindSub[] = $v;
+            }
+            $w .= ($neg ? ' AND NOT EXISTS (' : ' AND EXISTS (') . $sub . ')';
+            foreach ($bindSub as $b) $params[] = $b;
+        }
+    }
+
+    // Filtro por tema/subtema (dim_tema.id) — el lead respondió al menos una pregunta
+    // clasificada en alguno de esos temas.
+    if (!empty($f['temas']) && is_array($f['temas'])) {
+        $temaIds = array_values(array_filter(array_map('intval', $f['temas']), fn($v) => $v > 0));
+        if ($temaIds) {
+            $ph = implode(',', array_fill(0, count($temaIds), '?'));
+            $w .= " AND EXISTS (SELECT 1 FROM import_log_leads_respuestas r
+                                JOIN pregunta_tema pt ON pt.pregunta_id = r.pregunta_id
+                                WHERE r.lead_id = l.id_lead AND pt.tema_id IN ($ph))";
+            foreach ($temaIds as $v) $params[] = $v;
+        }
+    }
+
+    return $w;
 }
 
 /**
@@ -796,7 +1089,7 @@ function handleUpload(): string {
     if (empty($_FILES['file']['tmp_name'])) errOut('No se recibió archivo.');
     if ($_FILES['file']['error'] !== UPLOAD_ERR_OK) errOut('Error de upload: código ' . $_FILES['file']['error']);
     $ext = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, ['xlsx','xls','ods'])) errOut('Formato no soportado. Use .xlsx, .xls u .ods');
+    if (!in_array($ext, ['xlsx','xls','ods','csv'])) errOut('Formato no soportado. Use .xlsx, .xls, .csv u .ods');
     $tmpName = 'lead_' . bin2hex(random_bytes(8)) . '.' . $ext;
     $tmpPath = TMP_DIR . $tmpName;
     if (!move_uploaded_file($_FILES['file']['tmp_name'], $tmpPath)) errOut('No se pudo guardar el archivo temporal.', 500);
@@ -820,6 +1113,8 @@ try {
         // Verificar extensiones PHP necesarias
         $hasZip = class_exists('ZipArchive');
         $hasXml = function_exists('simplexml_load_string');
+        // .xls/.csv/.ods dependen de PhpSpreadsheet (vendor/) — .xlsx no lo necesita
+        $hasPhpSpreadsheet = file_exists(__DIR__ . '/vendor/autoload.php');
 
         // Verificar acceso a c98_geo
         $c98Status = 'skipped';
@@ -839,6 +1134,7 @@ try {
             'php_version' => PHP_VERSION,
             'php_zip'     => $hasZip,
             'php_xml'     => $hasXml,
+            'phpspreadsheet' => $hasPhpSpreadsheet ? 'ready (.xls/.csv/.ods)' : 'faltante — correr composer install',
             'c98_geo'     => $c98Status,
         ]);
     }
@@ -1028,6 +1324,46 @@ try {
                 ORDER BY il.id DESC LIMIT 20
             ")->fetchAll(PDO::FETCH_ASSOC);
 
+            // 7. Temas/subtemas — drill-down igual que geo (Dominio/Tema › Subtema › Pregunta),
+            // ver app/docs/taxonomia_temas_subtemas.md. Cuenta RESPUESTAS (no preguntas), para
+            // reflejar cuánta gente contestó algo de cada tema, no cuántas preguntas hay.
+            $joinLeadTemas = $importId ? "JOIN import_log_leads l ON l.id_lead = r.lead_id" : "";
+            $whereTemas    = $importId ? "WHERE l.import_id = $importId" : "";
+            $temas = [];
+            $temas['tema'] = array_map(fn($r) => ['val' => $r['val'], 'cnt' => (int)$r['cnt']], $db->query("
+                SELECT dt.tema AS val, COUNT(r.id) AS cnt
+                FROM dim_tema dt
+                JOIN pregunta_tema pt ON pt.tema_id = dt.id
+                JOIN import_log_leads_respuestas r ON r.pregunta_id = pt.pregunta_id
+                $joinLeadTemas
+                $whereTemas
+                GROUP BY dt.tema ORDER BY cnt DESC
+            ")->fetchAll(PDO::FETCH_ASSOC));
+            $temas['subtema'] = array_map(fn($r) => ['val' => $r['val'], 'cnt' => (int)$r['cnt']], $db->query("
+                SELECT CONCAT(dt.subtema, '|||', dt.tema) AS val, COUNT(r.id) AS cnt
+                FROM dim_tema dt
+                JOIN pregunta_tema pt ON pt.tema_id = dt.id
+                JOIN import_log_leads_respuestas r ON r.pregunta_id = pt.pregunta_id
+                $joinLeadTemas
+                $whereTemas
+                GROUP BY dt.id ORDER BY cnt DESC
+            ")->fetchAll(PDO::FETCH_ASSOC));
+            $leadFilterSub = $importId
+                ? "AND r.lead_id IN (SELECT id_lead FROM import_log_leads WHERE import_id = $importId)"
+                : "";
+            $temas['preguntas'] = $db->query("
+                SELECT p.id AS pregunta_id, p.pregunta, dt.tema, dt.subtema, dt.codigo,
+                       COUNT(r.id) AS n_respuestas
+                FROM dim_tema dt
+                JOIN pregunta_tema pt ON pt.tema_id = dt.id
+                JOIN import_log_leads_preguntas p ON p.id = pt.pregunta_id
+                LEFT JOIN import_log_leads_respuestas r ON r.pregunta_id = p.id $leadFilterSub
+                GROUP BY p.id, dt.id
+                ORDER BY dt.codigo, n_respuestas DESC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($temas['preguntas'] as &$pr) { $pr['n_respuestas'] = (int)$pr['n_respuestas']; $pr['pregunta_id'] = (int)$pr['pregunta_id']; }
+            unset($pr);
+
             jsonOut([
                 'ok'          => true,
                 'total'       => $total,
@@ -1035,6 +1371,7 @@ try {
                 'cobertura'   => $cobertura,
                 'dist'        => $dist,
                 'geo'         => $geo,
+                'temas'       => $temas,
                 'timeline'    => array_reverse($timeline),
                 'por_import'  => $porImport,
             ]);
@@ -1517,6 +1854,13 @@ try {
         $stmtGetPreg = $db->prepare(
             "SELECT id FROM import_log_leads_preguntas WHERE pregunta = ?"
         );
+        // Clasificación automática de tema/subtema (dominio Social/Interno) para preguntas
+        // nuevas — mismo patrón que es_electoral, ver app/docs/taxonomia_temas_subtemas.md §7.4.
+        // Se inserta como pendiente_revision=1: nunca se trata como definitiva sin revisión humana.
+        $temaKeywords = $db->query("SELECT id, keywords FROM dim_tema")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $stmtInsPregTema = $db->prepare(
+            "INSERT IGNORE INTO pregunta_tema (pregunta_id, tema_id, origen, pendiente_revision) VALUES (?, ?, 'auto', 1)"
+        );
         $stmtEav = $db->prepare(
             "INSERT INTO import_log_leads_respuestas (lead_id, pregunta_id, respuesta) VALUES (?, ?, ?)"
         );
@@ -1762,8 +2106,19 @@ try {
                                     if (str_contains($pregLower, $kw)) { $isElectoral = 1; break; }
                                 }
                                 $stmtInsPreg->execute([$pregNorm, $isElectoral]);
+                                $esPreguntaNueva = $stmtInsPreg->rowCount() > 0;
                                 $stmtGetPreg->execute([$pregNorm]);
                                 $pregIdCache[$pregNorm] = (int)($stmtGetPreg->fetchColumn() ?: 0);
+                                if ($esPreguntaNueva && !$isElectoral && $pregIdCache[$pregNorm]) {
+                                    foreach ($temaKeywords as $temaId => $kwJson) {
+                                        foreach (json_decode($kwJson, true) as $kw) {
+                                            if (str_contains($pregLower, $kw)) {
+                                                $stmtInsPregTema->execute([$pregIdCache[$pregNorm], $temaId]);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             if ($pregIdCache[$pregNorm]) {
                                 // Normalizar respuesta: _ → espacio, trim, colapsar espacios
@@ -1985,6 +2340,463 @@ try {
             $db->rollBack();
             errOut($e->getMessage());
         }
+    }
+
+    // ── Agregar partido rápido ──────────────────────────────────────────
+    if ($action === 'add_partido') {
+        $db = getDB();
+        $nombre = trim($_POST['nombre'] ?? '');
+        $sigla  = trim($_POST['sigla']  ?? '') ?: null;
+        if (!$nombre) errOut('Nombre del partido requerido.');
+
+        // Detectar columnas reales de dim_partido
+        $ptCols = $db->query(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='dim_partido'"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        $ptName    = in_array('nombre_partido', $ptCols) ? 'nombre_partido'
+                   : (in_array('partido', $ptCols) ? 'partido' : 'nombre_partido');
+        $hasActivo = in_array('activo', $ptCols);
+        $hasSigla  = in_array('sigla',  $ptCols);
+
+        try {
+            // ¿Ya existe? (case / trim insensitive)
+            $stmt = $db->prepare(
+                "SELECT id_partido, `$ptName` AS nombre FROM dim_partido
+                 WHERE UPPER(TRIM(`$ptName`)) = UPPER(TRIM(?)) LIMIT 1"
+            );
+            $stmt->execute([$nombre]);
+            if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                jsonOut(['ok' => true, 'id' => (int)$row['id_partido'],
+                         'nombre' => $row['nombre'], 'existing' => true]);
+            }
+
+            $cols = ["`$ptName`"]; $ph = ['?']; $vals = [$nombre];
+            if ($hasSigla)  { $cols[] = 'sigla';  $ph[] = '?'; $vals[] = $sigla; }
+            if ($hasActivo) { $cols[] = 'activo'; $ph[] = '?'; $vals[] = 1; }
+            $db->prepare(
+                "INSERT INTO dim_partido (" . implode(',', $cols) . ") VALUES (" . implode(',', $ph) . ")"
+            )->execute($vals);
+
+            jsonOut(['ok' => true, 'id' => (int)$db->lastInsertId(), 'nombre' => $nombre]);
+        } catch (\Throwable $e) {
+            errOut($e->getMessage());
+        }
+    }
+
+    // ── REGISTRAR_PREGUNTAS ───────────────────────────────────
+    // Paso "Temas" del wizard: recibe los headers EAV detectados en ESTA
+    // importación (antes de confirmar), los registra en el catálogo si son
+    // nuevos, y devuelve su clasificación (existente o auto-sugerida) para
+    // que el usuario la confirme/corrija antes de importar los leads.
+    if ($action === 'registrar_preguntas') {
+        $db = getDB();
+        $headers = json_decode($_POST['headers'] ?? '[]', true);
+        if (!is_array($headers)) errOut('headers debe ser un array JSON.');
+
+        $temaKeywords = $db->query("SELECT id, keywords FROM dim_tema")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $catalogo = $db->query("SELECT id, dominio, tema, subtema, codigo FROM dim_tema ORDER BY codigo")->fetchAll();
+
+        $resultado = [];
+        foreach (array_unique(array_filter(array_map('strval', $headers))) as $h) {
+            $resultado[] = registrarPregunta($db, $h, $temaKeywords);
+        }
+        jsonOut(['ok' => true, 'preguntas' => $resultado, 'catalogo' => $catalogo]);
+    }
+
+    // ── TEMAS_PENDIENTES ──────────────────────────────────────
+    // Cola de revisión de la taxonomía tema/subtema (ver app/docs/taxonomia_temas_subtemas.md §7.5)
+    if ($action === 'temas_pendientes') {
+        $db = getDB();
+        $catalogo = $db->query("
+            SELECT id, dominio, tema, subtema, codigo
+            FROM dim_tema
+            ORDER BY codigo
+        ")->fetchAll();
+        $catalogoConKeywords = $db->query("SELECT id, tema, subtema, codigo, keywords FROM dim_tema")->fetchAll();
+
+        // Sugeridas por el clasificador automático, aún no confirmadas
+        $sugeridas = $db->query("
+            SELECT p.id AS pregunta_id, p.pregunta, pt.tema_id, dt.codigo, dt.tema, dt.subtema
+            FROM pregunta_tema pt
+            JOIN import_log_leads_preguntas p ON p.id = pt.pregunta_id
+            JOIN dim_tema dt ON dt.id = pt.tema_id
+            WHERE pt.pendiente_revision = 1
+            ORDER BY p.id
+        ")->fetchAll();
+
+        // Sin ninguna clasificación todavía (ni auto ni manual) y no electorales
+        $sinTema = $db->query("
+            SELECT p.id, p.pregunta
+            FROM import_log_leads_preguntas p
+            WHERE p.es_electoral = 0
+              AND NOT EXISTS (SELECT 1 FROM pregunta_tema pt WHERE pt.pregunta_id = p.id)
+            ORDER BY p.id
+        ")->fetchAll();
+        // Sin match exacto de keywords: se les calcula una sugerencia débil por
+        // similitud de tokens, para no dejar al analista sin ningún punto de partida.
+        foreach ($sinTema as &$row) {
+            $row['sugerencias_debiles'] = sugerirTemasDebil(mb_strtolower($row['pregunta'], 'UTF-8'), $catalogoConKeywords);
+        }
+        unset($row);
+
+        jsonOut(['ok' => true, 'catalogo' => $catalogo, 'sugeridas' => $sugeridas, 'sin_tema' => $sinTema]);
+    }
+
+    // ── RESPUESTAS_MUESTRA ────────────────────────────────────
+    // Distribución real de respuestas de una pregunta — contexto para clasificarla.
+    if ($action === 'respuestas_muestra') {
+        $db = getDB();
+        $preguntaId = (int)($_GET['pregunta_id'] ?? 0);
+        $importId   = isset($_GET['import_id']) ? (int)$_GET['import_id'] : null;
+        if (!$preguntaId) errOut('Falta pregunta_id.');
+        $importFilter = $importId
+            ? "AND r.lead_id IN (SELECT id_lead FROM import_log_leads WHERE import_id = $importId)"
+            : "";
+        $stmt = $db->prepare("
+            SELECT r.respuesta, COUNT(*) AS n
+            FROM import_log_leads_respuestas r
+            WHERE r.pregunta_id = ? $importFilter
+            GROUP BY r.respuesta
+            ORDER BY n DESC
+            LIMIT 20
+        ");
+        $stmt->execute([$preguntaId]);
+        $filas = $stmt->fetchAll();
+        $totalStmt = $db->prepare("SELECT COUNT(*) FROM import_log_leads_respuestas r WHERE r.pregunta_id = ? $importFilter");
+        $totalStmt->execute([$preguntaId]);
+        $total = (int)$totalStmt->fetchColumn();
+        foreach ($filas as &$f) { $f['pct'] = $total ? round(100 * $f['n'] / $total, 1) : 0; }
+        unset($f);
+        jsonOut(['ok' => true, 'pregunta_id' => $preguntaId, 'total' => $total, 'respuestas' => $filas]);
+    }
+
+    // ── CREAR_TEMA ────────────────────────────────────────────
+    // Crea un tema/subtema nuevo en dim_tema cuando ninguno de los existentes aplica.
+    if ($action === 'crear_tema') {
+        $db = getDB();
+        $dominio = trim($_POST['dominio'] ?? '');
+        $tema    = trim($_POST['tema'] ?? '');
+        $subtema = trim($_POST['subtema'] ?? '');
+        $keywordsRaw = trim($_POST['keywords'] ?? '');
+        if (!in_array($dominio, ['Social', 'Interno'], true)) errOut('Dominio inválido.');
+        if ($tema === '' || $subtema === '') errOut('Tema y subtema son requeridos.');
+
+        $keywords = array_values(array_filter(array_map('trim', explode(',', $keywordsRaw))));
+        if (!$keywords) $keywords = [mb_strtolower($subtema, 'UTF-8')];
+
+        // Código jerárquico: reutiliza el prefijo del tema si ya existe, si no crea uno nuevo
+        $prefijoStmt = $db->prepare("SELECT codigo FROM dim_tema WHERE tema = ? ORDER BY codigo DESC LIMIT 1");
+        $prefijoStmt->execute([$tema]);
+        $ultimoCodigo = $prefijoStmt->fetchColumn();
+        if ($ultimoCodigo) {
+            [$base, $n] = explode('.', $ultimoCodigo);
+            $codigo = $base . '.' . ((int)$n + 1);
+        } else {
+            $prefijoBase = $dominio === 'Interno' ? 'INT' : 'SOC';
+            $maxBase = (int)$db->query("
+                SELECT MAX(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(codigo,'-',2),'-',-1) AS UNSIGNED))
+                FROM dim_tema WHERE codigo LIKE '{$prefijoBase}-%'
+            ")->fetchColumn();
+            $codigo = $prefijoBase . '-' . ($maxBase + 1) . '.1';
+        }
+
+        try {
+            $db->prepare("INSERT INTO dim_tema (dominio, tema, subtema, codigo, keywords) VALUES (?,?,?,?,?)")
+               ->execute([$dominio, $tema, $subtema, $codigo, json_encode($keywords, JSON_UNESCAPED_UNICODE)]);
+            $newId = (int)$db->lastInsertId();
+            jsonOut(['ok' => true, 'id' => $newId, 'dominio' => $dominio, 'tema' => $tema, 'subtema' => $subtema, 'codigo' => $codigo]);
+        } catch (\Throwable $e) {
+            errOut('No se pudo crear (¿ya existe ese tema+subtema?): ' . $e->getMessage());
+        }
+    }
+
+    // ── TEMAS_GUARDAR ─────────────────────────────────────────
+    // Confirma/corrige el tema(s) de una pregunta. Reemplaza sus filas en pregunta_tema
+    // por la selección final del analista, marcadas origen='manual', pendiente_revision=0.
+    if ($action === 'temas_guardar') {
+        $db = getDB();
+        $preguntaId = (int)($_POST['pregunta_id'] ?? 0);
+        $temaIdsRaw = $_POST['tema_ids'] ?? '';
+        $temaIds = array_filter(array_map('intval', explode(',', (string)$temaIdsRaw)));
+        if (!$preguntaId) errOut('Falta pregunta_id.');
+
+        $db->beginTransaction();
+        try {
+            $db->prepare("DELETE FROM pregunta_tema WHERE pregunta_id = ?")->execute([$preguntaId]);
+            $stmt = $db->prepare(
+                "INSERT INTO pregunta_tema (pregunta_id, tema_id, origen, pendiente_revision) VALUES (?, ?, 'manual', 0)"
+            );
+            foreach (array_unique($temaIds) as $temaId) {
+                $stmt->execute([$preguntaId, $temaId]);
+            }
+            $db->commit();
+            jsonOut(['ok' => true, 'pregunta_id' => $preguntaId, 'tema_ids' => array_values(array_unique($temaIds))]);
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            errOut($e->getMessage());
+        }
+    }
+
+    // ── SEGMENT_DIMS ──────────────────────────────────────────
+    // Cataloga los valores disponibles para poblar el constructor de consultas
+    // de leads_segmentacion.html (demografía, política, geografía, preguntas).
+    if ($action === 'segment_dims') {
+        $db = getDB();
+        $out = ['ok' => true];
+
+        // Valores categóricos simples (con conteo)
+        $catQueries = [
+            'sexo'                => 'SELECT sexo AS val, COUNT(*) AS cnt FROM import_log_leads WHERE sexo IS NOT NULL AND sexo <> "" GROUP BY sexo ORDER BY cnt DESC',
+            'rango_edad'          => 'SELECT rango_edad AS val, COUNT(*) AS cnt FROM import_log_leads WHERE rango_edad IS NOT NULL AND rango_edad <> "" GROUP BY rango_edad ORDER BY FIELD(rango_edad,"18a24","25a34","35a44","45a65+","18-24","25-34","35-44","45-65+") ASC',
+            'estrato'             => 'SELECT estrato AS val, COUNT(*) AS cnt FROM import_log_leads WHERE estrato IS NOT NULL GROUP BY estrato ORDER BY estrato ASC',
+            'platform'            => 'SELECT platform AS val, COUNT(*) AS cnt FROM import_log_leads WHERE platform IS NOT NULL AND platform <> "" GROUP BY platform ORDER BY cnt DESC',
+            'afiliacion_politica' => 'SELECT afiliacion_politica AS val, COUNT(*) AS cnt FROM import_log_leads WHERE afiliacion_politica IS NOT NULL AND afiliacion_politica <> "" GROUP BY afiliacion_politica ORDER BY cnt DESC LIMIT 40',
+            'nivel_educativo'     => 'SELECT nivel_educativo AS val, COUNT(*) AS cnt FROM import_log_leads WHERE nivel_educativo IS NOT NULL AND nivel_educativo <> "" GROUP BY nivel_educativo ORDER BY cnt DESC LIMIT 40',
+        ];
+        foreach ($catQueries as $k => $sql) {
+            $out[$k] = array_map(
+                fn($r) => ['val' => $r['val'], 'cnt' => (int)$r['cnt']],
+                $db->query($sql)->fetchAll(PDO::FETCH_ASSOC)
+            );
+        }
+
+        $out['total_leads'] = (int)$db->query("SELECT COUNT(*) FROM import_log_leads")->fetchColumn();
+
+        // Importaciones
+        $out['imports'] = array_map(fn($r) => [
+            'id'      => (int)$r['id'],
+            'archivo' => $r['archivo'],
+            'fecha'   => $r['fecha'],
+            'leads'   => (int)$r['leads'],
+        ], $db->query("
+            SELECT il.id, il.archivo, DATE(il.importado_en) AS fecha, COUNT(l.id_lead) AS leads
+            FROM import_log il
+            LEFT JOIN import_log_leads l ON l.import_id = il.id
+            GROUP BY il.id ORDER BY il.id DESC LIMIT 200
+        ")->fetchAll(PDO::FETCH_ASSOC));
+
+        // Geografía: regiones + departamentos (niveles más finos van on-demand vía c98geo_api.php)
+        $out['regiones'] = array_map(fn($r) => ['id' => (int)$r['id'], 'nombre' => $r['nombre']],
+            $db->query("SELECT id, nombre FROM c98_geo.dim_region ORDER BY nombre")->fetchAll(PDO::FETCH_ASSOC));
+        $out['departamentos'] = array_map(fn($r) => [
+            'id' => $r['id'], 'nombre' => $r['nombre'], 'id_region' => (int)$r['id_region'],
+        ], $db->query("SELECT id, nombre, id_region FROM c98_geo.dim_departamento ORDER BY nombre")->fetchAll(PDO::FETCH_ASSOC));
+
+        // Catálogo de preguntas de encuesta con su taxonomía (dominio › tema › subtema)
+        $out['preguntas'] = array_map(fn($r) => [
+            'id'       => (int)$r['id'],
+            'pregunta' => $r['pregunta'],
+            'dominio'  => $r['dominio'],
+            'tema'     => $r['tema'],
+            'subtema'  => $r['subtema'],
+            'codigo'   => $r['codigo'],
+            'es_electoral' => (int)$r['es_electoral'],
+            'n'        => (int)$r['n'],
+        ], $db->query("
+            SELECT p.id, p.pregunta, p.es_electoral,
+                   dt.dominio, dt.tema, dt.subtema, dt.codigo,
+                   (SELECT COUNT(*) FROM import_log_leads_respuestas r WHERE r.pregunta_id = p.id) AS n
+            FROM import_log_leads_preguntas p
+            LEFT JOIN pregunta_tema pt ON pt.pregunta_id = p.id
+            LEFT JOIN dim_tema dt ON dt.id = pt.tema_id
+            GROUP BY p.id
+            HAVING n > 0
+            ORDER BY (dt.codigo IS NULL), dt.codigo, n DESC
+        ")->fetchAll(PDO::FETCH_ASSOC));
+
+        // Catálogo de temas/subtemas (dim_tema) con cobertura de leads
+        $out['temas'] = array_map(fn($r) => [
+            'id'      => (int)$r['id'],
+            'dominio' => $r['dominio'],
+            'tema'    => $r['tema'],
+            'subtema' => $r['subtema'],
+            'codigo'  => $r['codigo'],
+            'n'       => (int)$r['n'],
+        ], $db->query("
+            SELECT dt.id, dt.dominio, dt.tema, dt.subtema, dt.codigo,
+                   COUNT(DISTINCT r.lead_id) AS n
+            FROM dim_tema dt
+            LEFT JOIN pregunta_tema pt ON pt.tema_id = dt.id
+            LEFT JOIN import_log_leads_respuestas r ON r.pregunta_id = pt.pregunta_id
+            GROUP BY dt.id
+            ORDER BY dt.codigo
+        ")->fetchAll(PDO::FETCH_ASSOC));
+
+        jsonOut($out);
+    }
+
+    // ── SEGMENTAR ─────────────────────────────────────────────
+    // Aplica el objeto de filtros y devuelve: tamaño del segmento, distribuciones
+    // (misma forma que action=analytics → dist) y agregación geográfica para el mapa.
+    if ($action === 'segmentar') {
+        $db = getDB();
+        $filtros = json_decode($_POST['filtros'] ?? file_get_contents('php://input') ?: '{}', true);
+        if (!is_array($filtros)) $filtros = [];
+        $nivelMapa = $_POST['nivel_mapa'] ?? $filtros['nivel_mapa'] ?? 'departamento';
+        if (!in_array($nivelMapa, SEGMENT_GEO_NIVELES, true)) $nivelMapa = 'departamento';
+
+        try {
+            $params = [];
+            $where  = buildSegmentWhere($filtros, $params);
+
+            $stmtTotal = $db->prepare("SELECT COUNT(*) FROM import_log_leads l $where");
+            $stmtTotal->execute($params);
+            $total = (int)$stmtTotal->fetchColumn();
+
+            $totalGlobal = (int)$db->query("SELECT COUNT(*) FROM import_log_leads")->fetchColumn();
+
+            // Distribuciones categóricas del segmento
+            $distDefs = [
+                'sexo'                => ['sexo', 'GROUP BY sexo ORDER BY cnt DESC'],
+                'rango_edad'          => ['rango_edad', 'GROUP BY rango_edad ORDER BY FIELD(rango_edad,"18a24","25a34","35a44","45a65+","18-24","25-34","35-44","45-65+") ASC'],
+                'estrato'             => ['estrato', 'GROUP BY estrato ORDER BY estrato ASC'],
+                'afiliacion_politica' => ['afiliacion_politica', 'GROUP BY afiliacion_politica ORDER BY cnt DESC LIMIT 15'],
+                'nivel_educativo'     => ['nivel_educativo', 'GROUP BY nivel_educativo ORDER BY cnt DESC LIMIT 12'],
+                'platform'            => ['platform', 'GROUP BY platform ORDER BY cnt DESC'],
+            ];
+            $dist = [];
+            foreach ($distDefs as $key => [$col, $tail]) {
+                $sql = "SELECT l.`$col` AS val, COUNT(*) AS cnt FROM import_log_leads l $where AND l.`$col` IS NOT NULL AND l.`$col` <> '' $tail";
+                $st = $db->prepare($sql);
+                $st->execute($params);
+                $dist[$key] = array_map(fn($r) => ['val' => $r['val'], 'cnt' => (int)$r['cnt']],
+                    $st->fetchAll(PDO::FETCH_ASSOC));
+            }
+
+            // Timeline del segmento (por mes de created_time)
+            $stTl = $db->prepare("
+                SELECT DATE_FORMAT(l.created_time, '%Y-%m') AS fecha, COUNT(*) AS nuevos
+                FROM import_log_leads l $where AND l.created_time IS NOT NULL
+                GROUP BY fecha ORDER BY fecha ASC LIMIT 60
+            ");
+            $stTl->execute($params);
+            $timeline = array_map(fn($r) => ['fecha' => $r['fecha'], 'nuevos' => (int)$r['nuevos']],
+                $stTl->fetchAll(PDO::FETCH_ASSOC));
+
+            // Conteo de leads del segmento por tema (dim_tema.id) — para que los botones de
+            // "Temas" muestren el valor del segmento, no el global.
+            $stTema = $db->prepare("
+                SELECT pt.tema_id, COUNT(DISTINCT l.id_lead) AS cnt
+                FROM import_log_leads l
+                JOIN import_log_leads_respuestas r ON r.lead_id = l.id_lead
+                JOIN pregunta_tema pt ON pt.pregunta_id = r.pregunta_id
+                $where
+                GROUP BY pt.tema_id
+            ");
+            $stTema->execute($params);
+            $temasCnt = [];
+            foreach ($stTema->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $temasCnt[(string)$r['tema_id']] = (int)$r['cnt'];
+            }
+
+            // Agregación geográfica para el mapa (join a c98_geo por nivel)
+            $geoMap = [];
+            $geoAgg = [
+                'region'       => "SELECT dpto.id_region AS geo_id, MAX(reg.nombre) AS nombre, COUNT(*) AS cnt
+                                   FROM import_log_leads l
+                                   JOIN c98_geo.dim_departamento dpto ON dpto.id = LEFT(l.id_geo,2)
+                                   JOIN c98_geo.dim_region reg ON reg.id = dpto.id_region
+                                   $where AND l.id_geo IS NOT NULL AND dpto.id_region IS NOT NULL
+                                   GROUP BY dpto.id_region",
+                'departamento' => "SELECT dpto.id AS geo_id, MAX(dpto.nombre) AS nombre, COUNT(*) AS cnt
+                                   FROM import_log_leads l
+                                   JOIN c98_geo.dim_departamento dpto ON dpto.id = LEFT(l.id_geo,2)
+                                   $where AND l.id_geo IS NOT NULL
+                                   GROUP BY dpto.id",
+                'subregion'    => "SELECT sr.id AS geo_id, MAX(sr.nombre) AS nombre, COUNT(*) AS cnt
+                                   FROM import_log_leads l
+                                   JOIN c98_geo.dim_municipio m ON m.id = LEFT(l.id_geo,5)
+                                   JOIN c98_geo.dim_subregion sr ON sr.id = m.id_subregion
+                                   $where AND l.id_geo IS NOT NULL AND m.id_subregion IS NOT NULL
+                                   GROUP BY sr.id",
+                'municipio'    => "SELECT m.id AS geo_id, MAX(m.nombre) AS nombre, COUNT(*) AS cnt
+                                   FROM import_log_leads l
+                                   JOIN c98_geo.dim_municipio m ON m.id = LEFT(l.id_geo,5)
+                                   $where AND l.id_geo IS NOT NULL
+                                   GROUP BY m.id",
+                'zona'         => "SELECT z.id AS geo_id, MAX(z.nombre) AS nombre, COUNT(*) AS cnt
+                                   FROM import_log_leads l
+                                   JOIN c98_geo.dim_zona z ON z.id = LEFT(l.id_geo,8)
+                                   $where AND CHAR_LENGTH(l.id_geo) >= 8
+                                   GROUP BY z.id",
+                'comuna'       => "SELECT c.id AS geo_id, MAX(c.nombre) AS nombre, COUNT(*) AS cnt
+                                   FROM import_log_leads l
+                                   JOIN c98_geo.dim_comuna c ON c.id = LEFT(l.id_geo,11)
+                                   $where AND CHAR_LENGTH(l.id_geo) >= 11
+                                   GROUP BY c.id",
+                'barrio'       => "SELECT b.id AS geo_id, MAX(b.nombre) AS nombre, COUNT(*) AS cnt
+                                   FROM import_log_leads l
+                                   JOIN c98_geo.dim_barrio b ON b.id = l.id_geo
+                                   $where AND CHAR_LENGTH(l.id_geo) = 15
+                                   GROUP BY b.id",
+            ];
+            $stGeo = $db->prepare($geoAgg[$nivelMapa]);
+            $stGeo->execute($params);
+            $geoMap = array_map(fn($r) => [
+                'geo_id' => (string)$r['geo_id'], 'nombre' => $r['nombre'], 'cnt' => (int)$r['cnt'],
+            ], $stGeo->fetchAll(PDO::FETCH_ASSOC));
+
+            // Leads sin id_geo o con id_geo demasiado corto para el nivel del mapa
+            $stSinGeo = $db->prepare("SELECT COUNT(*) FROM import_log_leads l $where AND l.id_geo IS NULL");
+            $stSinGeo->execute($params);
+            $sinGeo = (int)$stSinGeo->fetchColumn();
+
+            jsonOut([
+                'ok'            => true,
+                'total'         => $total,
+                'total_global'  => $totalGlobal,
+                'pct_del_total' => $totalGlobal > 0 ? round($total / $totalGlobal * 100, 2) : 0,
+                'dist'          => $dist,
+                'timeline'      => $timeline,
+                'nivel_mapa'    => $nivelMapa,
+                'geo_map'       => $geoMap,
+                'sin_geo'       => $sinGeo,
+                'mapeados'      => array_sum(array_column($geoMap, 'cnt')),
+                'temas_cnt'     => $temasCnt,
+            ]);
+        } catch (\Throwable $e) {
+            errOut('Error en segmentar: ' . $e->getMessage());
+        }
+    }
+
+    // ── SEGMENTO_EXPORT ───────────────────────────────────────
+    // Descarga el segmento como CSV con datos de contacto (para activación).
+    if ($action === 'segmento_export') {
+        $db = getDB();
+        $filtros = json_decode($_POST['filtros'] ?? file_get_contents('php://input') ?: '{}', true);
+        if (!is_array($filtros)) $filtros = [];
+
+        $params = [];
+        $where  = buildSegmentWhere($filtros, $params);
+
+        $sql = "
+            SELECT l.id, l.nombre, l.email, l.telefono, l.sexo, l.rango_edad, l.estrato,
+                   l.nivel_educativo, l.afiliacion_politica, l.platform, l.id_geo,
+                   dpto.nombre AS departamento, m.nombre AS municipio,
+                   l.created_time, l.campaign_name
+            FROM import_log_leads l
+            LEFT JOIN c98_geo.dim_departamento dpto ON dpto.id = LEFT(l.id_geo,2)
+            LEFT JOIN c98_geo.dim_municipio    m    ON m.id    = LEFT(l.id_geo,5)
+            $where
+            ORDER BY l.id_lead
+        ";
+        $st = $db->prepare($sql);
+        $st->execute($params);
+
+        header_remove('Content-Type');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="segmento_' . date('Ymd_Hi') . '.csv"');
+        $fh = fopen('php://output', 'w');
+        fwrite($fh, "\xEF\xBB\xBF"); // BOM para Excel
+        fputcsv($fh, ['lead_id', 'nombre', 'email', 'telefono', 'sexo', 'rango_edad', 'estrato',
+            'nivel_educativo', 'afiliacion_politica', 'plataforma', 'id_geo', 'departamento',
+            'municipio', 'created_time', 'campaign_name']);
+        while ($row = $st->fetch(PDO::FETCH_NUM)) {
+            fputcsv($fh, $row);
+        }
+        fclose($fh);
+        exit;
     }
 
     errOut('Acción no reconocida: ' . htmlspecialchars($action));

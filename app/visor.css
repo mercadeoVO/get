@@ -23,6 +23,10 @@
   --surf:var(--card); --bord:var(--border);
   --t1:var(--text); --t2:#1d3552; --t3:var(--muted); --t4:var(--muted); --t5:var(--small); --t6:#8a9bb0;
   --c-reg:#1b6bb8; --c-dpto:#3f8fcf; --c-subr:#7a5cc0; --c-mpio:#ef8458; --c-zona:#c2477d; --c-com:#b88a00; --c-bar:#2f9e6f;
+  /* alias de la página de segmentación */
+  --surface-3:var(--accent-soft); --border-soft:var(--line); --text-dim:var(--muted); --text-faint:var(--small);
+  --accent-2:var(--accent); --good:var(--accent); --warn:var(--yellow); --bad:var(--red);
+  --shadow-sm:var(--shadow); --radius:var(--r-lg); --map-tiles:none;
   color-scheme:light;
 }
 :root[data-theme="dark"]{
@@ -232,3 +236,31 @@ main{padding:20px 24px!important}
 .leaflet-container{background:transparent}
 .leaflet-control-attribution{background:color-mix(in srgb,var(--card) 80%,transparent)!important;color:var(--muted)!important}
 .leaflet-control-attribution a{color:var(--accent)!important}
+
+/* ── Segmentación ───────────────────────────────────────── */
+.status{background:transparent!important;border:0!important;padding:8px 24px 0!important}
+.seg-kpi .n{background:none!important;-webkit-text-fill-color:currentColor!important;color:var(--text);font-size:2.4rem!important;font-weight:700!important;letter-spacing:-.03em}
+.seg-kpi .lbl{text-transform:none!important;letter-spacing:0!important;font-size:.9rem!important;color:var(--text)!important;font-weight:600}
+.timer{background:var(--card)!important;border:0!important;border-radius:var(--r-pill)!important}
+.card-h{text-transform:none!important;letter-spacing:-.01em!important;font-size:1rem!important;font-weight:600!important}
+.card-h .badge{background:var(--accent)!important;color:var(--accent-ink)!important}
+.rcard{background:var(--card)!important;border:0!important;border-radius:var(--r-lg)!important;padding:24px 28px!important}
+.rcard-h{text-transform:none!important;letter-spacing:-.01em!important;font-size:1rem!important;font-weight:600!important}
+.sub-lbl,.field label{text-transform:none!important;letter-spacing:0!important;font-size:.8rem!important;color:var(--muted)!important}
+.tile,.geo-lvl,.eav-cond,.btn-add,.seg-toggle,.q-list,.tema-grp,.modal{border:0!important;background:var(--surface)!important;border-radius:var(--r-md)!important}
+.tile .drill{background:var(--accent-soft)!important;border-radius:0 var(--r-md) 0 var(--r-sm)!important}
+.tile.on,.geo-lvl.on,.seg-toggle button.on{background:var(--accent)!important;color:var(--accent-ink)!important;box-shadow:none!important}
+.tile.on .lbl,.tile.on .cnt{color:var(--accent-ink)!important}
+.tile:hover:not(.on){transform:none;background:var(--accent-soft)!important}
+.tema-grp>summary{background:transparent!important}
+.btn-add{border:1.5px dashed var(--border)!important;background:transparent!important}
+.modal{background:var(--card)!important;box-shadow:0 16px 48px rgba(12,35,64,.25)!important}
+.modal-bg{backdrop-filter:none!important;background:rgba(10,24,41,.5)!important}
+.modal-h,.modal-f{border-color:var(--line)!important}
+.map-crumb,.legend,.leaflet-tooltip.seg-tt{background:color-mix(in srgb,var(--card) 92%,transparent)!important;border:0!important;border-radius:var(--r-md)!important}
+.map-wrap{background:var(--surface)!important}
+.leaflet-container{background:transparent}
+
+/* ── Barra superior: seis pestañas caben en una fila desde 1100px; debajo no se fija ── */
+.v-link{padding:10px 16px}
+@media(max-width:1100px){.v-nav{position:static}}

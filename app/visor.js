@@ -2,10 +2,12 @@
    Uso: <div id="v-nav" data-page="analitica" data-refresh="load()"></div> + <script src="visor.js"> */
 (function(){
   var PAGES = [
-    ['electoral', 'Electoral',  'dashboard_local.html'],
-    ['analitica', 'Analítica',  'leads_analytics.html'],
-    ['geografia', 'Geografía',  'c98geo_dashboard.html'],
-    ['importar',  'Importar',   'leads_import.html']
+    ['electoral',    'Electoral',    'dashboard_local.html'],
+    ['analitica',    'Analítica',    'leads_analytics.html'],
+    ['segmentacion', 'Segmentación', 'leads_segmentacion.html'],
+    ['geografia',    'Geografía',    'c98geo_dashboard.html'],
+    ['importar',     'Importar',     'leads_import.html'],
+    ['temas',        'Temas pendientes', 'leads_temas_pendientes.html']
   ];
   var KEY = 'visor-theme';
   var root = document.documentElement;

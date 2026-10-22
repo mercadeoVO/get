@@ -142,8 +142,8 @@ tbody tr:hover{background:rgba(99,102,241,.05)}
 
 footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
 </style>
-<link rel="stylesheet" href="visor.css?v=8">
-<script src="visor.js?v=2"></script>
+<link rel="stylesheet" href="visor.css?v=10">
+<script src="visor.js?v=9"></script>
 </head>
 <body>
 
@@ -241,6 +241,36 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
     <div class="chart-wrap tall"><canvas id="ch-geo"></canvas></div>
   </div>
 
+  <!-- ── FILA 6b: Temas y Percepción (línea completa) ── -->
+  <div class="card">
+    <div class="card-title">Temas y Percepción
+      <span>Tema › Subtema › Pregunta — ver app/docs/taxonomia_temas_subtemas.md</span>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTema('tema',this)">Tema</button>
+      <button class="tab" onclick="switchTema('subtema',this)">Subtema</button>
+      <button class="tab" onclick="switchTema('pregunta',this)">Pregunta</button>
+    </div>
+    <div class="geo-filter-bar" id="tema-filter-bar" style="display:none">
+      <label id="tema-filter-label">Filtrar por</label>
+      <select id="tema-parent-select" onchange="applyTemaFilter()"></select>
+      <span id="tema-count"></span>
+    </div>
+    <div class="chart-wrap tall" id="tema-chart-wrap"><canvas id="ch-tema"></canvas></div>
+    <div id="tema-preguntas-wrap" style="display:none;">
+      <div class="tbl-wrap" style="max-height:340px;overflow-y:auto;">
+        <table>
+          <thead><tr><th>Código</th><th>Pregunta</th><th style="text-align:right;">Respuestas</th></tr></thead>
+          <tbody id="tema-preguntas-body"></tbody>
+        </table>
+      </div>
+      <div id="tema-pregunta-detalle" style="display:none;margin-top:14px;">
+        <div class="card-title" style="font-size:.8rem;margin-bottom:6px;" id="tema-pregunta-titulo"></div>
+        <div class="chart-wrap tall"><canvas id="ch-tema-pregunta"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── TABLA ── -->
   <div class="card">
     <div class="card-title">Historial de Importaciones</div>
@@ -293,7 +323,7 @@ function mapPlatform(v) {
   return PLATFORM_MAP[v.toLowerCase()] || 'Desconocido';
 }
 
-let DATA = null, GEO_DATA = null, charts = {};
+let DATA = null, GEO_DATA = null, TEMA_DATA = null, charts = {};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtN  = n => (n||0).toLocaleString('es-CO');   // número completo, sin abreviar
@@ -332,6 +362,8 @@ async function load() {
     DATA    = analData;
     GEO_DATA = analData.geo;
     parseGeoData(); // pre-parsear {val, parent, cnt} por nivel
+    TEMA_DATA = analData.temas;
+    parseTemaData();
 
     if(logData.ok && logData.logs?.length) {
       const sel = $('f-import');
@@ -388,6 +420,10 @@ function render() {
   // Geo — inicia en Departamento (sin padre)
   buildGeoFilter('departamento');
   renderGeo('departamento', null);
+
+  // Temas — inicia en Tema (sin padre)
+  buildTemaFilter('tema');
+  renderTemas('tema', null);
 
   // Tabla
   renderTable(d.por_import);
@@ -630,7 +666,7 @@ function parseGeoData() {
 }
 
 function switchGeo(nivel, btn) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
   activeGeo = nivel;
   buildGeoFilter(nivel);
@@ -721,6 +757,155 @@ function renderGeo(nivel, parentFilter) {
       }
     }
   });
+}
+
+// ── Temas drill-down (Tema › Subtema › Pregunta) ───────────────────────────────
+let activeTema = 'tema';
+const TEMA_PARENT = { subtema: { label:'Tema' } }; // 'pregunta' se filtra aparte (por subtema, vía lista)
+let TEMA_PARSED = {};   // {val, parent, cnt} por nivel tema/subtema
+let TEMA_PREGUNTAS = []; // array crudo {pregunta_id, pregunta, tema, subtema, codigo, n_respuestas}
+
+function parseTemaData() {
+  if (!TEMA_DATA) return;
+  ['tema', 'subtema'].forEach(nivel => {
+    TEMA_PARSED[nivel] = (TEMA_DATA[nivel] || []).map(d => {
+      const raw = d.val || '—';
+      const sep = raw.indexOf('|||');
+      if (sep < 0) return { val: raw, parent: null, cnt: d.cnt };
+      return { val: raw.substring(0, sep).trim(), parent: raw.substring(sep + 3).trim() || null, cnt: d.cnt };
+    });
+  });
+  TEMA_PREGUNTAS = TEMA_DATA.preguntas || [];
+}
+
+function switchTema(nivel, btn) {
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  activeTema = nivel;
+  buildTemaFilter(nivel);
+  renderTemas(nivel, null);
+}
+
+function buildTemaFilter(nivel) {
+  const bar = $('tema-filter-bar'), sel = $('tema-parent-select'), lbl = $('tema-filter-label');
+  let parents;
+  if (nivel === 'pregunta') {
+    parents = [...new Set(TEMA_PREGUNTAS.map(p => p.subtema))].sort((a,b)=>a.localeCompare(b,'es'));
+    lbl.textContent = 'Filtrar por Subtema:';
+  } else {
+    const config = TEMA_PARENT[nivel];
+    if (!config) { bar.style.display = 'none'; return; }
+    parents = [...new Set((TEMA_PARSED[nivel]||[]).map(d => d.parent).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+    lbl.textContent = `Filtrar por ${config.label}:`;
+  }
+  sel.innerHTML = `<option value="">— Todos (${parents.length}) —</option>` + parents.map(p => `<option value="${h(p)}">${h(p)}</option>`).join('');
+  bar.style.display = 'flex';
+}
+
+function applyTemaFilter() {
+  renderTemas(activeTema, $('tema-parent-select').value || null);
+}
+
+function renderTemas(nivel, parentFilter) {
+  const chartWrap = $('tema-chart-wrap'), preguntasWrap = $('tema-preguntas-wrap');
+  if (nivel === 'pregunta') {
+    chartWrap.style.display = 'none';
+    preguntasWrap.style.display = 'block';
+    $('tema-pregunta-detalle').style.display = 'none';
+    renderTemaPreguntasLista(parentFilter);
+    return;
+  }
+  chartWrap.style.display = 'block';
+  preguntasWrap.style.display = 'none';
+  destroyChart('ch-tema');
+
+  let rows = TEMA_PARSED?.[nivel];
+  if (!rows?.length) return;
+  if (parentFilter) rows = rows.filter(d => d.parent === parentFilter);
+  let top = rows.slice(0, 30);
+
+  const grouped = !parentFilter && top.some(d => d.parent);
+  if (grouped) top = [...top].sort((a,b)=>{ const pa=a.parent||'', pb=b.parent||''; return pa!==pb ? pa.localeCompare(pb,'es') : b.cnt-a.cnt; });
+
+  const vals = top.map(d => d.cnt);
+  const labels = top.map(d => grouped && d.parent ? `${d.val} — ${d.parent}` : (d.val || '—'));
+  const total = vals.reduce((a,b)=>a+b,0);
+
+  $('tema-count').textContent = parentFilter ? `${top.length} resultados · ${fmtK(total)} respuestas` : `Top ${top.length} · ${fmtK(total)} respuestas`;
+  chartWrap.style.height = Math.max(300, top.length * 26) + 'px';
+
+  charts['ch-tema'] = new Chart($('ch-tema').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Respuestas', data:vals, backgroundColor:'#a855f7CC', borderColor:'#a855f7', borderWidth:1, borderRadius:3 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      layout:{ padding:{ right:55 } },
+      plugins:{
+        datalabels: DL_BAR_H, legend:{display:false},
+        tooltip:{ callbacks:{ label: c => {
+          const row = top[c.dataIndex];
+          const ctx = row.parent ? ` · ${row.parent}` : '';
+          return ` ${fmtN(c.parsed.x)} respuestas (${(c.parsed.x/total*100).toFixed(1)}%)${ctx}`;
+        }}}
+      },
+      scales:{
+        x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
+        y:{ ticks:{color:'#e8eaf0',font:{size:10},maxTicksLimit:30}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderTemaPreguntasLista(subtemaFilter) {
+  let rows = TEMA_PREGUNTAS;
+  if (subtemaFilter) rows = rows.filter(p => p.subtema === subtemaFilter);
+  rows = [...rows].sort((a,b) => b.n_respuestas - a.n_respuestas);
+  $('tema-count').textContent = `${rows.length} pregunta(s)`;
+  const attrEsc = s => h(s).replace(/"/g,'&quot;');
+  $('tema-preguntas-body').innerHTML = rows.map(p => `
+    <tr style="cursor:pointer;" data-pregunta-id="${p.pregunta_id}" data-pregunta="${attrEsc(p.pregunta)}" onclick="verDistribucionPregunta(this.dataset.preguntaId, this.dataset.pregunta)">
+      <td><code style="color:#a855f7;font-size:.68rem;">${h(p.codigo)}</code></td>
+      <td>${h(p.pregunta)}</td>
+      <td style="text-align:right;">${fmtN(p.n_respuestas)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--muted);">Sin preguntas para este subtema.</td></tr>';
+}
+
+async function verDistribucionPregunta(preguntaId, pregunta) {
+  const importSel = $('f-import').value;
+  const qs = importSel ? `&import_id=${importSel}` : '';
+  const detalle = $('tema-pregunta-detalle');
+  detalle.style.display = 'block';
+  $('tema-pregunta-titulo').textContent = pregunta;
+  destroyChart('ch-tema-pregunta');
+  try {
+    const d = await fetch(`${API}?action=respuestas_muestra&pregunta_id=${preguntaId}${qs}`).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error');
+    if (d.total === 0) {
+      $('ch-tema-pregunta').parentElement.innerHTML = '<canvas id="ch-tema-pregunta"></canvas>';
+      return;
+    }
+    const labels = d.respuestas.map(r => r.respuesta || '(vacío)');
+    const vals   = d.respuestas.map(r => r.n);
+    charts['ch-tema-pregunta'] = new Chart($('ch-tema-pregunta').getContext('2d'), {
+      type:'bar',
+      data:{ labels, datasets:[{ label:'Respuestas', data:vals, backgroundColor:'#22c55eCC', borderColor:'#22c55e', borderWidth:1, borderRadius:3 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        layout:{ padding:{ right:55 } },
+        plugins:{
+          datalabels: DL_BAR_H, legend:{display:false},
+          tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.x)} (${(c.parsed.x/d.total*100).toFixed(1)}%)` } }
+        },
+        scales:{
+          x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
+          y:{ ticks:{color:'#e8eaf0',font:{size:10}}, grid:{display:false} }
+        }
+      }
+    });
+  } catch(e) {
+    console.error(e);
+  }
 }
 
 // ── Tabla ─────────────────────────────────────────────────────────────────────

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDFUT · Revisión de temas pendientes</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh;}
+
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:12px;}
+.topbar h1{font-size:18px;font-weight:700;}
+.topbar span{color:var(--muted);font-size:13px;}
+.topbar a{color:var(--accent);text-decoration:none;font-size:13px;margin-left:auto;}
+.topbar a:hover{text-decoration:underline;}
+.topbar a + a{margin-left:6px;}
+
+.container{max-width:980px;margin:0 auto;padding:28px 20px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px;}
+.card-title{font-size:15px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.card-sub{font-size:12.5px;color:var(--muted);margin-bottom:16px;}
+
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap;}
+.badge-blue{background:#1d4ed8;color:#bfdbfe;}
+.badge-green{background:#166534;color:#bbf7d0;}
+.badge-yellow{background:#854d0e;color:#fef08a;}
+.badge-gray{background:#374151;color:#9ca3af;}
+
+.btn{padding:7px 16px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-success{background:var(--green);color:#fff;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn:hover:not(:disabled){opacity:.85;}
+
+.stats-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+.stat-box{background:var(--surface2);border-radius:8px;padding:12px 18px;border:1px solid var(--border);min-width:110px;text-align:center;}
+.stat-box .val{font-size:28px;font-weight:800;}
+.stat-box .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+.stat-yellow .val{color:var(--yellow);}
+.stat-red .val{color:var(--red);}
+.stat-green .val{color:var(--green);}
+
+.pending-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;}
+.pending-item .preg{font-size:16px;font-weight:700;line-height:1.4;margin-bottom:10px;color:var(--yellow);}
+.pending-item .meta-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.pending-item .id-tag{font-family:'Courier New',monospace;font-size:11px;color:var(--small);}
+
+.disclosure-wrap{margin-top:8px;}
+.disclosure{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left;}
+.disclosure:hover{border-color:var(--accent);background:rgba(59,130,246,.06);}
+.disclosure .chev{display:inline-block;transition:transform .15s ease;font-size:10px;color:var(--muted);flex-shrink:0;}
+.disclosure[aria-expanded="true"] .chev{transform:rotate(90deg);}
+.disclosure .dlabel{flex:1;}
+.disclosure .dcount{color:var(--muted);font-size:11px;font-family:'Courier New',monospace;}
+.disclosure-panel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .18s ease;}
+.disclosure-panel.open{grid-template-rows:1fr;}
+.disclosure-panel > div{overflow:hidden;}
+.disclosure-panel .inner{background:var(--bg);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;padding:10px 12px;margin-top:-1px;}
+
+.resp-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0;}
+.resp-row .resp-txt{flex:1;color:var(--text);}
+.resp-row .resp-bar{height:6px;background:var(--accent);border-radius:3px;opacity:.55;}
+.resp-row .resp-n{color:var(--muted);font-family:'Courier New',monospace;font-size:11px;white-space:nowrap;}
+
+.debil-row{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+.debil-row h5{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+
+.mini-table{width:100%;border-collapse:collapse;font-size:12px;}
+.mini-table th{text-align:left;padding:5px 8px;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--border);}
+.mini-table td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.mini-table tr:last-child td{border-bottom:none;}
+.mini-table tr:hover td{background:rgba(255,255,255,.03);}
+.cod{font-family:'Courier New',monospace;color:var(--purple);font-size:11px;white-space:nowrap;}
+.use-btn{background:none;border:1px solid var(--purple);color:var(--purple);border-radius:5px;padding:2px 9px;font-size:11px;cursor:pointer;white-space:nowrap;}
+.use-btn:hover{background:rgba(168,85,247,.15);}
+.dom-tag{font-size:10px;color:var(--muted);}
+.catalogo-search{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:12px;margin-bottom:8px;}
+
+.disclosure.nested{padding:7px 10px;font-size:12px;border-radius:6px;background:var(--surface2);}
+.disclosure-wrap.nested{margin-top:6px;}
+.subtema-row{display:flex;align-items:center;gap:10px;padding:6px 4px;border-bottom:1px solid var(--border);}
+.subtema-row:last-child{border-bottom:none;}
+.subtema-row .subtema-txt{flex:1;color:var(--text);font-size:12px;}
+.catalogo-empty{color:var(--muted);font-size:12px;text-align:center;padding:10px;}
+
+.crear-tema-btn{background:none;border:1px dashed var(--muted);color:var(--muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;margin-top:8px;}
+.crear-tema-btn:hover{border-color:var(--purple);color:var(--purple);}
+.crear-tema-form{margin-top:10px;padding:12px;background:var(--bg);border:1px solid var(--purple);border-radius:8px;display:none;}
+.crear-tema-form.open{display:block;}
+.crear-tema-form input,.crear-tema-form select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:6px 8px;font-size:12.5px;margin-bottom:4px;}
+.crear-tema-form label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px;}
+.dominio-help{font-size:10px;font-style:italic;color:var(--small);margin-bottom:6px;line-height:1.4;}
+.dominio-help b{color:var(--muted);font-style:normal;}
+
+.editor{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);display:none;}
+.editor.open{display:block;}
+.tema-group{margin-bottom:10px;}
+.tema-group h4{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+.tema-opts{display:flex;flex-wrap:wrap;gap:6px;}
+.tema-opt{display:flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:4px 10px 4px 8px;font-size:12px;cursor:pointer;}
+.tema-opt input{accent-color:var(--accent);cursor:pointer;}
+.tema-opt.checked{border-color:var(--accent);background:rgba(59,130,246,.12);}
+.editor-actions{margin-top:12px;display:flex;gap:8px;}
+
+.empty-state{color:var(--muted);font-size:13px;text-align:center;padding:24px;}
+.alert{border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px;}
+.alert-ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#86efac;}
+.alert-err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;}
+.hidden{display:none;}
+</style>
+<link rel="stylesheet" href="visor.css?v=10">
+<script src="visor.js?v=9"></script>
+</head>
+<body>
+
+<div id="v-nav" data-page="temas"></div>
+<div class="page-hd"><h1 class="page-title">Temas pendientes</h1><p class="page-sub">Revisión de los temas y subtemas que el clasificador sugirió para preguntas nuevas.</p></div>
+
+<div class="container">
+
+  <div id="toast" class="hidden"></div>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="card">
+    <div class="card-title">Sugeridas por el clasificador automático</div>
+    <div class="card-sub">El clasificador ya propuso un tema al importar la encuesta. Confírmalo o corrígelo antes de que se use en reportes.</div>
+    <div id="sugeridasList"><div class="empty-state">Cargando…</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Sin ninguna clasificación</div>
+    <div class="card-sub">Preguntas nuevas donde ningún keyword hizo match. Asígnales tema/subtema manualmente (puedes elegir varios).</div>
+    <div id="sinTemaList"><div class="empty-state">Cargando…</div></div>
+  </div>
+
+</div>
+
+<script>
+const API = 'http://localhost/medfut/leads_importer.php';
+let CATALOGO = []; // dim_tema
+
+function toast(msg, ok=true){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'alert ' + (ok ? 'alert-ok' : 'alert-err');
+  setTimeout(()=>{ t.className = 'hidden'; }, 3500);
+}
+
+function catalogoAgrupado(){
+  const byTema = {};
+  CATALOGO.forEach(t=>{
+    const key = t.dominio + ' · ' + t.tema;
+    (byTema[key] = byTema[key] || []).push(t);
+  });
+  return byTema;
+}
+
+function renderEditor(preguntaId, preseleccion){
+  const grupos = catalogoAgrupado();
+  let html = '<div class="editor open" id="editor-'+preguntaId+'">';
+  Object.keys(grupos).forEach(grupo=>{
+    html += '<div class="tema-group"><h4>'+grupo+'</h4><div class="tema-opts">';
+    grupos[grupo].forEach(t=>{
+      const checked = preseleccion.includes(t.id) ? 'checked' : '';
+      const cls = preseleccion.includes(t.id) ? 'tema-opt checked' : 'tema-opt';
+      html += '<label class="'+cls+'" data-opt="'+t.id+'">'+
+        '<input type="checkbox" value="'+t.id+'" '+checked+' onchange="onOptToggle(this)"> '+
+        t.codigo+' '+t.subtema+'</label>';
+    });
+    html += '</div></div>';
+  });
+  html += '<div class="editor-actions">'+
+    '<button class="btn btn-success btn-sm" onclick="guardarPregunta('+preguntaId+')">Guardar clasificación</button>'+
+    '<button class="btn btn-outline btn-sm" onclick="cerrarEditor('+preguntaId+')">Cancelar</button>'+
+    '</div></div>';
+  return html;
+}
+
+function onOptToggle(input){
+  const label = input.closest('.tema-opt');
+  label.classList.toggle('checked', input.checked);
+}
+
+function cerrarEditor(id){
+  const el = document.getElementById('editor-'+id);
+  if (el) el.remove();
+}
+
+function abrirEditor(preguntaId, preseleccion){
+  cerrarEditor(preguntaId);
+  const host = document.getElementById('host-'+preguntaId);
+  host.insertAdjacentHTML('beforeend', renderEditor(preguntaId, preseleccion));
+}
+
+async function guardarPregunta(preguntaId){
+  const editor = document.getElementById('editor-'+preguntaId);
+  const ids = Array.from(editor.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value);
+  if (ids.length === 0) { toast('Selecciona al menos un tema/subtema.', false); return; }
+  const fd = new FormData();
+  fd.append('pregunta_id', preguntaId);
+  fd.append('tema_ids', ids.join(','));
+  try {
+    const d = await fetch(API+'?action=temas_guardar', {method:'POST', body:fd}).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error desconocido');
+    toast('Pregunta '+preguntaId+' clasificada correctamente.');
+    cargar();
+  } catch(e) {
+    toast('Error: '+e.message, false);
+  }
+}
+
+async function confirmarSugerida(preguntaId, temaId){
+  const fd = new FormData();
+  fd.append('pregunta_id', preguntaId);
+  fd.append('tema_ids', temaId);
+  try {
+    const d = await fetch(API+'?action=temas_guardar', {method:'POST', body:fd}).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error desconocido');
+    toast('Pregunta '+preguntaId+' confirmada.');
+    cargar();
+  } catch(e) {
+    toast('Error: '+e.message, false);
+  }
+}
+
+// ─── Patrón "disclosure": bloque de ancho completo, no un botón inline ─────
+function disclosureBlock(id, label, count, innerHtml, onclickCall){
+  return `<div class="disclosure-wrap">
+    <button class="disclosure" id="tgl-${id}" aria-expanded="false" onclick="${onclickCall || `toggleDisclosure('${id}')`}">
+      <span class="chev">▶</span><span class="dlabel">${label}</span>${count!=null ? `<span class="dcount">${count}</span>` : ''}
+    </button>
+    <div class="disclosure-panel" id="panel-${id}"><div><div class="inner" id="inner-${id}">${innerHtml||''}</div></div></div>
+  </div>`;
+}
+function toggleDisclosure(id, onFirstOpen){
+  const btn = document.getElementById('tgl-'+id);
+  const panel = document.getElementById('panel-'+id);
+  const opening = !panel.classList.contains('open');
+  panel.classList.toggle('open', opening);
+  btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  if (opening && onFirstOpen) onFirstOpen();
+  return opening;
+}
+
+function renderRespuestasToggle(preguntaId){
+  const id = 'resp-'+preguntaId;
+  return disclosureBlock(id, 'Ver respuestas', null, '', `toggleRespuestas(${preguntaId})`);
+}
+
+async function toggleRespuestas(preguntaId){
+  const id = 'resp-'+preguntaId;
+  const opening = toggleDisclosure(id);
+  const inner = document.getElementById('inner-'+id);
+  if (!opening || inner.dataset.loaded) return;
+  inner.innerHTML = '<span style="color:var(--muted);font-size:12px;">Cargando…</span>';
+  try {
+    const d = await fetch(API+'?action=respuestas_muestra&pregunta_id='+preguntaId).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error desconocido');
+    inner.dataset.loaded = '1';
+    if (d.total === 0) { inner.innerHTML = '<span style="color:var(--muted);font-size:12px;">Sin respuestas registradas todavía.</span>'; return; }
+    inner.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${d.total.toLocaleString()} respuestas totales · top ${d.respuestas.length}</div>` +
+      d.respuestas.map(r => `
+        <div class="resp-row">
+          <span class="resp-txt">${escapeHtml(r.respuesta || '(vacío)')}</span>
+          <span class="resp-bar" style="width:${Math.max(4, r.pct)}px;"></span>
+          <span class="resp-n">${r.n} (${r.pct}%)</span>
+        </div>
+      `).join('');
+  } catch(e) {
+    inner.innerHTML = `<span style="color:var(--red);font-size:12px;">Error: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+// ─── Catálogo completo, como acordeón de dos niveles: Tema → Subtema ───────
+function agruparPorTema(){
+  const grupos = {};
+  CATALOGO.forEach(t=>{
+    const key = t.dominio+'||'+t.tema;
+    if (!grupos[key]) grupos[key] = {dominio:t.dominio, tema:t.tema, subtemas:[]};
+    grupos[key].subtemas.push(t);
+  });
+  return Object.values(grupos);
+}
+
+function renderCatalogoAcordeon(catId, preguntaId, filtro){
+  const q = (filtro||'').trim().toLowerCase();
+  const grupos = agruparPorTema()
+    .map(g => ({...g, subtemas: g.subtemas.filter(t => !q || (t.tema+' '+t.subtema+' '+t.codigo).toLowerCase().includes(q))}))
+    .filter(g => g.subtemas.length > 0);
+  if (grupos.length === 0) return `<div class="catalogo-empty">Sin resultados para "${escapeHtml(filtro)}".</div>`;
+  return grupos.map((g, gi) => {
+    const temaId = catId+'-t'+gi;
+    const rows = g.subtemas.map(t => `
+      <div class="subtema-row">
+        <span class="cod">${escapeHtml(t.codigo)}</span>
+        <span class="subtema-txt">${escapeHtml(t.subtema)}</span>
+        <button class="use-btn" onclick="abrirEditor(${preguntaId}, [${t.id}])">Usar</button>
+      </div>`).join('');
+    // Si hay búsqueda activa, el bloque-tema arranca expandido para no exigir doble clic.
+    const openNow = q ? 'open' : '';
+    return `<div class="disclosure-wrap nested">
+      <button class="disclosure nested" id="tgl-${temaId}" aria-expanded="${q?'true':'false'}" onclick="toggleDisclosure('${temaId}')">
+        <span class="chev">▶</span><span class="dlabel">${escapeHtml(g.tema)} <span class="dom-tag">· ${escapeHtml(g.dominio)}</span></span><span class="dcount">${g.subtemas.length}</span>
+      </button>
+      <div class="disclosure-panel ${openNow}" id="panel-${temaId}"><div><div class="inner" id="inner-${temaId}">${rows}</div></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderCatalogoToggle(preguntaId){
+  const id = 'cat-'+preguntaId;
+  const inner = `
+    <input type="text" class="catalogo-search" placeholder="Buscar en los ${CATALOGO.length} temas…" oninput="filtrarCatalogo('${id}', ${preguntaId}, this.value)">
+    <div style="max-height:320px;overflow-y:auto;" id="cattbody-${id}"></div>`;
+  return disclosureBlock(id, 'Ver catálogo completo de temas', CATALOGO.length, inner, `toggleCatalogo(${preguntaId})`);
+}
+
+function filtrarCatalogo(id, preguntaId, q){
+  document.getElementById('cattbody-'+id).innerHTML = renderCatalogoAcordeon(id, preguntaId, q);
+}
+
+function toggleCatalogo(preguntaId){
+  const id = 'cat-'+preguntaId;
+  const opening = toggleDisclosure(id);
+  if (opening) document.getElementById('cattbody-'+id).innerHTML = renderCatalogoAcordeon(id, preguntaId, '');
+}
+
+function renderSugeridas(sugeridas){
+  const el = document.getElementById('sugeridasList');
+  if (sugeridas.length === 0) { el.innerHTML = '<div class="empty-state">No hay sugerencias pendientes de confirmar.</div>'; return; }
+  el.innerHTML = sugeridas.map(s => `
+    <div class="pending-item">
+      <div class="preg">${escapeHtml(s.pregunta)}</div>
+      <div class="meta-row">
+        <span class="id-tag">#${s.pregunta_id}</span>
+        <span class="badge badge-blue">${s.codigo} ${escapeHtml(s.tema)} → ${escapeHtml(s.subtema)}</span>
+        <button class="btn btn-success btn-sm" onclick="confirmarSugerida(${s.pregunta_id}, ${s.tema_id})">Confirmar</button>
+        <button class="btn btn-outline btn-sm" onclick="abrirEditor(${s.pregunta_id}, [${s.tema_id}])">Cambiar</button>
+      </div>
+      ${renderRespuestasToggle(s.pregunta_id)}
+      <div id="host-${s.pregunta_id}"></div>
+    </div>
+  `).join('');
+}
+
+function renderSinTema(sinTema){
+  const el = document.getElementById('sinTemaList');
+  if (sinTema.length === 0) { el.innerHTML = '<div class="empty-state">Todo el catálogo tiene al menos un tema asignado.</div>'; return; }
+  el.innerHTML = sinTema.map(s => {
+    const debiles = s.sugerencias_debiles || [];
+    const debilesHtml = `
+      <div class="debil-row">
+        <h5>Posibles temas (por similitud de palabras — no confirmado)</h5>
+        ${debiles.length ? `
+        <table class="mini-table"><tbody>
+          ${debiles.map(d => `<tr>
+            <td class="cod">${escapeHtml(d.codigo)}</td>
+            <td>${escapeHtml(d.tema)}</td>
+            <td>${escapeHtml(d.subtema)}</td>
+            <td style="color:var(--muted);white-space:nowrap;">${Math.round(d.score*100)}% similar</td>
+            <td><button class="use-btn" onclick="abrirEditor(${s.id}, [${d.tema_id}])">Usar</button></td>
+          </tr>`).join('')}
+        </tbody></table>` : `<span style="color:var(--muted);font-size:12px;">Sin ninguna coincidencia, ni siquiera aproximada.</span>`}
+      </div>
+      ${renderCatalogoToggle(s.id)}`;
+    return `
+    <div class="pending-item">
+      <div class="preg">${escapeHtml(s.pregunta)}</div>
+      <div class="meta-row">
+        <span class="id-tag">#${s.id}</span>
+        <span class="badge badge-yellow">sin clasificar</span>
+        <button class="btn btn-primary btn-sm" onclick="abrirEditor(${s.id}, [])">Clasificar</button>
+      </div>
+      ${renderRespuestasToggle(s.id)}
+      ${debilesHtml}
+      <button class="crear-tema-btn" onclick="toggleCrearTema(${s.id})">Ninguno aplica — crear tema/subtema nuevo</button>
+      <div class="crear-tema-form" id="crear-tema-${s.id}">
+        <label>Dominio</label>
+        <div class="dominio-help" id="ct-domhelp-${s.id}">Social: preguntas de opinión dirigidas al público/leads (condición social, marca, seguridad, obra pública, etc.) — la inmensa mayoría de los casos.</div>
+        <select id="ct-dominio-${s.id}" onchange="document.getElementById('ct-domhelp-${s.id}').textContent = this.value==='Interno' ? 'Interno: preguntas dirigidas a colaboradores/empleados de un programa (ej. clima laboral) — NO son respuestas de leads/ciudadanía.' : 'Social: preguntas de opinión dirigidas al público/leads (condición social, marca, seguridad, obra pública, etc.) — la inmensa mayoría de los casos.';">
+          <option value="Social" selected>Social — opinión pública / leads</option>
+          <option value="Interno">Interno — colaboradores de un programa</option>
+        </select>
+        <label>Tema (nuevo o existente)</label>
+        <input type="text" id="ct-tema-${s.id}" placeholder="Ej. Sostenibilidad energética">
+        <label>Subtema</label>
+        <input type="text" id="ct-subtema-${s.id}" placeholder="Ej. Racionamiento y límites de consumo">
+        <label>Keywords (separadas por coma, opcional)</label>
+        <input type="text" id="ct-keywords-${s.id}" placeholder="límite de consumo, racionamiento">
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-success btn-sm" onclick="guardarNuevoTema(${s.id})">Crear y asignar</button>
+          <button class="btn btn-outline btn-sm" onclick="toggleCrearTema(${s.id})">Cancelar</button>
+        </div>
+      </div>
+      <div id="host-${s.id}"></div>
+    </div>
+  `;
+  }).join('');
+}
+
+function toggleCrearTema(preguntaId){
+  document.getElementById('crear-tema-'+preguntaId).classList.toggle('open');
+}
+
+async function guardarNuevoTema(preguntaId){
+  const dominio = document.getElementById('ct-dominio-'+preguntaId).value;
+  const tema = document.getElementById('ct-tema-'+preguntaId).value.trim();
+  const subtema = document.getElementById('ct-subtema-'+preguntaId).value.trim();
+  const keywords = document.getElementById('ct-keywords-'+preguntaId).value.trim();
+  if (!tema || !subtema) { toast('Tema y subtema son requeridos.', false); return; }
+  const fd = new FormData();
+  fd.append('dominio', dominio); fd.append('tema', tema); fd.append('subtema', subtema); fd.append('keywords', keywords);
+  try {
+    const d = await fetch(API+'?action=crear_tema', {method:'POST', body:fd}).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error desconocido');
+    toast(`Tema creado: ${d.codigo} ${d.subtema}. Asignando…`);
+    const fd2 = new FormData();
+    fd2.append('pregunta_id', preguntaId);
+    fd2.append('tema_ids', d.id);
+    const d2 = await fetch(API+'?action=temas_guardar', {method:'POST', body:fd2}).then(r=>r.json());
+    if (!d2.ok) throw new Error(d2.error || 'Error desconocido');
+    toast('Pregunta '+preguntaId+' clasificada con el nuevo tema.');
+    cargar();
+  } catch(e) {
+    toast('Error: '+e.message, false);
+  }
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function cargar(){
+  try {
+    const d = await fetch(API+'?action=temas_pendientes').then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error desconocido');
+    CATALOGO = d.catalogo;
+    document.getElementById('statsRow').innerHTML = `
+      <div class="stat-box stat-yellow"><div class="val">${d.sugeridas.length}</div><div class="lbl">Sugeridas por confirmar</div></div>
+      <div class="stat-box stat-red"><div class="val">${d.sin_tema.length}</div><div class="lbl">Sin ninguna clasificación</div></div>
+      <div class="stat-box stat-green"><div class="val">${d.catalogo.length}</div><div class="lbl">Subtemas en el catálogo</div></div>
+    `;
+    renderSugeridas(d.sugeridas);
+    renderSinTema(d.sin_tema);
+  } catch(e) {
+    toast('Error cargando pendientes: '+e.message, false);
+  }
+}
+
+cargar();
+</script>
+</body>
+</html>

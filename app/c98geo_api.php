@@ -143,7 +143,7 @@ try {
 
     // Orden de regiones acorde al resto del dashboard
     // (ojo: array_search puede devolver 0, que es "falsy" — no usar ?: aqui)
-    $ord = ['Andina', 'Caribe', 'Pacífico', 'Orinoquía', 'Amazonía'];
+    $ord = ['Andina', 'Eje Cafetero', 'Caribe', 'Pacífico', 'Orinoquía', 'Amazonía'];
     $ordPos = fn($r) => (($p = array_search($r, $ord)) !== false) ? $p : 99;
     usort($result, fn($a, $b) => $ordPos($a['r']) <=> $ordPos($b['r']));
 

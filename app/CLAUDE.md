@@ -101,7 +101,7 @@ LEFT JOIN c98_geo.dim_barrio       b    ON b.id    = l.id_geo            AND CHA
 | Archivo | Descripción |
 |---------|-------------|
 | `config.php` | Conexión BD (`getDB()`) |
-| `leads_importer.php` | API principal (~1900 líneas). Acciones: `check`, `get_sheets`, `preview`, `import`, `analytics`, `stats`, `logs`, `dims`, `set_etapa`, etc. |
+| `leads_importer.php` | API principal (~2600 líneas). Acciones: `check`, `get_sheets`, `preview`, `import`, `analytics`, `stats`, `logs`, `dims`, `set_etapa`, `segment_dims`, `segmentar`, `segmento_export`, etc. |
 | `ExcelReaderPhp.php` | Lector XLSX nativo (ZipArchive + SimpleXML). Reemplaza Python/openpyxl. |
 | `c98geo_api.php` | API de jerarquía geográfica (lookups, autocompletar) |
 | `c98geo_map_api.php` | API para mapa geográfico |
@@ -113,6 +113,7 @@ LEFT JOIN c98_geo.dim_barrio       b    ON b.id    = l.id_geo            AND CHA
 |---------|-------------|
 | `leads_import.html` | UI de importación de Excel → BD |
 | `leads_analytics.html` | Dashboard de análisis de leads (cobertura, geo, demografía) |
+| `leads_segmentacion.html` | Constructor de consultas cruzadas (demografía × geo × política × respuestas EAV) + mapa Leaflet coropleta/contorno + export CSV. Ver `docs/segmentacion.md`. |
 | `c98geo_dashboard.html` | Explorer de jerarquía geográfica c98_geo |
 | `dashboard_local.html` | Dashboard general |
 
