@@ -216,7 +216,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 @keyframes rowFlash{0%{background:rgba(56,189,248,.35)}100%{background:transparent}}
 tr.row-flash td{animation:rowFlash 1.6s ease-out}
 </style>
-<link rel="stylesheet" href="visor.css?v=3">
+<link rel="stylesheet" href="visor.css?v=8">
 <script src="visor.js?v=2"></script>
 </head>
 <body>
@@ -670,11 +670,28 @@ function levelForZoom(z){
 }
 
 function initMap(){
-  map = L.map('map', {zoomControl:true}).setView([4.5,-74.0], 5);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  // Colombia continental + San Andrés: el mapa no sale de este recuadro ni carga mosaicos fuera de él.
+  const COL = L.latLngBounds([-4.3,-82.0], [13.6,-66.7]);
+  map = L.map('map', {zoomControl:true, maxBounds:COL, maxBoundsViscosity:1});
+  // El contenedor puede medir 0 al inicializar: se ajusta cuando ya tiene tamaño y al redimensionar.
+  const fitColombia = ()=>{
+    map.invalidateSize();
+    if(!map.getSize().x || !map.getSize().y) return;
+    programmaticZoom = true;
+    map.setMinZoom(map.getBoundsZoom(COL));
+    if(map.getZoom() < map.getMinZoom() || !map.__fitDone){ map.fitBounds(COL); map.__fitDone = true; }
+    setTimeout(()=>{ programmaticZoom = false; }, 350);
+  };
+  map.setView([4.5,-74.0], 5);
+  new ResizeObserver(fitColombia).observe(document.getElementById('map'));
+  const base = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom:19,
-    className:'osm-base'
+    className:'osm-base', bounds:COL
   }).addTo(map);
+  // Vista nacional y departamental: solo los polígonos de Colombia (sin países vecinos).
+  // El mapa base aparece al acercarse a una zona, donde sirve de referencia de calles.
+  const syncBase = ()=> base.setOpacity(map.getZoom() >= 8 ? 1 : 0);
+  map.on('zoomend', syncBase); syncBase();
   geoLayer = L.geoJSON(null).addTo(map);
 
   document.getElementById('map-levels').addEventListener('click', e=>{

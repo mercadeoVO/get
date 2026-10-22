@@ -208,7 +208,7 @@ main{padding:20px 24px!important}
 .map-area-label{background:color-mix(in srgb,var(--card) 88%,transparent)!important;border:0!important;border-radius:var(--r-md)!important}
 .map-loading,.map-empty{background:color-mix(in srgb,var(--card) 80%,transparent)!important}
 .leaflet-tooltip.geo-tooltip{background:var(--card)!important;color:var(--text)!important;border:0!important;border-radius:var(--r-md)!important;box-shadow:0 4px 16px rgba(12,35,64,.18)!important}
-#map{background:var(--bg)!important}
+#map{background:transparent!important}
 .search-wrap .si{color:var(--muted)}
 .search-inp{padding-left:34px!important}
 
@@ -229,6 +229,6 @@ main{padding:20px 24px!important}
 .osm-base{filter:saturate(.55) contrast(.92) brightness(1.04)}
 :root[data-theme="dark"] .osm-base{filter:invert(1) hue-rotate(200deg) saturate(.5) brightness(.85) contrast(.95)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .osm-base{filter:invert(1) hue-rotate(200deg) saturate(.5) brightness(.85) contrast(.95)}}
-.leaflet-container{background:var(--bg)}
+.leaflet-container{background:transparent}
 .leaflet-control-attribution{background:color-mix(in srgb,var(--card) 80%,transparent)!important;color:var(--muted)!important}
 .leaflet-control-attribution a{color:var(--accent)!important}
