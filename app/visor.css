@@ -224,3 +224,11 @@ main{padding:20px 24px!important}
 /* ── Iconos de trazo ────────────────────────────────────── */
 .ic{vertical-align:-3px;flex-shrink:0}
 .drop-zone .icon .ic{color:var(--accent);width:40px;height:40px}
+
+/* ── Mapa base (OpenStreetMap): suavizado en claro, invertido en oscuro ── */
+.osm-base{filter:saturate(.55) contrast(.92) brightness(1.04)}
+:root[data-theme="dark"] .osm-base{filter:invert(1) hue-rotate(200deg) saturate(.5) brightness(.85) contrast(.95)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .osm-base{filter:invert(1) hue-rotate(200deg) saturate(.5) brightness(.85) contrast(.95)}}
+.leaflet-container{background:var(--bg)}
+.leaflet-control-attribution{background:color-mix(in srgb,var(--card) 80%,transparent)!important;color:var(--muted)!important}
+.leaflet-control-attribution a{color:var(--accent)!important}
