@@ -273,7 +273,7 @@ main{padding:20px 24px!important}
 .panel>.card,#card-demo{flex:none!important;width:100%}
 .results{flex-direction:column!important;gap:20px!important}
 .results>.rcard{flex:none!important;width:100%}
-.map-wrap{height:clamp(360px,52vh,500px)!important;min-height:360px!important;flex:none!important}
+.map-wrap{height:clamp(520px,75vh,780px)!important;min-height:520px!important;flex:none!important}
 .panel>.card{padding:6px 8px!important}
 .tiles.cols6{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 .tile .lbl{word-break:normal!important;overflow-wrap:break-word}
@@ -285,7 +285,7 @@ main{padding:20px 24px!important}
   padding:3px 10px;font-size:.72rem;font-weight:500;box-shadow:0 1px 4px rgba(12,35,64,.18)}
 .seg-tag span b{font-weight:600;margin-right:4px}
 
-/* ── Segmentación: mapa compacto con Geografía debajo, mismo ancho ── */
+/* ── Segmentación: Geografía sobre el mapa, mismo ancho, mapa alto ── */
 .seg-top{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
-/* Geografía queda bajo el mapa, con su mismo ancho */
+/* Geografía queda sobre el mapa, con su mismo ancho */
 #geo-slot>.card{padding:6px 8px!important}
