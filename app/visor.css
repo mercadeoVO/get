@@ -285,7 +285,7 @@ main{padding:20px 24px!important}
   padding:3px 10px;font-size:.72rem;font-weight:500;box-shadow:0 1px 4px rgba(12,35,64,.18)}
 .seg-tag span b{font-weight:600;margin-right:4px}
 
-/* ── Segmentación: Geografía a la izquierda del mapa, mapa más compacto ── */
+/* ── Segmentación: mapa compacto con Geografía debajo, mismo ancho ── */
 .seg-top{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
-@media(min-width:1000px){.seg-top{grid-template-columns:minmax(260px,320px) minmax(0,1fr)}}
+/* Geografía queda bajo el mapa, con su mismo ancho */
 #geo-slot>.card{padding:6px 8px!important}
