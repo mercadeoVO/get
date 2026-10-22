@@ -273,11 +273,10 @@ main{padding:20px 24px!important}
 .panel>.card,#card-demo{flex:none!important;width:100%}
 .results{flex-direction:column!important;gap:20px!important}
 .results>.rcard{flex:none!important;width:100%}
-.map-wrap{height:clamp(480px,70vh,720px)!important;min-height:480px!important;flex:none!important}
+.map-wrap{height:clamp(360px,52vh,500px)!important;min-height:360px!important;flex:none!important}
 .panel>.card{padding:6px 8px!important}
 .tiles.cols6{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 .tile .lbl{word-break:normal!important;overflow-wrap:break-word}
-.results>.rcard:has(#map){order:-1}
 
 /* ── Etiquetas fijas del mapa de Segmentación ───────────── */
 .seg-tag{background:none!important;border:0!important}
@@ -285,3 +284,8 @@ main{padding:20px 24px!important}
   background:color-mix(in srgb,var(--card) 94%,transparent);color:var(--text);border-radius:var(--r-pill);
   padding:3px 10px;font-size:.72rem;font-weight:500;box-shadow:0 1px 4px rgba(12,35,64,.18)}
 .seg-tag span b{font-weight:600;margin-right:4px}
+
+/* ── Segmentación: Geografía a la izquierda del mapa, mapa más compacto ── */
+.seg-top{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
+@media(min-width:1000px){.seg-top{grid-template-columns:minmax(260px,320px) minmax(0,1fr)}}
+#geo-slot>.card{padding:6px 8px!important}

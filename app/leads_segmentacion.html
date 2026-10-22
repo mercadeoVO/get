@@ -213,7 +213,7 @@ select[multiple]{min-height:78px}
 @keyframes spin{to{transform:rotate(360deg)}}
 footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
 </style>
-<link rel="stylesheet" href="visor.css?v=15">
+<link rel="stylesheet" href="visor.css?v=16">
 <script src="visor.js?v=10"></script>
 </head>
 <body>
@@ -239,23 +239,9 @@ footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
 <main>
   <div class="panel" id="panel"></div>
   <div class="results">
-    <div class="rcard">
-      <div class="rcard-h">Distribuciones del segmento</div>
-      <div id="dist-empty" class="empty-state">Ajusta los filtros para ver el segmento.</div>
-      <div id="dist-charts" style="display:none">
-        <div class="chart-grid-3">
-          <div class="chart-box"><div class="t">Sexo</div><div class="chart-wrap"><canvas id="ch-sexo"></canvas></div></div>
-          <div class="chart-box"><div class="t">Rango de edad</div><div class="chart-wrap"><canvas id="ch-edad"></canvas></div></div>
-          <div class="chart-box"><div class="t">Estrato</div><div class="chart-wrap"><canvas id="ch-estrato"></canvas></div></div>
-        </div>
-        <div class="chart-grid-2" style="margin-top:13px">
-          <div class="chart-box"><div class="t">Afiliación política</div><div class="chart-wrap tall"><canvas id="ch-afil"></canvas></div></div>
-          <div class="chart-box"><div class="t">Nivel educativo</div><div class="chart-wrap tall"><canvas id="ch-edu"></canvas></div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rcard">
+    <div class="seg-top">
+      <div id="geo-slot"></div>
+      <div class="rcard">
       <div class="rcard-h">Mapa del segmento <span class="sub" id="map-sub"></span></div>
       <div class="map-toolbar">
         <div class="seg-toggle">
@@ -269,6 +255,22 @@ footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
         <div class="map-crumb" id="map-crumb"></div>
         <div class="map-msg" id="map-msg"></div>
         <div class="legend" id="map-legend"></div>
+      </div>
+    </div>
+    </div>
+    <div class="rcard">
+      <div class="rcard-h">Distribuciones del segmento</div>
+      <div id="dist-empty" class="empty-state">Ajusta los filtros para ver el segmento.</div>
+      <div id="dist-charts" style="display:none">
+        <div class="chart-grid-3">
+          <div class="chart-box"><div class="t">Sexo</div><div class="chart-wrap"><canvas id="ch-sexo"></canvas></div></div>
+          <div class="chart-box"><div class="t">Rango de edad</div><div class="chart-wrap"><canvas id="ch-edad"></canvas></div></div>
+          <div class="chart-box"><div class="t">Estrato</div><div class="chart-wrap"><canvas id="ch-estrato"></canvas></div></div>
+        </div>
+        <div class="chart-grid-2" style="margin-top:13px">
+          <div class="chart-box"><div class="t">Afiliación política</div><div class="chart-wrap tall"><canvas id="ch-afil"></canvas></div></div>
+          <div class="chart-box"><div class="t">Nivel educativo</div><div class="chart-wrap tall"><canvas id="ch-edu"></canvas></div></div>
+        </div>
       </div>
     </div>
   </div>
@@ -390,9 +392,9 @@ function buildPanel(){
   $('panel').innerHTML =
     card('demo','','Demografía',demo) +
     card('pol','','Política',pol) +
-    card('geo','','Geografía',geo) +
     card('temas','','Temas y percepción',temas) +
     card('eav','','Encuesta · pregunta/respuesta',eav);
+  $('geo-slot').innerHTML = card('geo','','Geografía',geo);
 
   renderGeo();
   renderTemas();
