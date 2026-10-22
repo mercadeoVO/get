@@ -278,3 +278,10 @@ main{padding:20px 24px!important}
 .tiles.cols6{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 .tile .lbl{word-break:normal!important;overflow-wrap:break-word}
 .results>.rcard:has(#map){order:-1}
+
+/* ── Etiquetas fijas del mapa de Segmentación ───────────── */
+.seg-tag{background:none!important;border:0!important}
+.seg-tag span{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;
+  background:color-mix(in srgb,var(--card) 94%,transparent);color:var(--text);border-radius:var(--r-pill);
+  padding:3px 10px;font-size:.72rem;font-weight:500;box-shadow:0 1px 4px rgba(12,35,64,.18)}
+.seg-tag span b{font-weight:600;margin-right:4px}
