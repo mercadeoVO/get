@@ -7,13 +7,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0" crossorigin="anonymous"></script>
 <style>
-:root{
-  --bg:#0f1117; --surface:#1a1d2e; --card:#1e2132;
-  --border:#2d3148; --text:#e8eaf0; --muted:#7b84a3;
-  --accent:#6366f1; --accent2:#8b5cf6;
-  --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --blue:#3b82f6;
-  --orange:#f97316; --pink:#ec4899; --cyan:#06b6d4;
-}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
 
@@ -149,6 +142,8 @@ tbody tr:hover{background:rgba(99,102,241,.05)}
 
 footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
 </style>
+<link rel="stylesheet" href="visor.css">
+<script src="visor.js"></script>
 </head>
 <body>
 
@@ -157,22 +152,8 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
   <div class="loading-text">Cargando analítica…</div>
 </div>
 
-<header>
-  <div class="brand">
-    <span class="brand-icon">📊</span>
-    <div>
-      <h1>Analítica de Leads</h1>
-      <p>MEDFUT · Medellín 2026</p>
-    </div>
-  </div>
-  <nav class="nav-links">
-    <a href="dashboard_local.html"  class="nav-btn">🗳️ Electoral</a>
-    <a href="leads_import.html"     class="nav-btn">📥 Importar</a>
-    <a href="leads_analytics.html"  class="nav-btn active">📊 Analítica</a>
-    <a href="c98geo_dashboard.html" class="nav-btn">🗺️ Geografía</a>
-  </nav>
-  <button class="btn-reload" onclick="load()">↻ Actualizar</button>
-</header>
+<div id="v-nav" data-page="analitica" data-refresh="load()"></div>
+<div class="page-hd"><h1 class="page-title">Analítica de leads</h1><p class="page-sub">Medellín 2026 · cobertura, geografía y perfil de quienes dejaron sus datos.</p></div>
 
 <div class="filter-bar">
   <span class="filter-label">Importación:</span>
@@ -194,7 +175,7 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
       <div class="periodo" id="kpi-periodo">—</div>
     </div>
     <div class="card">
-      <div class="card-title">📋 Cobertura por Campo</div>
+      <div class="card-title">Cobertura por Campo</div>
       <div class="cob-list" id="cob-list"></div>
     </div>
   </div>
@@ -202,15 +183,15 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
   <!-- ── FILA 3: Sexo | Rango Edad | Estrato ── -->
   <div class="chart-grid-3">
     <div class="card">
-      <div class="card-title">⚥ Sexo</div>
+      <div class="card-title">Sexo</div>
       <div class="chart-wrap"><canvas id="ch-sexo"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">🎂 Rango de Edad</div>
+      <div class="card-title">Rango de Edad</div>
       <div class="chart-wrap"><canvas id="ch-edad"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">🏠 Estrato</div>
+      <div class="card-title">Estrato</div>
       <div class="chart-wrap"><canvas id="ch-estrato"></canvas></div>
     </div>
   </div>
@@ -218,11 +199,11 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
   <!-- ── FILA 4: Afiliación | Nivel Educativo ── -->
   <div class="chart-grid-2">
     <div class="card">
-      <div class="card-title">🗳️ Afiliación Política <span>top 15</span></div>
+      <div class="card-title">Afiliación Política <span>top 15</span></div>
       <div class="chart-wrap tall"><canvas id="ch-afil"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">🎓 Nivel Educativo</div>
+      <div class="card-title">Nivel Educativo</div>
       <div class="chart-wrap tall"><canvas id="ch-edu"></canvas></div>
     </div>
   </div>
@@ -230,18 +211,18 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
   <!-- ── FILA 5: Plataforma (50%) | Timeline (50%) ── -->
   <div class="chart-grid-2">
     <div class="card">
-      <div class="card-title">📱 Plataforma de Origen</div>
+      <div class="card-title">Plataforma de Origen</div>
       <div class="chart-wrap"><canvas id="ch-platform"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">📅 Timeline de Importaciones <span>volumen importado por fecha</span></div>
+      <div class="card-title">Timeline de Importaciones <span>volumen importado por fecha</span></div>
       <div class="chart-wrap"><canvas id="ch-timeline"></canvas></div>
     </div>
   </div>
 
   <!-- ── FILA 6: Jerarquía Geográfica (línea completa) ── -->
   <div class="card">
-    <div class="card-title">🌎 Jerarquía Geográfica
+    <div class="card-title">Jerarquía Geográfica
       <span>Departamento › Subregión › Municipio › Zona › Comuna › Barrio</span>
     </div>
     <div class="tabs">
@@ -262,7 +243,7 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
 
   <!-- ── TABLA ── -->
   <div class="card">
-    <div class="card-title">📂 Historial de Importaciones</div>
+    <div class="card-title">Historial de Importaciones</div>
     <div class="tbl-wrap">
       <table>
         <thead><tr>
@@ -289,8 +270,7 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
 Chart.register(ChartDataLabels);
 
 const API    = 'leads_importer.php';
-const COLORS = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ef4444','#8b5cf6',
-                '#06b6d4','#f97316','#ec4899','#84cc16','#14b8a6','#a855f7'];
+const COLORS = V.palette();
 
 // Colores específicos por plataforma
 const PLATFORM_COLORS = {
@@ -298,7 +278,7 @@ const PLATFORM_COLORS = {
   Instagram:    '#E4405F',
   Google:       '#4285F4',
   TikTok:       '#69C9D0',
-  Desconocido:  '#7b84a3',
+  Desconocido:  V.css('--muted'),
 };
 
 // Mapeo de códigos de plataforma a nombre legible
@@ -439,13 +419,13 @@ function destroyChart(id) {
 // Datalabel config reutilizable
 const DL_BAR_H = {
   anchor:'end', align:'end',
-  color:'#e8eaf0', font:{size:9,weight:'600'},
+  color:V.css('--text'), font:{size:9,weight:'600'},
   formatter: v => fmtK(v),
   padding:{right:4}
 };
 const DL_BAR_V = {
   anchor:'end', align:'top',
-  color:'#e8eaf0', font:{size:9,weight:'600'},
+  color:V.css('--text'), font:{size:9,weight:'600'},
   formatter: v => fmtK(v),
 };
 const DL_DONUT = {
@@ -469,13 +449,13 @@ function renderDonut(id, data) {
     data:{ labels, datasets:[{
       data:vals,
       backgroundColor: COLORS.map(c=>c+'CC'),
-      borderColor:'#1e2132', borderWidth:2
+      borderColor:V.css('--line'), borderWidth:2
     }]},
     options:{
       responsive:true, maintainAspectRatio:false, cutout:'55%',
       plugins:{
         datalabels: DL_DONUT,
-        legend:{ position:'right', labels:{ color:'#7b84a3', font:{size:11}, usePointStyle:true, padding:10 }},
+        legend:{ position:'right', labels:{ color:V.css('--muted'), font:{size:11}, usePointStyle:true, padding:10 }},
         tooltip:{ callbacks:{ label: c => {
           const tot = c.dataset.data.reduce((a,b)=>a+b,0);
           return ` ${c.label}: ${fmtN(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`;
@@ -490,7 +470,7 @@ function renderBarH(id, data, opts={}) {
   if(!data?.length) return;
   const labels = data.map(d=>d.val||'—');
   const vals   = data.map(d=>d.cnt);
-  const color  = opts.color||'#6366f1';
+  const color  = opts.color||V.css('--accent');
   charts[id]   = new Chart($(id).getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{
@@ -507,8 +487,8 @@ function renderBarH(id, data, opts={}) {
         tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.x)} leads` }}
       },
       scales:{
-        x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
-        y:{ ticks:{color:'#e8eaf0',font:{size:10}}, grid:{display:false} }
+        x:{ ticks:{color:V.css('--muted'),font:{size:9}}, grid:{color:V.css('--line')} },
+        y:{ ticks:{color:V.css('--text'),font:{size:10}}, grid:{display:false} }
       }
     }
   });
@@ -535,8 +515,8 @@ function renderBarV(id, data, opts={}) {
         tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.y)} leads` }}
       },
       scales:{
-        x:{ ticks:{color:'#e8eaf0',font:{size:10}}, grid:{display:false} },
-        y:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} }
+        x:{ ticks:{color:V.css('--text'),font:{size:10}}, grid:{display:false} },
+        y:{ ticks:{color:V.css('--muted'),font:{size:9}}, grid:{color:V.css('--line')} }
       }
     }
   });
@@ -554,7 +534,7 @@ function renderTimeline(data) {
       label:'Leads importados',
       data:nuevos,
       backgroundColor:'#6366f1BB',
-      borderColor:'#6366f1',
+      borderColor:V.css('--accent'),
       borderRadius:3, borderWidth:1
     }]},
     options:{
@@ -563,15 +543,15 @@ function renderTimeline(data) {
       plugins:{
         datalabels:{
           anchor:'end', align:'top',
-          color:'#e8eaf0', font:{size:8,weight:'600'},
+          color:V.css('--text'), font:{size:8,weight:'600'},
           formatter: v => v>0 ? fmtK(v) : '',
         },
         legend:{display:false},
         tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.y)} leads` }}
       },
       scales:{
-        x:{ ticks:{color:'#7b84a3',font:{size:8},maxRotation:45}, grid:{display:false} },
-        y:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} }
+        x:{ ticks:{color:V.css('--muted'),font:{size:8},maxRotation:45}, grid:{display:false} },
+        y:{ ticks:{color:V.css('--muted'),font:{size:9}}, grid:{color:V.css('--line')} }
       }
     }
   });
@@ -591,21 +571,21 @@ function renderPlatform(rawData) {
   const entries = Object.entries(agg).sort((a,b)=>b[1]-a[1]);
   const labels  = entries.map(e=>e[0]);
   const vals    = entries.map(e=>e[1]);
-  const colors  = labels.map(l => (PLATFORM_COLORS[l]||'#7b84a3')+'CC');
-  const borders = labels.map(l => PLATFORM_COLORS[l]||'#7b84a3');
+  const colors  = labels.map(l => (PLATFORM_COLORS[l]||V.css('--muted'))+'CC');
+  const borders = labels.map(l => PLATFORM_COLORS[l]||V.css('--muted'));
 
   charts['ch-platform'] = new Chart($('ch-platform').getContext('2d'), {
     type:'doughnut',
     data:{ labels, datasets:[{
       data:vals,
       backgroundColor:colors,
-      borderColor:'#1e2132', borderWidth:2
+      borderColor:V.css('--line'), borderWidth:2
     }]},
     options:{
       responsive:true, maintainAspectRatio:false, cutout:'55%',
       plugins:{
         datalabels: DL_DONUT,
-        legend:{ position:'right', labels:{ color:'#7b84a3', font:{size:11}, usePointStyle:true, padding:10 }},
+        legend:{ position:'right', labels:{ color:V.css('--muted'), font:{size:11}, usePointStyle:true, padding:10 }},
         tooltip:{ callbacks:{ label: c => {
           const tot = c.dataset.data.reduce((a,b)=>a+b,0);
           return ` ${c.label}: ${fmtN(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`;
@@ -720,7 +700,7 @@ function renderGeo(nivel, parentFilter) {
     type:'bar',
     data:{ labels, datasets:[{
       label:'Leads', data:vals,
-      backgroundColor:'#6366f1CC', borderColor:'#6366f1',
+      backgroundColor:'#6366f1CC', borderColor:V.css('--accent'),
       borderWidth:1, borderRadius:3
     }]},
     options:{
@@ -736,8 +716,8 @@ function renderGeo(nivel, parentFilter) {
         }}}
       },
       scales:{
-        x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
-        y:{ ticks:{color:'#e8eaf0',font:{size:10},maxTicksLimit:25}, grid:{display:false} }
+        x:{ ticks:{color:V.css('--muted'),font:{size:9}}, grid:{color:V.css('--line')} },
+        y:{ ticks:{color:V.css('--text'),font:{size:10},maxTicksLimit:25}, grid:{display:false} }
       }
     }
   });
@@ -747,8 +727,8 @@ function renderGeo(nivel, parentFilter) {
 let tblData = [], tblSort = {col:3, dir:-1};
 
 const TIPO_BADGE  = t => t==='electoral'
-  ? '<span class="badge badge-purple">🗳️ Electoral</span>'
-  : '<span class="badge badge-blue">📋 Leads</span>';
+  ? '<span class="badge badge-purple">Electoral</span>'
+  : '<span class="badge badge-blue">Leads</span>';
 const ETAPA_BADGE = e => {
   const m = {importado:'badge-blue',validando:'badge-yellow',enriquecido:'badge-green',
              analizado:'badge-green',reportado:'badge-purple',archivado:'badge-orange'};
@@ -785,5 +765,6 @@ function sortTbl(col) {
 
 load();
 </script>
+<script>V.onTheme(function(){ location.reload(); });</script>
 </body>
 </html>
