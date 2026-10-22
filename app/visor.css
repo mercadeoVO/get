@@ -289,3 +289,6 @@ main{padding:20px 24px!important}
 .seg-top{display:grid;grid-template-columns:1fr;gap:20px;align-items:start}
 /* Geografía queda sobre el mapa, con su mismo ancho */
 #geo-slot>.card{padding:6px 8px!important}
+
+/* ── Selector de modo geográfico ────────────────────────── */
+.geo-mode{margin:6px 0 12px}

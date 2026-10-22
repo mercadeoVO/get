@@ -213,7 +213,7 @@ select[multiple]{min-height:78px}
 @keyframes spin{to{transform:rotate(360deg)}}
 footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
 </style>
-<link rel="stylesheet" href="visor.css?v=18">
+<link rel="stylesheet" href="visor.css?v=19">
 <script src="visor.js?v=10"></script>
 </head>
 <body>
@@ -381,9 +381,14 @@ function buildPanel(){
     <div class="sub-lbl">Estrato</div>${tiles('estrato',DIMS.estrato,x=>String(x.val),x=>'Estrato '+x.val,'cols6')}
     <div class="sub-lbl">Nivel educativo</div>${tiles('nivel_educativo',DIMS.nivel_educativo,x=>x.val,null,'cols6')}`;
   const pol=`<div class="sub-lbl">Afiliación / tendencia política</div>${tiles('afiliacion_politica',DIMS.afiliacion_politica,x=>x.val,null,'cols1')}`;
-  const geo=`<div class="geo-levels" id="geo-levels"></div>
+  const geo=`<div class="seg-toggle geo-mode" id="geo-mode">
+      <button data-m="entrar" onclick="setGeoMode('entrar')">Entrar al área</button>
+      <button data-m="varias" onclick="setGeoMode('varias')">Varias áreas</button>
+    </div>
+    <div class="geo-levels" id="geo-levels"></div>
     <div class="crumb" id="geo-crumb"></div><div id="geo-tiles"></div>
-    <div class="mini" id="geo-note"></div>`;
+    <div class="mini" id="geo-note"></div>
+    <div id="geo-children"></div>`;
   const temas=`<div id="temas-acc"></div>
     <div class="mini">Filtra por leads que respondieron algo clasificado en el tema/subtema.</div>`;
   const eav=`<div id="eav-list"></div>
@@ -457,8 +462,8 @@ function renderGeo(){
   const rows=[...(LAST.geo_map||[])].filter(g=>g.cnt>0).sort((a,b)=>b.cnt-a.cnt);
   $('geo-tiles').innerHTML = `<div class="tiles">`+rows.slice(0,400).map(g=>{
     const id=String(g.geo_id), on=GEO.sel.has(id);
-    return `<button class="tile${on?' on':''}" data-gid="${h(id)}" data-nom="${h(g.nombre).replace(/"/g,'&quot;')}" onclick="toggleGeo(this)">
-      ${canDrill?`<span class="drill" title="Ver ${nextLbl}" onclick="geoDrill('${h(id)}',this.parentNode.dataset.nom);event.stopPropagation()">›</span>`:''}
+    return `<button class="tile${on?' on':''}" data-gid="${h(id)}" data-nom="${h(g.nombre).replace(/"/g,'&quot;')}" onclick="${GEO_MODE==='entrar'&&canDrill?`geoDrill('${h(id)}',this.dataset.nom)`:'toggleGeo(this)'}">
+      ${canDrill&&GEO_MODE==='varias'?`<span class="drill" title="Ver ${nextLbl}" onclick="geoDrill('${h(id)}',this.parentNode.dataset.nom);event.stopPropagation()">›</span>`:''}
       <span class="lbl">${h(g.nombre)}</span><span class="cnt">${fmtN(g.cnt)}</span>
     </button>`;
   }).join('')+`</div>`;
@@ -466,6 +471,45 @@ function renderGeo(){
     ? `${rows.length} ${rows.length===1?'área':'áreas'} con registros en el segmento`
     : `Sin ${GEO_LABEL[lvl].toLowerCase()} con leads en este segmento`;
   refreshBadges();
+  paintGeoMode(); renderGeoChildren();
+}
+
+// ── Modo de selección geográfica: "entrar" (un clic baja un nivel) o "varias" (multiselección + hijos) ──
+let GEO_MODE='entrar';
+try{ GEO_MODE=localStorage.getItem('seg_geo_mode')||'entrar'; }catch(e){}
+function paintGeoMode(){
+  document.querySelectorAll('#geo-mode button').forEach(b=>b.classList.toggle('on',b.dataset.m===GEO_MODE));
+}
+function setGeoMode(m){
+  GEO_MODE=m; try{ localStorage.setItem('seg_geo_mode',m); }catch(e){}
+  paintGeoMode(); renderGeo();
+}
+const GEO_PLURAL={region:'Regiones',departamento:'Departamentos',municipio:'Municipios',zona:'Zonas',comuna:'Comunas/Localidades',barrio:'Barrios'};
+let CH_SEQ=0;
+// Modo "varias": nivel inferior de las áreas marcadas (consulta aparte con nivel_mapa = nivel siguiente)
+async function renderGeoChildren(){
+  const box=$('geo-children'); if(!box) return;
+  const li=GEO_CHAIN.indexOf(GEO.level);
+  if(GEO_MODE!=='varias'||!GEO.sel.size||li>=GEO_CHAIN.length-1){ box.innerHTML=''; return; }
+  const next=GEO_CHAIN[li+1], seq=++CH_SEQ;
+  box.innerHTML=`<div class="sub-lbl">${GEO_PLURAL[next]} de lo seleccionado</div><div class="mini">Calculando…</div>`;
+  try{
+    const f=buildFiltros(); f.nivel_mapa=next;
+    const body=new URLSearchParams(); body.set('filtros',JSON.stringify(f)); body.set('nivel_mapa',next);
+    const d=await fetch(`${API}?action=segmentar`,{method:'POST',body}).then(r=>r.json());
+    if(seq!==CH_SEQ) return;
+    if(!d.ok) throw new Error(d.error||'Error');
+    const rows=[...(d.geo_map||[])].filter(g=>g.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+    box.innerHTML=`<div class="sub-lbl">${GEO_PLURAL[next]} de lo seleccionado</div>`+
+      (rows.length?`<div class="tiles">`+rows.slice(0,200).map(g=>
+        `<button class="tile" onclick="geoJump('${h(String(g.geo_id))}',this.dataset.nom,'${next}')" data-nom="${h(g.nombre).replace(/"/g,'&quot;')}">
+          <span class="lbl">${h(g.nombre)}</span><span class="cnt">${fmtN(g.cnt)}</span></button>`).join('')+`</div>`
+        :`<div class="mini">Sin ${GEO_LABEL[next].toLowerCase()} con leads en la selección.</div>`);
+  }catch(e){ if(seq===CH_SEQ) box.innerHTML=`<div class="mini">No se pudo calcular: ${h(e.message)}</div>`; }
+}
+function geoJump(id,nombre,lvl){
+  GEO.path=[]; GEO.level=lvl; GEO.sel=new Set([String(id)]); GEO.selLabels={[String(id)]:nombre};
+  renderGeoLevels(); renderGeoCrumb(); refreshBadges(); queueQuery();
 }
 function toggleGeo(el){
   const id=String(el.dataset.gid);
