@@ -41,55 +41,11 @@ function errOut(string $msg, int $code = 400): void {
 
 // ── Wrappers PHP-nativo para lectura Excel (reemplaza Python) ────────────────
 
-function isCsvPath(string $path): bool {
-    return in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['csv', 'tsv', 'txt'], true);
-}
-
-/**
- * Lee un CSV completo como matriz de strings. Detecta codificación (BOM UTF-8/UTF-16,
- * o Windows-1252 si no es UTF-8 válido) y separador (, ; tab). Las filas vacías se omiten.
- */
-function csvReadAll(string $filePath): array
-{
-    $raw = file_get_contents($filePath);
-    if ($raw === false) throw new RuntimeException('No se pudo leer el archivo CSV.');
-
-    if (str_starts_with($raw, "\xFF\xFE"))      $raw = mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16LE');
-    elseif (str_starts_with($raw, "\xFE\xFF"))  $raw = mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16BE');
-    else {
-        $raw = ltrim($raw, "\xEF\xBB\xBF");
-        if (!mb_check_encoding($raw, 'UTF-8')) $raw = mb_convert_encoding($raw, 'UTF-8', 'Windows-1252');
-    }
-
-    $firstLine = strtok($raw, "\r\n") ?: '';
-    $delim = ',';
-    $best = -1;
-    foreach ([',', ';', "\t"] as $d) {
-        $n = substr_count($firstLine, $d);
-        if ($n > $best) { $best = $n; $delim = $d; }
-    }
-
-    $fh = fopen('php://temp', 'r+');
-    fwrite($fh, $raw);
-    rewind($fh);
-    $rows = [];
-    while (($r = fgetcsv($fh, 0, $delim, '"', '')) !== false) {
-        if ($r === [null] || !array_filter($r, fn($v) => $v !== null && $v !== '')) continue;
-        $rows[] = array_map(fn($v) => (string)$v, $r);
-    }
-    fclose($fh);
-    return $rows;
-}
-
 /**
  * Retorna info de hojas: [['name'=>'Sheet1','rows'=>int,'cols'=>int], ...]
  */
 function xlsxGetSheets(string $filePath): array
 {
-    if (isCsvPath($filePath)) {
-        $rows = csvReadAll($filePath);
-        return [['name' => 'CSV', 'rows' => count($rows), 'cols' => $rows ? max(array_map('count', $rows)) : 0]];
-    }
     $reader = new PhpXlsxReader($filePath);
     $sheets = $reader->getSheets();
     $reader->close();
@@ -101,10 +57,6 @@ function xlsxGetSheets(string $filePath): array
  */
 function xlsxReadRows(string $filePath, string $sheetName, int $maxRows = 0): array
 {
-    if (isCsvPath($filePath)) {
-        $rows = csvReadAll($filePath);
-        return ['ok' => true, 'rows' => $maxRows > 0 ? array_slice($rows, 0, $maxRows) : $rows];
-    }
     $reader = new PhpXlsxReader($filePath);
     $rows   = $reader->readRows($sheetName, $maxRows);
     $reader->close();
@@ -844,7 +796,7 @@ function handleUpload(): string {
     if (empty($_FILES['file']['tmp_name'])) errOut('No se recibió archivo.');
     if ($_FILES['file']['error'] !== UPLOAD_ERR_OK) errOut('Error de upload: código ' . $_FILES['file']['error']);
     $ext = strtolower(pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, ['xlsx','xls','ods','csv'])) errOut('Formato no soportado. Use .xlsx, .xls, .ods o .csv');
+    if (!in_array($ext, ['xlsx','xls','ods'])) errOut('Formato no soportado. Use .xlsx, .xls u .ods');
     $tmpName = 'lead_' . bin2hex(random_bytes(8)) . '.' . $ext;
     $tmpPath = TMP_DIR . $tmpName;
     if (!move_uploaded_file($_FILES['file']['tmp_name'], $tmpPath)) errOut('No se pudo guardar el archivo temporal.', 500);
