@@ -71,6 +71,19 @@ try {
     $padreNombre = isset($_GET['padre_nombre']) && $_GET['padre_nombre'] !== '' ? $_GET['padre_nombre'] : null;
     $idExacto = isset($_GET['id']) && $_GET['id'] !== '' ? $_GET['id'] : null;
 
+    // ids=05001,08001,...  → devuelve solo esas entidades (para pintar únicamente las
+    // áreas con registros de un segmento, sin traer la geometría nacional completa).
+    $idsLista = [];
+    if (isset($_GET['ids']) && $_GET['ids'] !== '') {
+        foreach (explode(',', $_GET['ids']) as $rawId) {
+            $rawId = trim($rawId);
+            if ($rawId !== '' && preg_match('/^[0-9A-Za-z]+$/', $rawId)) {
+                $idsLista[] = $rawId;
+            }
+        }
+        $idsLista = array_slice(array_values(array_unique($idsLista)), 0, 800);
+    }
+
     // punto=lon,lat — busca que entidad de este nivel contiene ese punto
     // (usado por el zoom automatico del mapa: al cambiar de nivel, ubica el
     // padre correspondiente al centro actual del mapa via ST_Contains)
@@ -158,6 +171,14 @@ try {
     if ($idExacto !== null) {
         $sql .= " AND e.id = :id_exacto";
         $params['id_exacto'] = $idExacto;
+    }
+    if (!empty($idsLista)) {
+        $ph = [];
+        foreach ($idsLista as $i => $val) {
+            $ph[] = ":id_l$i";
+            $params["id_l$i"] = $val;
+        }
+        $sql .= " AND e.id IN (" . implode(',', $ph) . ")";
     }
     if ($puntoLon !== null && $puntoLat !== null) {
         $sql .= " AND ST_Contains(g.geom, ST_PointFromText(CONCAT('POINT(', :plon, ' ', :plat, ')'), 4326))";

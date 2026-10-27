@@ -6,12 +6,6 @@
 <title>MEDFUT · Dashboard Electoral Medellín 2026</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
 <style>
-:root {
-  --bg:#0f1117; --surface:#1a1d2e; --card:#1e2132;
-  --border:#2d3148; --text:#e8eaf0; --muted:#7b84a3;
-  --accent:#6366f1; --accent2:#8b5cf6;
-  --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --blue:#3b82f6;
-}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
 
@@ -92,6 +86,8 @@ tbody tr:hover td{background:#232640}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){main{padding:12px 14px}.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid2,.grid3{grid-template-columns:1fr}header{padding:14px}}
 </style>
+<link rel="stylesheet" href="visor.css?v=21">
+<script src="visor.js?v=10"></script>
 </head>
 <body>
 
@@ -100,42 +96,27 @@ tbody tr:hover td{background:#232640}
   <span class="loading-text">Conectando con API local…</span>
 </div>
 
-<header>
-  <div class="brand">
-    <div>
-      <h1>🗳️ MEDFUT · Electoral Medellín 2026</h1>
-      <p>API local · XAMPP MariaDB <span class="status-dot"></span></p>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="filter-pill">
-      <span>Zona:</span>
-      <select id="fil-zona" onchange="applyFilters()">
-        <option value="all">Todas</option>
-        <option value="COMUNA">Solo Comunas</option>
-        <option value="CORREGIMIENTO">Solo Corregimientos</option>
-      </select>
-    </div>
-    <div class="filter-pill">
-      <span>Candidato Pres.:</span>
-      <select id="fil-cand" onchange="applyFilters()">
-        <option value="all">Todos</option>
-      </select>
-    </div>
-    <a href="leads_import.html"     class="btn-refresh" style="text-decoration:none;background:var(--surface);border:1px solid var(--border);color:var(--text);" title="Importar leads desde Excel">📥 Leads</a>
-    <a href="leads_analytics.html"  class="btn-refresh" style="text-decoration:none;background:var(--surface);border:1px solid var(--border);color:var(--text);" title="Analítica de leads">📊 Analítica</a>
-    <a href="c98geo_dashboard.html" class="btn-refresh" style="text-decoration:none;background:var(--surface);border:1px solid var(--border);color:var(--text);" title="Geografía Colombia">🗺️ Geografía</a>
-    <button class="btn-refresh" onclick="loadAll()">↻ Actualizar</button>
-  </div>
-</header>
+<div id="v-nav" data-page="electoral" data-refresh="loadAll()"></div>
+<div class="page-hd"><h1 class="page-title">Electoral Medellín 2026</h1><p class="page-sub">Resultados por comuna y corregimiento, desde la base local C98_MEDFUT.</p></div>
+<div class="filter-bar">
+  <label class="filter-label" for="fil-zona">Zona</label>
+  <select id="fil-zona" class="filter-select" onchange="applyFilters()">
+    <option value="all">Todas</option>
+    <option value="COMUNA">Solo comunas</option>
+    <option value="CORREGIMIENTO">Solo corregimientos</option>
+  </select>
+  <label class="filter-label" for="fil-cand">Candidato presidencial</label>
+  <select id="fil-cand" class="filter-select" onchange="applyFilters()">
+    <option value="all">Todos</option>
+  </select>
+</div>
 
 <main>
   <!-- KPIs -->
   <div class="kpi-grid" id="kpi-grid"></div>
 
   <!-- FILA 1: Presidencial + Espectro + Participación -->
-  <div style="font-size:.7rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.8px">
-    📊 Resultados Preconteo · Presidencial 1ª Vuelta 2026 · Medellín por Comuna
+  <div style="font-size:.7rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.8px">Resultados Preconteo · Presidencial 1ª Vuelta 2026 · Medellín por Comuna
   </div>
   <div class="grid3">
     <div class="card">
@@ -160,8 +141,7 @@ tbody tr:hover td{background:#232640}
   </div>
 
   <!-- FILA 2: Encuesta alcaldía + Duel -->
-  <div style="font-size:.7rem;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.8px">
-    🗳️ Encuesta Intención de Voto · Alcaldía Medellín 2026 · Meta Ads Mayo 2026
+  <div style="font-size:.7rem;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.8px">Encuesta Intención de Voto · Alcaldía Medellín 2026 · Meta Ads Mayo 2026
   </div>
   <div class="grid2">
     <div class="card">
@@ -226,7 +206,7 @@ const COLORS_PRES = {
 };
 
 const COLORS_ALC = {
-  andres_tobon:       '#6366f1',
+  andres_tobon:       V.css('--accent'),
   anibal_gaviria:     '#f59e0b',
   carlos_raul_yepes:  '#10b981',
   claudia_carrasquilla:'#8b5cf6',
@@ -317,8 +297,8 @@ function getFilteredVotos() {
 }
 
 function chartDefaults() {
-  Chart.defaults.color = '#7b84a3';
-  Chart.defaults.borderColor = '#2d3148';
+  Chart.defaults.color = V.css('--muted');
+  Chart.defaults.borderColor = V.css('--line');
   Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
   Chart.defaults.font.size = 11;
 }
@@ -358,8 +338,8 @@ function renderKPIs() {
 
   const kpis = [
     { label:'Votos Preconteo Pres.',  val: fmt(totalVotos), sub:'Votos válidos · Medellín', cls:'' },
-    { label:'🏆 Líder Presidencial',  val: fmtP(totalVotos>0 ? winner[1]/totalVotos*100 : 0), sub: winnerName ? winnerName.nombre_completo.split(' ').slice(0,2).join(' ') : winner[0], cls:'winner' },
-    { label:'🗳️ Líder Alcaldía',      val: fmtP(encTotal>0 ? encLeader[1]/encTotal*100 : 0), sub: (encName ? encName.nombre_completo.split(' ').slice(0,2).join(' ') : encLeader[0]) + ' · Encuesta', cls:'leader' },
+    { label:'Líder Presidencial',  val: fmtP(totalVotos>0 ? winner[1]/totalVotos*100 : 0), sub: winnerName ? winnerName.nombre_completo.split(' ').slice(0,2).join(' ') : winner[0], cls:'winner' },
+    { label:'Líder Alcaldía',      val: fmtP(encTotal>0 ? encLeader[1]/encTotal*100 : 0), sub: (encName ? encName.nombre_completo.split(' ').slice(0,2).join(' ') : encLeader[0]) + ' · Encuesta', cls:'leader' },
     { label:'Participación 2026',     val: partPct, sub:'Cámara · Potencial '+fmt(part2026?.potencial), cls:'' },
     { label:'Muestra Encuesta Alc.',  val: fmt(DB.encuesta.reduce((a,r)=>a+(r.n||0),0)), sub:'Respuestas · Meta Ads · Mayo 2026', cls:'' },
   ];
@@ -385,7 +365,7 @@ function renderPreconteoBar() {
     return c ? c.nombre_completo.split(' ').slice(0,2).join(' ') : k;
   });
   const data   = sorted.map(([,v]) => v);
-  const colors = sorted.map(([k]) => COLORS_PRES[k]||'#6366f1');
+  const colors = sorted.map(([k]) => COLORS_PRES[k]||V.css('--accent'));
   const total  = data.reduce((a,b)=>a+b,0);
 
   destroyChart('preconteo');
@@ -397,8 +377,8 @@ function renderPreconteoBar() {
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fmt(c.raw)} votos (${fmtP(c.raw/total*100)})`}} },
       scales:{
-        x:{grid:{color:'#1e2132'}, ticks:{callback:v=>(v/1000).toFixed(0)+'K'}},
-        y:{grid:{display:false}, ticks:{color:'#e8eaf0', font:{size:10}}}
+        x:{grid:{color:V.css('--line')}, ticks:{callback:v=>(v/1000).toFixed(0)+'K'}},
+        y:{grid:{display:false}, ticks:{color:V.css('--text'), font:{size:10}}}
       }
     }
   });
@@ -413,7 +393,7 @@ function renderEspectro() {
   const order  = ['Izquierda','Centro-Izquierda','Centro','Centro-Derecha','Derecha'];
   const labels = order.filter(k => byEsp[k]);
   const data   = labels.map(k => byEsp[k]);
-  const colors = labels.map(k => SPEC_COLOR[k]||'#6366f1');
+  const colors = labels.map(k => SPEC_COLOR[k]||V.css('--accent'));
   const total  = data.reduce((a,b)=>a+b,0);
 
   destroyChart('espectro');
@@ -459,7 +439,7 @@ function renderParticipacion() {
     options: {
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw.toFixed(1)}%`}} },
-      scales:{ y:{min:40,max:75,grid:{color:'#1e2132'},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false},ticks:{font:{size:9},maxRotation:30}} }
+      scales:{ y:{min:40,max:75,grid:{color:V.css('--line')},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false},ticks:{font:{size:9},maxRotation:30}} }
     }
   });
 }
@@ -496,7 +476,7 @@ function renderEncuesta() {
   const datasets = top5.map(ckey => {
     const cand = DB.candidatos.find(c=>c.candidato_key===ckey);
     const name = cand ? cand.nombre_completo.split(' ')[0] : ckey;
-    const color = COLORS_ALC[ckey]||'#6366f1';
+    const color = COLORS_ALC[ckey]||V.css('--accent');
 
     const data = labels.map(lbl => {
       const geoLabel = encTab==='zona' ? lbl.replace('C.','CORREGIMIENTO ').replace(/^C(\d)/,'COMUNA $1') : lbl;
@@ -525,7 +505,7 @@ function renderEncuesta() {
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'top',labels:{padding:12,boxWidth:10,font:{size:10}}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}%`}} },
-      scales:{ y:{grid:{color:'#1e2132'},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false}} }
+      scales:{ y:{grid:{color:V.css('--line')},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false}} }
     }
   });
 }
@@ -563,7 +543,7 @@ function renderDuel() {
     options:{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'top',labels:{padding:10,boxWidth:10}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}%`}} },
-      scales:{ x:{min:0,max:80,grid:{color:'#1e2132'},ticks:{callback:v=>v+'%'}}, y:{grid:{display:false},ticks:{font:{size:9}}} }
+      scales:{ x:{min:0,max:80,grid:{color:V.css('--line')},ticks:{callback:v=>v+'%'}}, y:{grid:{display:false},ticks:{font:{size:9}}} }
     }
   });
 }
@@ -602,8 +582,8 @@ function _renderSorted() {
   });
 
   const rows = sorted.slice(0,300).map(r => {
-    const c  = COLORS_PRES[r.key]||'#6366f1';
-    const sc = SPEC_COLOR[r.espectro]||'#6366f1';
+    const c  = COLORS_PRES[r.key]||V.css('--accent');
+    const sc = SPEC_COLOR[r.espectro]||V.css('--accent');
     return `<tr>
       <td style="font-weight:600;font-size:.75rem">${r.zona}</td>
       <td style="color:var(--muted);font-size:.72rem">${r.tipo}</td>
@@ -629,5 +609,6 @@ function sortTable(col) {
 chartDefaults();
 loadAll();
 </script>
+<script>V.onTheme(function(){ location.reload(); });</script>
 </body>
 </html>

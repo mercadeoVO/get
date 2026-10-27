@@ -7,13 +7,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0" crossorigin="anonymous"></script>
 <style>
-:root{
-  --bg:#0f1117; --surface:#1a1d2e; --card:#1e2132;
-  --border:#2d3148; --text:#e8eaf0; --muted:#7b84a3;
-  --accent:#6366f1; --accent2:#8b5cf6;
-  --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --blue:#3b82f6;
-  --orange:#f97316; --pink:#ec4899; --cyan:#06b6d4;
-}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
 
@@ -149,6 +142,8 @@ tbody tr:hover{background:rgba(99,102,241,.05)}
 
 footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
 </style>
+<link rel="stylesheet" href="visor.css?v=21">
+<script src="visor.js?v=10"></script>
 </head>
 <body>
 
@@ -157,22 +152,8 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
   <div class="loading-text">Cargando analítica…</div>
 </div>
 
-<header>
-  <div class="brand">
-    <span class="brand-icon">📊</span>
-    <div>
-      <h1>Analítica de Leads</h1>
-      <p>MEDFUT · Medellín 2026</p>
-    </div>
-  </div>
-  <nav class="nav-links">
-    <a href="dashboard_local.html"  class="nav-btn">🗳️ Electoral</a>
-    <a href="leads_import.html"     class="nav-btn">📥 Importar</a>
-    <a href="leads_analytics.html"  class="nav-btn active">📊 Analítica</a>
-    <a href="c98geo_dashboard.html" class="nav-btn">🗺️ Geografía</a>
-  </nav>
-  <button class="btn-reload" onclick="load()">↻ Actualizar</button>
-</header>
+<div id="v-nav" data-page="analitica" data-refresh="load()"></div>
+<div class="page-hd"><h1 class="page-title">Analítica de leads</h1><p class="page-sub">Medellín 2026 · cobertura, geografía y perfil de quienes dejaron sus datos.</p></div>
 
 <div class="filter-bar">
   <span class="filter-label">Importación:</span>
@@ -194,7 +175,7 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
       <div class="periodo" id="kpi-periodo">—</div>
     </div>
     <div class="card">
-      <div class="card-title">📋 Cobertura por Campo</div>
+      <div class="card-title">Cobertura por Campo</div>
       <div class="cob-list" id="cob-list"></div>
     </div>
   </div>
@@ -202,15 +183,15 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
   <!-- ── FILA 3: Sexo | Rango Edad | Estrato ── -->
   <div class="chart-grid-3">
     <div class="card">
-      <div class="card-title">⚥ Sexo</div>
+      <div class="card-title">Sexo</div>
       <div class="chart-wrap"><canvas id="ch-sexo"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">🎂 Rango de Edad</div>
+      <div class="card-title">Rango de Edad</div>
       <div class="chart-wrap"><canvas id="ch-edad"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">🏠 Estrato</div>
+      <div class="card-title">Estrato</div>
       <div class="chart-wrap"><canvas id="ch-estrato"></canvas></div>
     </div>
   </div>
@@ -218,11 +199,11 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
   <!-- ── FILA 4: Afiliación | Nivel Educativo ── -->
   <div class="chart-grid-2">
     <div class="card">
-      <div class="card-title">🗳️ Afiliación Política <span>top 15</span></div>
+      <div class="card-title">Afiliación Política <span>top 15</span></div>
       <div class="chart-wrap tall"><canvas id="ch-afil"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">🎓 Nivel Educativo</div>
+      <div class="card-title">Nivel Educativo</div>
       <div class="chart-wrap tall"><canvas id="ch-edu"></canvas></div>
     </div>
   </div>
@@ -230,18 +211,18 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
   <!-- ── FILA 5: Plataforma (50%) | Timeline (50%) ── -->
   <div class="chart-grid-2">
     <div class="card">
-      <div class="card-title">📱 Plataforma de Origen</div>
+      <div class="card-title">Plataforma de Origen</div>
       <div class="chart-wrap"><canvas id="ch-platform"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">📅 Timeline de Importaciones <span>volumen importado por fecha</span></div>
+      <div class="card-title">Timeline de Importaciones <span>volumen importado por fecha</span></div>
       <div class="chart-wrap"><canvas id="ch-timeline"></canvas></div>
     </div>
   </div>
 
   <!-- ── FILA 6: Jerarquía Geográfica (línea completa) ── -->
   <div class="card">
-    <div class="card-title">🌎 Jerarquía Geográfica
+    <div class="card-title">Jerarquía Geográfica
       <span>Departamento › Subregión › Municipio › Zona › Comuna › Barrio</span>
     </div>
     <div class="tabs">
@@ -260,9 +241,39 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
     <div class="chart-wrap tall"><canvas id="ch-geo"></canvas></div>
   </div>
 
+  <!-- ── FILA 6b: Temas y Percepción (línea completa) ── -->
+  <div class="card">
+    <div class="card-title">Temas y Percepción
+      <span>Tema › Subtema › Pregunta — ver app/docs/taxonomia_temas_subtemas.md</span>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTema('tema',this)">Tema</button>
+      <button class="tab" onclick="switchTema('subtema',this)">Subtema</button>
+      <button class="tab" onclick="switchTema('pregunta',this)">Pregunta</button>
+    </div>
+    <div class="geo-filter-bar" id="tema-filter-bar" style="display:none">
+      <label id="tema-filter-label">Filtrar por</label>
+      <select id="tema-parent-select" onchange="applyTemaFilter()"></select>
+      <span id="tema-count"></span>
+    </div>
+    <div class="chart-wrap tall" id="tema-chart-wrap"><canvas id="ch-tema"></canvas></div>
+    <div id="tema-preguntas-wrap" style="display:none;">
+      <div class="tbl-wrap" style="max-height:340px;overflow-y:auto;">
+        <table>
+          <thead><tr><th>Código</th><th>Pregunta</th><th style="text-align:right;">Respuestas</th></tr></thead>
+          <tbody id="tema-preguntas-body"></tbody>
+        </table>
+      </div>
+      <div id="tema-pregunta-detalle" style="display:none;margin-top:14px;">
+        <div class="card-title" style="font-size:.8rem;margin-bottom:6px;" id="tema-pregunta-titulo"></div>
+        <div class="chart-wrap tall"><canvas id="ch-tema-pregunta"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── TABLA ── -->
   <div class="card">
-    <div class="card-title">📂 Historial de Importaciones</div>
+    <div class="card-title">Historial de Importaciones</div>
     <div class="tbl-wrap">
       <table>
         <thead><tr>
@@ -289,8 +300,7 @@ footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
 Chart.register(ChartDataLabels);
 
 const API    = 'leads_importer.php';
-const COLORS = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ef4444','#8b5cf6',
-                '#06b6d4','#f97316','#ec4899','#84cc16','#14b8a6','#a855f7'];
+const COLORS = V.palette();
 
 // Colores específicos por plataforma
 const PLATFORM_COLORS = {
@@ -298,7 +308,7 @@ const PLATFORM_COLORS = {
   Instagram:    '#E4405F',
   Google:       '#4285F4',
   TikTok:       '#69C9D0',
-  Desconocido:  '#7b84a3',
+  Desconocido:  V.css('--muted'),
 };
 
 // Mapeo de códigos de plataforma a nombre legible
@@ -313,7 +323,7 @@ function mapPlatform(v) {
   return PLATFORM_MAP[v.toLowerCase()] || 'Desconocido';
 }
 
-let DATA = null, GEO_DATA = null, charts = {};
+let DATA = null, GEO_DATA = null, TEMA_DATA = null, charts = {};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtN  = n => (n||0).toLocaleString('es-CO');   // número completo, sin abreviar
@@ -352,6 +362,8 @@ async function load() {
     DATA    = analData;
     GEO_DATA = analData.geo;
     parseGeoData(); // pre-parsear {val, parent, cnt} por nivel
+    TEMA_DATA = analData.temas;
+    parseTemaData();
 
     if(logData.ok && logData.logs?.length) {
       const sel = $('f-import');
@@ -409,6 +421,10 @@ function render() {
   buildGeoFilter('departamento');
   renderGeo('departamento', null);
 
+  // Temas — inicia en Tema (sin padre)
+  buildTemaFilter('tema');
+  renderTemas('tema', null);
+
   // Tabla
   renderTable(d.por_import);
 
@@ -439,13 +455,13 @@ function destroyChart(id) {
 // Datalabel config reutilizable
 const DL_BAR_H = {
   anchor:'end', align:'end',
-  color:'#e8eaf0', font:{size:9,weight:'600'},
+  color:V.css('--text'), font:{size:9,weight:'600'},
   formatter: v => fmtK(v),
   padding:{right:4}
 };
 const DL_BAR_V = {
   anchor:'end', align:'top',
-  color:'#e8eaf0', font:{size:9,weight:'600'},
+  color:V.css('--text'), font:{size:9,weight:'600'},
   formatter: v => fmtK(v),
 };
 const DL_DONUT = {
@@ -469,13 +485,13 @@ function renderDonut(id, data) {
     data:{ labels, datasets:[{
       data:vals,
       backgroundColor: COLORS.map(c=>c+'CC'),
-      borderColor:'#1e2132', borderWidth:2
+      borderColor:V.css('--line'), borderWidth:2
     }]},
     options:{
       responsive:true, maintainAspectRatio:false, cutout:'55%',
       plugins:{
         datalabels: DL_DONUT,
-        legend:{ position:'right', labels:{ color:'#7b84a3', font:{size:11}, usePointStyle:true, padding:10 }},
+        legend:{ position:'right', labels:{ color:V.css('--muted'), font:{size:11}, usePointStyle:true, padding:10 }},
         tooltip:{ callbacks:{ label: c => {
           const tot = c.dataset.data.reduce((a,b)=>a+b,0);
           return ` ${c.label}: ${fmtN(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`;
@@ -490,7 +506,7 @@ function renderBarH(id, data, opts={}) {
   if(!data?.length) return;
   const labels = data.map(d=>d.val||'—');
   const vals   = data.map(d=>d.cnt);
-  const color  = opts.color||'#6366f1';
+  const color  = opts.color||V.css('--accent');
   charts[id]   = new Chart($(id).getContext('2d'), {
     type:'bar',
     data:{ labels, datasets:[{
@@ -507,8 +523,8 @@ function renderBarH(id, data, opts={}) {
         tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.x)} leads` }}
       },
       scales:{
-        x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
-        y:{ ticks:{color:'#e8eaf0',font:{size:10}}, grid:{display:false} }
+        x:{ ticks:{color:V.css('--muted'),font:{size:9}}, grid:{color:V.css('--line')} },
+        y:{ ticks:{color:V.css('--text'),font:{size:10}}, grid:{display:false} }
       }
     }
   });
@@ -535,8 +551,8 @@ function renderBarV(id, data, opts={}) {
         tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.y)} leads` }}
       },
       scales:{
-        x:{ ticks:{color:'#e8eaf0',font:{size:10}}, grid:{display:false} },
-        y:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} }
+        x:{ ticks:{color:V.css('--text'),font:{size:10}}, grid:{display:false} },
+        y:{ ticks:{color:V.css('--muted'),font:{size:9}}, grid:{color:V.css('--line')} }
       }
     }
   });
@@ -554,7 +570,7 @@ function renderTimeline(data) {
       label:'Leads importados',
       data:nuevos,
       backgroundColor:'#6366f1BB',
-      borderColor:'#6366f1',
+      borderColor:V.css('--accent'),
       borderRadius:3, borderWidth:1
     }]},
     options:{
@@ -563,15 +579,15 @@ function renderTimeline(data) {
       plugins:{
         datalabels:{
           anchor:'end', align:'top',
-          color:'#e8eaf0', font:{size:8,weight:'600'},
+          color:V.css('--text'), font:{size:8,weight:'600'},
           formatter: v => v>0 ? fmtK(v) : '',
         },
         legend:{display:false},
         tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.y)} leads` }}
       },
       scales:{
-        x:{ ticks:{color:'#7b84a3',font:{size:8},maxRotation:45}, grid:{display:false} },
-        y:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} }
+        x:{ ticks:{color:V.css('--muted'),font:{size:8},maxRotation:45}, grid:{display:false} },
+        y:{ ticks:{color:V.css('--muted'),font:{size:9}}, grid:{color:V.css('--line')} }
       }
     }
   });
@@ -591,21 +607,21 @@ function renderPlatform(rawData) {
   const entries = Object.entries(agg).sort((a,b)=>b[1]-a[1]);
   const labels  = entries.map(e=>e[0]);
   const vals    = entries.map(e=>e[1]);
-  const colors  = labels.map(l => (PLATFORM_COLORS[l]||'#7b84a3')+'CC');
-  const borders = labels.map(l => PLATFORM_COLORS[l]||'#7b84a3');
+  const colors  = labels.map(l => (PLATFORM_COLORS[l]||V.css('--muted'))+'CC');
+  const borders = labels.map(l => PLATFORM_COLORS[l]||V.css('--muted'));
 
   charts['ch-platform'] = new Chart($('ch-platform').getContext('2d'), {
     type:'doughnut',
     data:{ labels, datasets:[{
       data:vals,
       backgroundColor:colors,
-      borderColor:'#1e2132', borderWidth:2
+      borderColor:V.css('--line'), borderWidth:2
     }]},
     options:{
       responsive:true, maintainAspectRatio:false, cutout:'55%',
       plugins:{
         datalabels: DL_DONUT,
-        legend:{ position:'right', labels:{ color:'#7b84a3', font:{size:11}, usePointStyle:true, padding:10 }},
+        legend:{ position:'right', labels:{ color:V.css('--muted'), font:{size:11}, usePointStyle:true, padding:10 }},
         tooltip:{ callbacks:{ label: c => {
           const tot = c.dataset.data.reduce((a,b)=>a+b,0);
           return ` ${c.label}: ${fmtN(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`;
@@ -650,7 +666,7 @@ function parseGeoData() {
 }
 
 function switchGeo(nivel, btn) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
   activeGeo = nivel;
   buildGeoFilter(nivel);
@@ -720,7 +736,7 @@ function renderGeo(nivel, parentFilter) {
     type:'bar',
     data:{ labels, datasets:[{
       label:'Leads', data:vals,
-      backgroundColor:'#6366f1CC', borderColor:'#6366f1',
+      backgroundColor:'#6366f1CC', borderColor:V.css('--accent'),
       borderWidth:1, borderRadius:3
     }]},
     options:{
@@ -736,19 +752,168 @@ function renderGeo(nivel, parentFilter) {
         }}}
       },
       scales:{
-        x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
-        y:{ ticks:{color:'#e8eaf0',font:{size:10},maxTicksLimit:25}, grid:{display:false} }
+        x:{ ticks:{color:V.css('--muted'),font:{size:9}}, grid:{color:V.css('--line')} },
+        y:{ ticks:{color:V.css('--text'),font:{size:10},maxTicksLimit:25}, grid:{display:false} }
       }
     }
   });
+}
+
+// ── Temas drill-down (Tema › Subtema › Pregunta) ───────────────────────────────
+let activeTema = 'tema';
+const TEMA_PARENT = { subtema: { label:'Tema' } }; // 'pregunta' se filtra aparte (por subtema, vía lista)
+let TEMA_PARSED = {};   // {val, parent, cnt} por nivel tema/subtema
+let TEMA_PREGUNTAS = []; // array crudo {pregunta_id, pregunta, tema, subtema, codigo, n_respuestas}
+
+function parseTemaData() {
+  if (!TEMA_DATA) return;
+  ['tema', 'subtema'].forEach(nivel => {
+    TEMA_PARSED[nivel] = (TEMA_DATA[nivel] || []).map(d => {
+      const raw = d.val || '—';
+      const sep = raw.indexOf('|||');
+      if (sep < 0) return { val: raw, parent: null, cnt: d.cnt };
+      return { val: raw.substring(0, sep).trim(), parent: raw.substring(sep + 3).trim() || null, cnt: d.cnt };
+    });
+  });
+  TEMA_PREGUNTAS = TEMA_DATA.preguntas || [];
+}
+
+function switchTema(nivel, btn) {
+  btn.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  activeTema = nivel;
+  buildTemaFilter(nivel);
+  renderTemas(nivel, null);
+}
+
+function buildTemaFilter(nivel) {
+  const bar = $('tema-filter-bar'), sel = $('tema-parent-select'), lbl = $('tema-filter-label');
+  let parents;
+  if (nivel === 'pregunta') {
+    parents = [...new Set(TEMA_PREGUNTAS.map(p => p.subtema))].sort((a,b)=>a.localeCompare(b,'es'));
+    lbl.textContent = 'Filtrar por Subtema:';
+  } else {
+    const config = TEMA_PARENT[nivel];
+    if (!config) { bar.style.display = 'none'; return; }
+    parents = [...new Set((TEMA_PARSED[nivel]||[]).map(d => d.parent).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+    lbl.textContent = `Filtrar por ${config.label}:`;
+  }
+  sel.innerHTML = `<option value="">— Todos (${parents.length}) —</option>` + parents.map(p => `<option value="${h(p)}">${h(p)}</option>`).join('');
+  bar.style.display = 'flex';
+}
+
+function applyTemaFilter() {
+  renderTemas(activeTema, $('tema-parent-select').value || null);
+}
+
+function renderTemas(nivel, parentFilter) {
+  const chartWrap = $('tema-chart-wrap'), preguntasWrap = $('tema-preguntas-wrap');
+  if (nivel === 'pregunta') {
+    chartWrap.style.display = 'none';
+    preguntasWrap.style.display = 'block';
+    $('tema-pregunta-detalle').style.display = 'none';
+    renderTemaPreguntasLista(parentFilter);
+    return;
+  }
+  chartWrap.style.display = 'block';
+  preguntasWrap.style.display = 'none';
+  destroyChart('ch-tema');
+
+  let rows = TEMA_PARSED?.[nivel];
+  if (!rows?.length) return;
+  if (parentFilter) rows = rows.filter(d => d.parent === parentFilter);
+  let top = rows.slice(0, 30);
+
+  const grouped = !parentFilter && top.some(d => d.parent);
+  if (grouped) top = [...top].sort((a,b)=>{ const pa=a.parent||'', pb=b.parent||''; return pa!==pb ? pa.localeCompare(pb,'es') : b.cnt-a.cnt; });
+
+  const vals = top.map(d => d.cnt);
+  const labels = top.map(d => grouped && d.parent ? `${d.val} — ${d.parent}` : (d.val || '—'));
+  const total = vals.reduce((a,b)=>a+b,0);
+
+  $('tema-count').textContent = parentFilter ? `${top.length} resultados · ${fmtK(total)} respuestas` : `Top ${top.length} · ${fmtK(total)} respuestas`;
+  chartWrap.style.height = Math.max(300, top.length * 26) + 'px';
+
+  charts['ch-tema'] = new Chart($('ch-tema').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Respuestas', data:vals, backgroundColor:'#a855f7CC', borderColor:'#a855f7', borderWidth:1, borderRadius:3 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      layout:{ padding:{ right:55 } },
+      plugins:{
+        datalabels: DL_BAR_H, legend:{display:false},
+        tooltip:{ callbacks:{ label: c => {
+          const row = top[c.dataIndex];
+          const ctx = row.parent ? ` · ${row.parent}` : '';
+          return ` ${fmtN(c.parsed.x)} respuestas (${(c.parsed.x/total*100).toFixed(1)}%)${ctx}`;
+        }}}
+      },
+      scales:{
+        x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
+        y:{ ticks:{color:'#e8eaf0',font:{size:10},maxTicksLimit:30}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function renderTemaPreguntasLista(subtemaFilter) {
+  let rows = TEMA_PREGUNTAS;
+  if (subtemaFilter) rows = rows.filter(p => p.subtema === subtemaFilter);
+  rows = [...rows].sort((a,b) => b.n_respuestas - a.n_respuestas);
+  $('tema-count').textContent = `${rows.length} pregunta(s)`;
+  const attrEsc = s => h(s).replace(/"/g,'&quot;');
+  $('tema-preguntas-body').innerHTML = rows.map(p => `
+    <tr style="cursor:pointer;" data-pregunta-id="${p.pregunta_id}" data-pregunta="${attrEsc(p.pregunta)}" onclick="verDistribucionPregunta(this.dataset.preguntaId, this.dataset.pregunta)">
+      <td><code style="color:#a855f7;font-size:.68rem;">${h(p.codigo)}</code></td>
+      <td>${h(p.pregunta)}</td>
+      <td style="text-align:right;">${fmtN(p.n_respuestas)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--muted);">Sin preguntas para este subtema.</td></tr>';
+}
+
+async function verDistribucionPregunta(preguntaId, pregunta) {
+  const importSel = $('f-import').value;
+  const qs = importSel ? `&import_id=${importSel}` : '';
+  const detalle = $('tema-pregunta-detalle');
+  detalle.style.display = 'block';
+  $('tema-pregunta-titulo').textContent = pregunta;
+  destroyChart('ch-tema-pregunta');
+  try {
+    const d = await fetch(`${API}?action=respuestas_muestra&pregunta_id=${preguntaId}${qs}`).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error');
+    if (d.total === 0) {
+      $('ch-tema-pregunta').parentElement.innerHTML = '<canvas id="ch-tema-pregunta"></canvas>';
+      return;
+    }
+    const labels = d.respuestas.map(r => r.respuesta || '(vacío)');
+    const vals   = d.respuestas.map(r => r.n);
+    charts['ch-tema-pregunta'] = new Chart($('ch-tema-pregunta').getContext('2d'), {
+      type:'bar',
+      data:{ labels, datasets:[{ label:'Respuestas', data:vals, backgroundColor:'#22c55eCC', borderColor:'#22c55e', borderWidth:1, borderRadius:3 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        layout:{ padding:{ right:55 } },
+        plugins:{
+          datalabels: DL_BAR_H, legend:{display:false},
+          tooltip:{ callbacks:{ label: c => ` ${fmtN(c.parsed.x)} (${(c.parsed.x/d.total*100).toFixed(1)}%)` } }
+        },
+        scales:{
+          x:{ ticks:{color:'#7b84a3',font:{size:9}}, grid:{color:'rgba(45,49,72,.4)'} },
+          y:{ ticks:{color:'#e8eaf0',font:{size:10}}, grid:{display:false} }
+        }
+      }
+    });
+  } catch(e) {
+    console.error(e);
+  }
 }
 
 // ── Tabla ─────────────────────────────────────────────────────────────────────
 let tblData = [], tblSort = {col:3, dir:-1};
 
 const TIPO_BADGE  = t => t==='electoral'
-  ? '<span class="badge badge-purple">🗳️ Electoral</span>'
-  : '<span class="badge badge-blue">📋 Leads</span>';
+  ? '<span class="badge badge-purple">Electoral</span>'
+  : '<span class="badge badge-blue">Leads</span>';
 const ETAPA_BADGE = e => {
   const m = {importado:'badge-blue',validando:'badge-yellow',enriquecido:'badge-green',
              analizado:'badge-green',reportado:'badge-purple',archivado:'badge-orange'};
@@ -785,5 +950,6 @@ function sortTbl(col) {
 
 load();
 </script>
+<script>V.onTheme(function(){ location.reload(); });</script>
 </body>
 </html>

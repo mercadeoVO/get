@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEDFUT · Segmentación de Leads</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0" crossorigin="anonymous"></script>
+<style>
+/* ── Design tokens ─────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans','Segoe UI',system-ui,sans-serif;min-height:100vh}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+button{font-family:inherit}
+
+/* ── Header ───────────────────────────────────────────────────── */
+header{background:var(--surface);border-bottom:1px solid var(--border);
+  padding:12px 24px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:600}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{font-size:1.35rem}
+.brand h1{font-size:1.02rem;font-weight:800;letter-spacing:-.01em}
+.brand p{font-size:.66rem;color:var(--text-dim);margin-top:1px}
+.nav-links{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.nav-btn{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:9px;text-decoration:none;
+  font-size:.72rem;font-weight:600;border:1px solid transparent;color:var(--text-dim)}
+.nav-btn:hover{background:var(--surface-2);color:var(--text)}
+.nav-btn.active{background:var(--accent);color:#fff}
+.theme-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);
+  color:var(--text);font-size:1rem;cursor:pointer;display:grid;place-items:center}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Status strip ─────────────────────────────────────────────── */
+.status{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.seg-kpi{display:flex;align-items:baseline;gap:9px}
+.seg-kpi .n{font-size:1.7rem;font-weight:900;letter-spacing:-.02em;line-height:1;
+  background:linear-gradient(92deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.seg-kpi .lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.7px;color:var(--text-dim)}
+.seg-kpi .pct{font-size:.72rem;color:var(--text-dim)}
+.timer{display:none;align-items:center;gap:7px;font-size:.72rem;color:var(--text-dim);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:4px 11px}
+.timer.on{display:inline-flex}
+.timer .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.strip-actions{margin-left:auto;display:flex;gap:8px}
+.btn{border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:.74rem;font-weight:700;
+  cursor:pointer;background:var(--surface-2);color:var(--text);display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{opacity:.9;color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.query-summary{width:100%;font-size:.71rem;color:var(--text-dim);line-height:1.6;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.query-summary .chip{background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:2px 8px;font-weight:600}
+.query-summary .k{color:var(--text-faint);font-weight:700;text-transform:uppercase;font-size:.62rem;letter-spacing:.4px;margin-left:6px}
+
+/* ── Layout ───────────────────────────────────────────────────── */
+main{display:flex;flex-direction:column;gap:16px;padding:16px 24px 40px;max-width:1980px;margin:0 auto}
+/* Bloque 1: filtros a 100% de ancho, fila de tarjetas de igual alto (sin scroll interno) */
+.panel{width:100%;display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
+.panel>.card{flex:1 1 160px;display:flex;flex-direction:column;min-width:0}
+#card-demo{flex:2 1 300px}
+/* Debajo de 880px las tarjetas pasan a una por fila */
+@media(max-width:880px){ .panel>.card,#card-demo{flex:1 1 100%} }
+/* Bloque 2: mapa 50% / distribuciones 50% */
+.results{display:flex;gap:16px;align-items:stretch}
+.results>.rcard{flex:1 1 50%;min-width:0;display:flex;flex-direction:column}
+@media(max-width:1080px){.results{flex-direction:column}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+.card-h{padding:12px 16px;font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+  display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.card-h .ico{font-size:.95rem}
+.card-h .badge{margin-left:auto;background:var(--accent);color:#fff;font-size:.6rem;font-weight:800;border-radius:9px;padding:1px 7px}
+.card-h .chev{color:var(--text-faint);font-size:.62rem;transition:transform .2s ease;margin-left:6px}
+.card.collapsed .chev{transform:rotate(-90deg)}
+.card.collapsed .card-b{display:none}
+.card-b{padding:4px 16px 16px}
+/* Tarjetas de filtro: el cuerpo llena el alto de la tarjeta, sin scroll interno */
+.panel .card-b{flex:1;overflow:visible}
+
+.sub-lbl{font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);
+  margin:12px 0 7px}
+.sub-lbl:first-child{margin-top:4px}
+
+/* ── Tile buttons (square-ish) ────────────────────────────────── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:7px}
+.tiles.cols6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.tiles.cols1{grid-template-columns:1fr}
+.tiles.cols1 .tile{min-height:0;flex-direction:row;justify-content:space-between;padding:9px 12px}
+.tiles.cols1 .tile .cnt{margin-left:auto}
+@media(max-width:1280px){.tiles.cols6{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:880px){.tiles.cols6{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.tile{position:relative;min-height:62px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 5px;
+  cursor:pointer;text-align:center;overflow:hidden}
+.tile:hover:not(.on){border-color:var(--accent);transform:translateY(-1px)}
+.tile .lbl{font-size:11px;font-weight:700;line-height:1.15;word-break:break-word}
+.tile .cnt{font-size:9.5px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.tile.on{background:var(--accent);border-color:var(--accent);box-shadow:0 6px 16px -6px var(--accent)}
+.tile.on .lbl,.tile.on .cnt{color:#fff}
+.tile .drill{position:absolute;top:0;right:0;width:20px;height:20px;display:grid;place-items:center;
+  font-size:11px;color:var(--text-faint);border-bottom-left-radius:8px;background:var(--surface-3)}
+.tile .drill:hover{background:var(--accent);color:#fff}
+.tile.on .drill{background:rgba(255,255,255,.18);color:#fff}
+
+/* geo: selector de nivel + breadcrumb */
+.geo-levels{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.geo-lvl{flex:1 1 auto;min-width:70px;padding:7px 5px;border-radius:9px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text-dim);font-size:.66rem;font-weight:800;cursor:pointer;
+  text-align:center;text-transform:uppercase;letter-spacing:.3px}
+.geo-lvl:hover:not(:disabled):not(.on){border-color:var(--accent);color:var(--text)}
+.geo-lvl.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.geo-lvl:disabled{opacity:.32;cursor:not-allowed}
+.crumb{display:flex;flex-wrap:wrap;gap:3px;align-items:center;font-size:.72rem;margin-bottom:9px}
+.crumb button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.72rem;font-weight:600;padding:2px 4px;border-radius:5px}
+.crumb button:hover{background:var(--accent-soft)}
+.crumb .sep{color:var(--text-faint)}
+.crumb .cur{color:var(--text-dim);font-weight:700}
+
+/* temas accordion */
+.tema-grp{border:1px solid var(--border-soft);border-radius:11px;margin-top:8px;overflow:hidden}
+.tema-grp>summary{list-style:none;padding:9px 12px;font-size:.73rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:8px;background:var(--surface-2)}
+.tema-grp>summary::-webkit-details-marker{display:none}
+.tema-grp>summary .tcnt{margin-left:auto;font-size:.64rem;color:var(--text-dim);font-weight:600}
+.tema-grp>summary .tmark{width:8px;height:8px;border-radius:3px;background:var(--accent);opacity:.25}
+.tema-grp[data-active="1"]>summary .tmark{opacity:1}
+.tema-grp .tiles{padding:9px 11px;grid-template-columns:1fr}
+.tema-grp .tiles .tile{min-height:0;flex-direction:row;justify-content:space-between;padding:9px 12px;text-align:left}
+.tema-grp .tiles .tile .lbl{text-align:left}
+.tema-grp .tiles .tile .cnt{margin-left:auto}
+
+/* misc form controls */
+.field{margin-top:11px}
+.field label{display:block;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-faint);margin-bottom:5px}
+select,input[type=date],input[type=text]{width:100%;background:var(--surface-2);border:1px solid var(--border);
+  color:var(--text);border-radius:9px;padding:7px 10px;font-size:.74rem;outline:none}
+select:focus,input:focus{border-color:var(--accent)}
+select[multiple]{min-height:78px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini{font-size:.63rem;color:var(--text-dim);margin-top:5px;line-height:1.5}
+
+.eav-cond{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:8px;position:relative}
+.eav-cond .q{font-size:.7rem;font-weight:700;line-height:1.35;margin-bottom:3px;padding-right:16px}
+.eav-cond .meta{font-size:.61rem;color:var(--text-dim)}
+.eav-cond .vals{font-size:.63rem;color:var(--accent);margin-top:3px;word-break:break-word}
+.eav-cond .rm{position:absolute;top:6px;right:8px;color:var(--bad);cursor:pointer;font-weight:800;font-size:.75rem}
+.btn-add{width:100%;margin-top:10px;background:transparent;border:1px dashed var(--border);color:var(--text-dim);
+  border-radius:10px;padding:9px;font-size:.72rem;cursor:pointer;font-weight:600}
+.btn-add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(4,6,14,.55);backdrop-filter:blur(3px);z-index:1000;
+  display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:min(620px,100%);
+  max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow)}
+.modal-h{padding:15px 18px;border-bottom:1px solid var(--border);font-weight:800;font-size:.86rem;display:flex;justify-content:space-between}
+.modal-h .x{cursor:pointer;color:var(--text-dim);font-size:1rem}
+.modal-b{padding:15px 18px;overflow-y:auto}
+.modal-f{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.q-list{max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;margin-top:8px}
+.q-item{padding:8px 11px;font-size:.72rem;cursor:pointer;border-bottom:1px solid var(--border-soft);line-height:1.35}
+.q-item:hover{background:var(--accent-soft)}
+.q-item.on{background:var(--accent-soft)}
+.q-item .qt{color:var(--text-dim);font-size:.61rem;margin-top:2px}
+.val-list{max-height:220px;overflow-y:auto;margin-top:8px;display:flex;flex-direction:column;gap:1px}
+.val-list label{display:flex;gap:8px;align-items:flex-start;font-size:.72rem;padding:5px 6px;border-radius:6px;cursor:pointer}
+.val-list label:hover{background:var(--accent-soft)}
+.val-list .vc{color:var(--text-dim);font-size:.63rem;margin-left:auto}
+
+/* results */
+.rcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 17px;box-shadow:var(--shadow-sm)}
+.rcard-h{font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:11px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rcard-h .sub{color:var(--text-dim);font-weight:500;text-transform:none;letter-spacing:0;font-size:.7rem}
+.map-toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.seg-toggle{display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.seg-toggle button{background:var(--surface-2);border:none;color:var(--text-dim);font-size:.7rem;font-weight:700;padding:6px 13px;cursor:pointer}
+.seg-toggle button.on{background:var(--accent);color:#fff}
+.map-wrap{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  flex:1;min-height:520px;background:var(--surface-2)}
+#map{width:100%;height:100%;background:var(--surface-2)}
+#map .leaflet-tile-pane{filter:var(--map-tiles)}
+.leaflet-container{background:var(--surface-2)}
+.map-msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);
+  color:#fff;font-size:.76rem;z-index:500;text-align:center;padding:22px}
+.map-msg.show{display:flex}
+.leaflet-tooltip.seg-tt{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;box-shadow:var(--shadow-sm);font-size:.72rem}
+.leaflet-tooltip.seg-tt::before{border-top-color:var(--border)}
+.legend{position:absolute;right:10px;bottom:10px;z-index:450;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:9px 11px;font-size:.63rem;color:var(--text-dim);box-shadow:var(--shadow-sm);display:none}
+.legend .row{display:flex;align-items:center;gap:6px;margin-top:3px}
+.legend .sw{width:16px;height:11px;border-radius:3px}
+.map-crumb{position:absolute;left:10px;top:10px;z-index:450;background:var(--surface);border:1px solid var(--border);
+  border-radius:9px;padding:5px 9px;font-size:.68rem;box-shadow:var(--shadow-sm);display:flex;gap:3px;align-items:center;max-width:70%}
+.map-crumb button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.68rem;font-weight:600}
+.map-crumb .sep{color:var(--text-faint)}
+
+.chart-grid-3,.chart-grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:13px}
+.chart-box .t{font-size:.68rem;font-weight:700;color:var(--text-dim);margin-bottom:6px}
+.chart-wrap{position:relative;height:210px}
+.chart-wrap.tall{height:280px}
+.chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-faint);font-size:.7rem;text-align:center;padding:10px}
+.empty-state{text-align:center;color:var(--text-dim);font-size:.82rem;padding:44px 20px}
+
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000;gap:14px}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
+</style>
+<link rel="stylesheet" href="visor.css?v=21">
+<script src="visor.js?v=10"></script>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><div style="color:var(--text-dim);font-size:.8rem">Cargando dimensiones…</div></div>
+
+<div id="v-nav" data-page="segmentacion"></div>
+<div class="page-hd"><h1 class="page-title">Segmentación de leads</h1><p class="page-sub">Cruza demografía, geografía, política y respuestas de encuesta; el mapa y las distribuciones se actualizan con cada filtro.</p></div>
+
+<div class="status">
+  <div class="seg-kpi">
+    <span class="n" id="seg-n">—</span>
+    <div><div class="lbl">leads en el segmento</div><div class="pct" id="seg-pct"></div></div>
+  </div>
+  <span class="timer" id="timer"><span class="dot"></span><span id="timer-t">0.0 s</span></span>
+  <div class="strip-actions">
+    <button class="btn" onclick="clearAll()">Limpiar</button>
+    <button class="btn btn-primary" id="btn-export" onclick="exportCsv()" disabled>⬇ Exportar CSV</button>
+  </div>
+  <div class="query-summary" id="q-summary">Sin filtros — se muestran todos los leads.</div>
+</div>
+
+<main>
+  <div class="panel" id="panel"></div>
+  <div class="results">
+    <div class="seg-top">
+      <div id="geo-slot"></div>
+      <div class="rcard">
+      <div class="rcard-h">Mapa del segmento <span class="sub" id="map-sub"></span></div>
+      <div class="map-toolbar">
+        <div class="seg-toggle">
+          <button id="mode-choro" class="on" onclick="setMapMode('choropleth')">Densidad</button>
+          <button id="mode-cont" onclick="setMapMode('contour')">Contorno</button>
+        </div>
+        <span class="mini" id="map-note" style="margin:0"></span>
+      </div>
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="map-crumb" id="map-crumb"></div>
+        <div class="map-msg" id="map-msg"></div>
+        <div class="legend" id="map-legend"></div>
+      </div>
+    </div>
+    </div>
+    <div class="rcard">
+      <div class="rcard-h">Distribuciones del segmento</div>
+      <div id="dist-empty" class="empty-state">Ajusta los filtros para ver el segmento.</div>
+      <div id="dist-charts" style="display:none">
+        <div class="chart-grid-3">
+          <div class="chart-box"><div class="t">Sexo</div><div class="chart-wrap"><canvas id="ch-sexo"></canvas></div></div>
+          <div class="chart-box"><div class="t">Rango de edad</div><div class="chart-wrap"><canvas id="ch-edad"></canvas></div></div>
+          <div class="chart-box"><div class="t">Estrato</div><div class="chart-wrap"><canvas id="ch-estrato"></canvas></div></div>
+        </div>
+        <div class="chart-grid-2" style="margin-top:13px">
+          <div class="chart-box"><div class="t">Afiliación política</div><div class="chart-wrap tall"><canvas id="ch-afil"></canvas></div></div>
+          <div class="chart-box"><div class="t">Nivel educativo</div><div class="chart-wrap tall"><canvas id="ch-edu"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="modal-bg" id="eav-modal">
+  <div class="modal">
+    <div class="modal-h"><span>Condición de encuesta</span><span class="x" onclick="closeEavModal()">✕</span></div>
+    <div class="modal-b">
+      <input type="text" id="q-search" placeholder="Buscar pregunta (texto, tema, marca)…" oninput="renderQList()">
+      <label class="mini" style="display:flex;gap:6px;margin-top:8px;align-items:center">
+        <input type="checkbox" id="q-show-elec" style="width:auto" onchange="renderQList()"> incluir preguntas electorales
+      </label>
+      <div class="q-list" id="q-list"></div>
+      <div id="q-values-block" style="display:none">
+        <div class="sub-lbl" style="margin-top:12px">Operador</div>
+        <select id="q-op" onchange="onOpChange()">
+          <option value="in">Respondió alguno de estos valores</option>
+          <option value="not_in">NO respondió ninguno de estos valores</option>
+          <option value="answered">Respondió (cualquier valor)</option>
+        </select>
+        <div class="val-list" id="q-values"></div>
+      </div>
+    </div>
+    <div class="modal-f">
+      <button class="btn" onclick="closeEavModal()">Cancelar</button>
+      <button class="btn btn-primary" id="q-add-btn" onclick="addEavCondition()" disabled>Añadir</button>
+    </div>
+  </div>
+</div>
+
+<form id="export-form" method="POST" action="leads_importer.php?action=segmento_export" target="_blank" style="display:none">
+  <input type="hidden" name="filtros" id="export-filtros">
+</form>
+
+<footer>MEDFUT · Segmentación · <span id="footer-ts">—</span></footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+Chart.register(ChartDataLabels);
+const API='leads_importer.php', MAP_API='c98geo_map_api.php', GEO_TREE_API='c98geo_api.php';
+const $=id=>document.getElementById(id);
+const h=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmtN=n=>(n||0).toLocaleString('es-CO');
+const COLORS=V.palette();
+// Escala coroplética verde → rojo (bajo → alto)
+const CHORO=['#cfe3f5','#9cc7ea','#5a9fd6','#2a78bd','#0f4c8a'];
+const PLAT={fb:'Facebook',ig:'Instagram',go:'Google',google:'Google',tt:'TikTok',tiktok:'TikTok',an:'Desconocido'};
+const mapPlat=v=>!v?'Desconocido':(PLAT[String(v).toLowerCase()]||v);
+
+let DIMS=null, LAST=null, charts={};
+let TREE=null, TREE_LOADING=null;
+
+// ── Estado de filtros ─────────────────────────────────────────
+const F={
+  sexo:new Set(), rango_edad:new Set(), estrato:new Set(), nivel_educativo:new Set(),
+  platform:new Set(), afiliacion_politica:new Set(), temas:new Set(),
+  is_organic:'', created_desde:'', created_hasta:'', import_ids:new Set(),
+  preguntas:[]
+};
+// Drill geográfico: path = ancestros elegidos; sel = selección al nivel actual
+const GEO_CHAIN=['region','departamento','municipio','zona','comuna','barrio'];
+const GEO_LABEL={region:'Región',departamento:'Departamento',municipio:'Municipio',zona:'Zona',comuna:'Comuna/Localidad',barrio:'Barrio'};
+const GEO_PADRE_CAMPO={departamento:'id_region',municipio:'id_departamento',zona:'id_municipio',comuna:'id_zona',barrio:'id_comuna'};
+const GEO_RES={region:'low',departamento:'low',municipio:'mid',zona:'high',comuna:'high',barrio:'high'};
+let GEO={ level:'region', path:[], sel:new Set(), selLabels:{} };  // path: [{level,id,nombre}]
+
+let mapMode='choropleth';
+
+// ── Tema claro / oscuro (lo controla visor.js) ────────────────
+V.onTheme(()=>setTimeout(()=>{ try{ map.invalidateSize(); paintBase(); renderMap(); if(LAST) renderDist(LAST); }catch(e){} },60));
+
+// ── Carga inicial ─────────────────────────────────────────────
+async function boot(){
+  try{
+    DIMS = await fetch(`${API}?action=segment_dims`).then(r=>r.json());
+    if(!DIMS.ok) throw new Error(DIMS.error||'Error');
+    buildPanel();
+    initMap();
+    runQuery();
+  }catch(e){
+    document.body.innerHTML='<p style="padding:40px;color:var(--red)">Error: '+h(e.message)+'</p>';
+  }finally{ $('loading').style.display='none'; }
+}
+
+// ── Panel de filtros ──────────────────────────────────────────
+function card(id,ico,title,body,collapsed){
+  return `<div class="card${collapsed?' collapsed':''}" id="card-${id}">
+    <div class="card-h" onclick="document.getElementById('card-${id}').classList.toggle('collapsed')">
+      <span class="ico">${ico}</span><span>${title}</span>
+      <span class="badge" id="badge-${id}" style="display:none"></span><span class="chev">▼</span>
+    </div>
+    <div class="card-b">${body}</div>
+  </div>`;
+}
+function tiles(key,items,valGetter,lblGetter,cls){
+  return `<div class="tiles ${cls||''}" data-key="${key}">`+items.map(it=>{
+    const v=valGetter(it), lbl=lblGetter?lblGetter(it):v;
+    return `<button class="tile" data-key="${key}" data-v="${h(v)}" onclick="toggleTile(this)">
+      <span class="lbl">${h(lbl)}</span>${it.cnt!=null?`<span class="cnt">${fmtN(it.cnt)}</span>`:''}</button>`;
+  }).join('')+`</div>`;
+}
+function buildPanel(){
+  const demo=`
+    <div class="sub-lbl">Sexo</div>${tiles('sexo',DIMS.sexo,x=>x.val,null,'cols6')}
+    <div class="sub-lbl">Rango de edad</div>${tiles('rango_edad',DIMS.rango_edad,x=>x.val,null,'cols6')}
+    <div class="sub-lbl">Estrato</div>${tiles('estrato',DIMS.estrato,x=>String(x.val),x=>'Estrato '+x.val,'cols6')}
+    <div class="sub-lbl">Nivel educativo</div>${tiles('nivel_educativo',DIMS.nivel_educativo,x=>x.val,null,'cols6')}`;
+  const pol=`<div class="sub-lbl">Afiliación / tendencia política</div>${tiles('afiliacion_politica',DIMS.afiliacion_politica,x=>x.val,null,'cols1')}`;
+  const geo=`<div class="geo-levels" id="geo-levels"></div>
+    <div class="crumb" id="geo-crumb"></div><div id="geo-tiles"></div>
+    <div class="mini" id="geo-note"></div>`;
+  const temas=`<div id="temas-acc"></div>
+    <div class="mini">Filtra por leads que respondieron algo clasificado en el tema/subtema.</div>`;
+  const eav=`<div id="eav-list"></div>
+    <button class="btn-add" onclick="openEavModal()">Añadir condición pregunta + respuesta</button>`;
+
+  $('panel').innerHTML =
+    card('demo','','Demografía',demo) +
+    card('pol','','Política',pol) +
+    card('temas','','Temas y percepción',temas) +
+    card('eav','','Encuesta · pregunta/respuesta',eav);
+  $('geo-slot').innerHTML = card('geo','','Geografía',geo);
+
+  renderGeo();
+  renderTemas();
+  renderEavList();
+}
+
+// ── Tiles genéricas ───────────────────────────────────────────
+function toggleTile(el){
+  const k=el.dataset.key, v=el.dataset.v;
+  const set=F[k];
+  if(set.has(v)) set.delete(v); else set.add(v);
+  el.classList.toggle('on');
+  refreshBadges();
+  queueQuery();
+}
+const BADGE_GROUPS={demo:['sexo','rango_edad','estrato','nivel_educativo'],pol:['afiliacion_politica'],temas:['temas']};
+function refreshBadges(){
+  for(const [g,keys] of Object.entries(BADGE_GROUPS)){
+    let n=keys.reduce((a,k)=>a+(F[k]?F[k].size:0),0);
+    if(g==='geo') n=GEO.sel.size;
+    const b=$('badge-'+g); if(!b) continue;
+    b.textContent=n; b.style.display=n?'inline-block':'none';
+  }
+  const gb=$('badge-geo'); if(gb){ const n=GEO.sel.size+GEO.path.length; gb.textContent=n; gb.style.display=n?'inline-block':'none'; }
+  const eb=$('badge-eav'); if(eb){ eb.textContent=F.preguntas.length; eb.style.display=F.preguntas.length?'inline-block':'none'; }
+}
+function onImportSel(){ F.import_ids=new Set([...$('f-imports').selectedOptions].map(o=>+o.value)); queueQuery(); }
+
+// ── Geografía: selector de nivel + tiles (solo áreas con registros) ────────────
+const GEO_SHORT={region:'Región',departamento:'Depto.',municipio:'Mpio.',zona:'Zona',comuna:'Comuna',barrio:'Barrio'};
+function geoNaturalLevel(){
+  return GEO.path.length===0 ? 'region'
+    : GEO_CHAIN[GEO_CHAIN.indexOf(GEO.path[GEO.path.length-1].level)+1];
+}
+function renderGeoLevels(){
+  // Los 6 niveles siempre están disponibles. Al saltar a uno sin haber entrado a un
+  // área padre inmediata, el mapa pide la geometría acotada por &ids= (solo las áreas
+  // con registros en el segmento) en vez de la geometría nacional completa.
+  $('geo-levels').innerHTML = GEO_CHAIN.map(lv=>{
+    return `<button class="geo-lvl${lv===GEO.level?' on':''}" onclick="setGeoLevel('${lv}')">${GEO_SHORT[lv]}</button>`;
+  }).join('');
+}
+function renderGeoCrumb(){
+  const cr=$('geo-crumb'); if(!cr) return;
+  let html=`<button onclick="geoReset()">Colombia</button>`;
+  GEO.path.forEach((p,i)=>{ html+=`<span class="sep">›</span><button onclick="geoUpTo(${i})">${h(p.nombre)}</button>`; });
+  html+=`<span class="sep">›</span><span class="cur">${GEO_LABEL[GEO.level]}</span>`;
+  cr.innerHTML=html;
+}
+function renderGeo(){
+  renderGeoLevels(); renderGeoCrumb();
+  const lvl=GEO.level;
+  const haveMap = LAST && LAST.nivel_mapa===lvl;
+  const canDrill = GEO_CHAIN.indexOf(lvl) < GEO_CHAIN.length-1;
+  const nextLbl = canDrill ? GEO_LABEL[GEO_CHAIN[GEO_CHAIN.indexOf(lvl)+1]].toLowerCase() : '';
+  if(!haveMap){
+    $('geo-tiles').innerHTML = `<div class="mini">Calculando áreas con registros…</div>`;
+    $('geo-note').textContent=''; refreshBadges(); return;
+  }
+  const rows=[...(LAST.geo_map||[])].filter(g=>g.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+  $('geo-tiles').innerHTML = `<div class="tiles">`+rows.slice(0,400).map(g=>{
+    const id=String(g.geo_id), on=GEO.sel.has(id);
+    return `<button class="tile${on?' on':''}" data-gid="${h(id)}" data-nom="${h(g.nombre).replace(/"/g,'&quot;')}" onclick="${canDrill?`geoDrill('${h(id)}',this.dataset.nom)`:'toggleGeo(this)'}" title="${canDrill?'Ver '+nextLbl:''}">
+      <span class="lbl">${h(g.nombre)}</span><span class="cnt">${fmtN(g.cnt)}</span>
+    </button>`;
+  }).join('')+`</div>`;
+  $('geo-note').textContent = rows.length
+    ? `${rows.length} ${rows.length===1?'área':'áreas'} con registros en el segmento`
+    : `Sin ${GEO_LABEL[lvl].toLowerCase()} con leads en este segmento`;
+  refreshBadges();
+}
+
+function toggleGeo(el){
+  const id=String(el.dataset.gid);
+  if(GEO.sel.has(id)){ GEO.sel.delete(id); delete GEO.selLabels[id]; }
+  else { GEO.sel.add(id); GEO.selLabels[id]=el.dataset.nom; }
+  el.classList.toggle('on');
+  refreshBadges(); queueQuery();
+}
+function setGeoLevel(lvl){
+  const li=GEO_CHAIN.indexOf(lvl);
+  if(li<GEO.path.length) GEO.path=GEO.path.slice(0,li);
+  GEO.level=lvl; GEO.sel=new Set(); GEO.selLabels={};
+  renderGeoLevels(); renderGeoCrumb(); queueQuery();
+}
+function geoDrill(id,nombre){
+  GEO.path.push({level:GEO.level,id:String(id),nombre});
+  GEO.level=GEO_CHAIN[GEO_CHAIN.indexOf(GEO.level)+1];
+  GEO.sel=new Set(); GEO.selLabels={};
+  renderGeoLevels(); renderGeoCrumb(); queueQuery();
+}
+function geoReset(){ GEO.path=[]; GEO.level='region'; GEO.sel=new Set(); GEO.selLabels={}; renderGeoLevels(); renderGeoCrumb(); queueQuery(); }
+function geoUpTo(i){
+  GEO.path=GEO.path.slice(0,i);
+  GEO.level=GEO_CHAIN.indexOf(geoNaturalLevel())>=0?geoNaturalLevel():'region';
+  GEO.sel=new Set(); GEO.selLabels={};
+  renderGeoLevels(); renderGeoCrumb(); queueQuery();
+}
+function geoFilter(){
+  if(GEO.sel.size) return {nivel:GEO.level, ids:[...GEO.sel]};
+  if(GEO.path.length){ const p=GEO.path[GEO.path.length-1]; return {nivel:p.level, ids:[p.id]}; }
+  return null;
+}
+
+// ── Temas ─────────────────────────────────────────────────────
+function renderTemas(){
+  const byTema={};
+  (DIMS.temas||[]).forEach(t=>{ (byTema[t.tema] ||= []).push(t); });
+  $('temas-acc').innerHTML = Object.entries(byTema).map(([tema,subs])=>{
+    const totN=subs.reduce((a,s)=>a+s.n,0);
+    const active=subs.some(s=>F.temas.has(String(s.id)))?1:0;
+    return `<details class="tema-grp" data-active="${active}"${active?' open':''}>
+      <summary><span class="tmark"></span>${h(tema)}<span class="tcnt">${fmtN(totN)}</span></summary>
+      <div class="tiles">${subs.map(s=>{
+        const on=F.temas.has(String(s.id));
+        return `<button class="tile${on?' on':''}" data-tid="${s.id}" onclick="toggleTema(this)">
+          <span class="lbl">${h(s.subtema)}</span><span class="cnt">${fmtN(s.n)}</span></button>`;
+      }).join('')}</div>
+    </details>`;
+  }).join('');
+}
+function toggleTema(el){
+  const id=String(el.dataset.tid);
+  if(F.temas.has(id)) F.temas.delete(id); else F.temas.add(id);
+  el.classList.toggle('on');
+  const grp=el.closest('.tema-grp');
+  grp.dataset.active = grp.querySelector('.tile.on')?'1':'0';
+  refreshBadges(); queueQuery();
+}
+
+// ── Modal EAV ─────────────────────────────────────────────────
+let eavPick=null;
+function openEavModal(){ eavPick=null; $('q-search').value=''; $('q-values-block').style.display='none';
+  $('q-add-btn').disabled=true; renderQList(); $('eav-modal').classList.add('show'); }
+function closeEavModal(){ $('eav-modal').classList.remove('show'); }
+function renderQList(){
+  const q=($('q-search').value||'').toLowerCase(), showElec=$('q-show-elec').checked;
+  const rows=DIMS.preguntas.filter(p=>{
+    if(p.es_electoral&&!showElec) return false;
+    if(!q) return true;
+    return (p.pregunta+' '+(p.tema||'')+' '+(p.subtema||'')+' '+(p.dominio||'')).toLowerCase().includes(q);
+  }).slice(0,200);
+  $('q-list').innerHTML = rows.map(p=>`
+    <div class="q-item${eavPick&&eavPick.id===p.id?' on':''}" onclick="pickQ(${p.id})">${h(p.pregunta)}
+      <div class="qt">${p.tema?h(p.tema)+' › ':''}${h(p.subtema||'sin tema')} · ${fmtN(p.n)} resp.${p.es_electoral?' · ':''}</div>
+    </div>`).join('')||'<div class="q-item">Sin coincidencias.</div>';
+}
+async function pickQ(id){
+  eavPick=DIMS.preguntas.find(p=>p.id===id); renderQList();
+  $('q-values-block').style.display='block'; $('q-op').value='in';
+  $('q-values').innerHTML='<div class="mini">Cargando…</div>'; onOpChange();
+  const d=await fetch(`${API}?action=respuestas_muestra&pregunta_id=${id}`).then(r=>r.json());
+  eavPick._vals=(d.respuestas||[]).map(r=>({v:r.respuesta||'(vacío)',n:r.n}));
+  $('q-values').innerHTML=(eavPick._vals||[]).map(r=>`<label><input type="checkbox" value="${h(r.v)}" style="width:auto"><span>${h(r.v)}</span><span class="vc">${fmtN(r.n)}</span></label>`).join('')||'<div class="mini">Sin respuestas.</div>';
+  $('q-add-btn').disabled=false;
+}
+function onOpChange(){ $('q-values').style.display=$('q-op').value==='answered'?'none':'flex'; $('q-add-btn').disabled=!eavPick; }
+function addEavCondition(){
+  if(!eavPick) return;
+  const op=$('q-op').value;
+  const valores=op==='answered'?[]:[...$('q-values').querySelectorAll('input:checked')].map(c=>c.value);
+  if(op!=='answered'&&!valores.length){ alert('Selecciona al menos un valor.'); return; }
+  F.preguntas.push({pregunta_id:eavPick.id,pregunta:eavPick.pregunta,tema:eavPick.subtema||eavPick.tema,op,valores});
+  renderEavList(); closeEavModal(); refreshBadges(); queueQuery();
+}
+function removeEav(i){ F.preguntas.splice(i,1); renderEavList(); refreshBadges(); queueQuery(); }
+function renderEavList(){
+  $('eav-list').innerHTML=F.preguntas.map((c,i)=>`
+    <div class="eav-cond"><span class="rm" onclick="removeEav(${i})">✕</span>
+      <div class="q">${h(c.pregunta)}</div>
+      <div class="meta">${c.op==='in'?'Respondió':c.op==='not_in'?'NO respondió':'Respondió cualquier valor'}</div>
+      ${c.valores.length?`<div class="vals">${c.valores.map(h).join(' · ')}</div>`:''}
+    </div>`).join('');
+}
+
+// ── Construir filtros ─────────────────────────────────────────
+function buildFiltros(){
+  const f={};
+  ['sexo','rango_edad','estrato','nivel_educativo','platform','afiliacion_politica','temas'].forEach(k=>{ if(F[k].size) f[k]=[...F[k]]; });
+  if(F.is_organic!=='') f.is_organic=+F.is_organic;
+  if(F.created_desde) f.created_desde=F.created_desde;
+  if(F.created_hasta) f.created_hasta=F.created_hasta;
+  if(F.import_ids.size) f.import_ids=[...F.import_ids];
+  const g=geoFilter(); if(g) f.geo=g;
+  if(F.preguntas.length) f.preguntas=F.preguntas.map(c=>({pregunta_id:c.pregunta_id,op:c.op,valores:c.valores}));
+  f.nivel_mapa=GEO.level;
+  return f;
+}
+function updateSummary(){
+  const parts=[]; const add=(k,set,fmt)=>{ if(set.size) parts.push(`<span class="k">${k}</span>`+[...set].map(v=>`<span class="chip">${h(fmt?fmt(v):v)}</span>`).join('')); };
+  add('Sexo',F.sexo); add('Edad',F.rango_edad); add('Estrato',F.estrato,v=>'E'+v);
+  add('Nivel educ.',F.nivel_educativo); add('Afiliación',F.afiliacion_politica);
+  if(F.temas.size){ const names=[...F.temas].map(id=>{ const t=(DIMS.temas||[]).find(x=>String(x.id)===id); return t?t.subtema:id; }); parts.push('<span class="k">Tema</span>'+names.slice(0,4).map(n=>`<span class="chip">${h(n)}</span>`).join('')+(names.length>4?` +${names.length-4}`:'')); }
+  const g=geoFilter(); if(g){ const nm=GEO.sel.size?[...GEO.sel].map(id=>GEO.selLabels[id]||id):[GEO.path[GEO.path.length-1].nombre]; parts.push(`<span class="k">${GEO_LABEL[g.nivel]}</span>`+nm.slice(0,5).map(n=>`<span class="chip">${h(n)}</span>`).join('')); }
+  F.preguntas.forEach(c=>parts.push('<span class="k">Encuesta</span><span class="chip">'+h(c.pregunta.slice(0,42))+(c.pregunta.length>42?'…':'')+'</span>'));
+  $('q-summary').innerHTML = parts.length?parts.join(' '):'Sin filtros — se muestran todos los leads.';
+}
+function clearAll(){
+  ['sexo','rango_edad','estrato','nivel_educativo','platform','afiliacion_politica','temas','import_ids'].forEach(k=>F[k].clear());
+  F.is_organic=''; F.created_desde=''; F.created_hasta=''; F.preguntas=[];
+  GEO={level:'region',path:[],sel:new Set(),selLabels:{}};
+  buildPanel(); refreshBadges(); runQuery();
+}
+
+// ── Consulta reactiva ─────────────────────────────────────────
+let queryTimer=null, QSEQ=0, elapsedIv=null, elapsedStart=0;
+function queueQuery(){
+  updateSummary();
+  clearTimeout(queryTimer);
+  queryTimer=setTimeout(runQuery, 320);
+}
+function startTimer(){
+  elapsedStart=performance.now(); $('timer').classList.add('on');
+  elapsedIv=setInterval(()=>{ $('timer-t').textContent=((performance.now()-elapsedStart)/1000).toFixed(1)+' s'; }, 100);
+}
+function stopTimer(){ clearInterval(elapsedIv); $('timer').classList.remove('on'); }
+
+// ── Sincronizar el conteo de cada botón con el segmento actual ────────────────
+// (antes mostraban el total global de segment_dims; ahora reflejan la consulta activa)
+function syncTileCounts(d){
+  const byField={sexo:d.dist.sexo,rango_edad:d.dist.rango_edad,estrato:d.dist.estrato,
+    nivel_educativo:d.dist.nivel_educativo,afiliacion_politica:d.dist.afiliacion_politica};
+  for(const [key,rows] of Object.entries(byField)){
+    const byVal={}; (rows||[]).forEach(r=>{ byVal[String(r.val)]=r.cnt; });
+    document.querySelectorAll(`.tile[data-key="${key}"]`).forEach(el=>{
+      const cntEl=el.querySelector('.cnt');
+      if(cntEl) cntEl.textContent=fmtN(byVal[el.dataset.v]||0);
+    });
+  }
+  const temasCnt=d.temas_cnt||{};
+  document.querySelectorAll('#temas-acc .tile[data-tid]').forEach(el=>{
+    const cntEl=el.querySelector('.cnt');
+    if(cntEl) cntEl.textContent=fmtN(temasCnt[el.dataset.tid]||0);
+  });
+  document.querySelectorAll('#temas-acc .tema-grp').forEach(grp=>{
+    let sum=0; grp.querySelectorAll('.tile[data-tid]').forEach(t=>{ sum+=(temasCnt[t.dataset.tid]||0); });
+    const tc=grp.querySelector('.tcnt'); if(tc) tc.textContent=fmtN(sum);
+  });
+}
+
+async function runQuery(){
+  const myseq=++QSEQ;
+  updateSummary();
+  startTimer();
+  try{
+    const filtros=buildFiltros();
+    const body=new URLSearchParams();
+    body.set('filtros',JSON.stringify(filtros));
+    body.set('nivel_mapa',filtros.nivel_mapa);
+    const d=await fetch(`${API}?action=segmentar`,{method:'POST',body}).then(r=>r.json());
+    if(myseq!==QSEQ) return;
+    if(!d.ok) throw new Error(d.error||'Error');
+    LAST=d;
+    $('seg-n').textContent=fmtN(d.total);
+    $('seg-pct').textContent=d.pct_del_total+'% de '+fmtN(d.total_global);
+    $('btn-export').disabled=d.total===0;
+    renderDist(d);
+    renderMap();
+    renderGeo();
+    syncTileCounts(d);
+    $('footer-ts').textContent=new Date().toLocaleTimeString('es-CO');
+  }catch(e){ console.error(e); }
+  finally{ if(myseq===QSEQ) stopTimer(); }
+}
+function exportCsv(){ $('export-filtros').value=JSON.stringify(buildFiltros()); $('export-form').submit(); }
+
+// ── Charts ────────────────────────────────────────────────────
+function destroy(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+const cText=()=>getComputedStyle(document.documentElement).getPropertyValue('--text').trim();
+const cDim=()=>getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim();
+const cGrid=()=>getComputedStyle(document.documentElement).getPropertyValue('--border-soft').trim();
+const DL_H=()=>({anchor:'end',align:'end',color:cText(),font:{size:9,weight:'700'},formatter:v=>fmtN(v),padding:{right:4}});
+const DL_V=()=>({anchor:'end',align:'top',color:cText(),font:{size:9,weight:'700'},formatter:v=>fmtN(v)});
+const DL_D=()=>({color:'#fff',font:{size:11,weight:'800'},formatter:(v,c)=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);const p=v/t*100;return p>=6?p.toFixed(0)+'%':'';}});
+function markEmpty(id,data){
+  const wrap=$(id).parentElement; let ph=wrap.querySelector('.chart-empty');
+  if(data&&data.length){ if(ph) ph.remove(); $(id).style.display='block'; return true; }
+  $(id).style.display='none';
+  if(!ph){ ph=document.createElement('div'); ph.className='chart-empty'; ph.textContent='Sin datos de este atributo en el segmento'; wrap.appendChild(ph); }
+  return false;
+}
+function donut(id,data){ destroy(id); if(!markEmpty(id,data))return;
+  charts[id]=new Chart($(id),{type:'doughnut',data:{labels:data.map(d=>d.val||'—'),datasets:[{data:data.map(d=>d.cnt),backgroundColor:COLORS.map(c=>c+'DD'),borderColor:getComputedStyle(document.documentElement).getPropertyValue('--surface').trim(),borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'56%',plugins:{datalabels:DL_D(),legend:{position:'right',labels:{color:cDim(),font:{size:10},usePointStyle:true,padding:8}},tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return ` ${c.label}: ${fmtN(c.parsed)} (${(c.parsed/t*100).toFixed(1)}%)`;}}}}}});
+}
+function barH(id,data,color){ destroy(id); if(!markEmpty(id,data))return;
+  charts[id]=new Chart($(id),{type:'bar',data:{labels:data.map(d=>d.val||'—'),datasets:[{data:data.map(d=>d.cnt),backgroundColor:(color||V.css('--accent'))+'DD',borderColor:color||V.css('--accent'),borderWidth:1,borderRadius:4,maxBarThickness:34}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:44}},plugins:{datalabels:DL_H(),legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmtN(c.parsed.x)} leads`}}},scales:{x:{ticks:{color:cDim(),font:{size:9}},grid:{color:cGrid()}},y:{ticks:{color:cText(),font:{size:10}},grid:{display:false}}}}});
+}
+function barV(id,data){ destroy(id); if(!markEmpty(id,data))return;
+  charts[id]=new Chart($(id),{type:'bar',data:{labels:data.map(d=>'E'+(d.val??'?')),datasets:[{data:data.map(d=>d.cnt),backgroundColor:COLORS.map(c=>c+'DD'),borderColor:COLORS,borderWidth:1,borderRadius:5,maxBarThickness:56}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:18}},plugins:{datalabels:DL_V(),legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmtN(c.parsed.y)} leads`}}},scales:{x:{ticks:{color:cText(),font:{size:10}},grid:{display:false}},y:{ticks:{color:cDim(),font:{size:9}},grid:{color:cGrid()}}}}});
+}
+function renderDist(d){
+  if(d.total===0){ $('dist-charts').style.display='none'; $('dist-empty').style.display='block'; $('dist-empty').textContent='El segmento no tiene leads con estos filtros.'; return; }
+  $('dist-empty').style.display='none'; $('dist-charts').style.display='block';
+  donut('ch-sexo',d.dist.sexo);
+  barH('ch-edad',d.dist.rango_edad,V.css('--accent'));
+  barV('ch-estrato',d.dist.estrato);
+  barH('ch-afil',d.dist.afiliacion_politica,V.css('--coral'));
+  barH('ch-edu',d.dist.nivel_educativo,V.css('--sky'));
+}
+
+// ── Mapa ──────────────────────────────────────────────────────
+let map,layer,baseLayer;
+const COL_BOUNDS=[[-5.5,-82.5],[13.8,-66.0]];   // caja de Colombia (incluye San Andrés y Leticia)
+function initMap(){
+  // Sin mapa base: solo Colombia. La vista queda limitada a la caja del país.
+  map=L.map('map',{zoomControl:false,attributionControl:false,
+    maxBounds:COL_BOUNDS,maxBoundsViscosity:1,minZoom:4,zoomSnap:.25}).fitBounds(COL_BOUNDS);
+  L.control.zoom({position:'topright'}).addTo(map);
+  // Silueta de Colombia (5 regiones, geometría liviana) como fondo gris no interactivo
+  map.createPane('base'); map.getPane('base').style.zIndex=150;
+  baseLayer=L.geoJSON(null,{pane:'base',interactive:false}).addTo(map);
+  fetch(`${MAP_API}?tipo=region&resolution=low`).then(r=>r.json()).then(j=>{
+    if(!j.ok) return;
+    baseLayer.addData(j.data);
+    paintBase();
+  }).catch(()=>{});
+  layer=L.geoJSON(null).addTo(map);
+}
+function paintBase(){
+  if(!baseLayer) return;
+  const cs=getComputedStyle(document.documentElement);
+  baseLayer.setStyle({color:cs.getPropertyValue('--border').trim(),weight:1,fill:true,
+    fillColor:cs.getPropertyValue('--surface-3').trim(),fillOpacity:1});
+}
+function setMapMode(m){ mapMode=m; $('mode-choro').classList.toggle('on',m==='choropleth'); $('mode-cont').classList.toggle('on',m==='contour'); renderMap(); }
+function choroColor(v,max){ if(v<=0) return getComputedStyle(document.documentElement).getPropertyValue('--surface-3').trim(); const t=v/max; return t>.8?CHORO[4]:t>.6?CHORO[3]:t>.4?CHORO[2]:t>.2?CHORO[1]:CHORO[0]; }
+let tagLayer=null;
+// Punto de la etiqueta: centro del caja del polígono más grande (evita islas lejanas como San Andrés).
+function labelPoint(g){
+  if(!g) return null;
+  const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
+  let best=null,area=-1;
+  polys.forEach(p=>{
+    const ring=p[0]; if(!ring||!ring.length) return;
+    let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+    ring.forEach(([x,y])=>{ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; });
+    const a=(x1-x0)*(y1-y0);
+    if(a>area){ area=a; best=[(y0+y1)/2,(x0+x1)/2]; }
+  });
+  return best;
+}
+async function renderMap(){
+  try{ map.invalidateSize(); }catch(e){}
+  const lvl=GEO.level;
+  $('map-sub').textContent=GEO_LABEL[lvl];
+  const msg=$('map-msg'); msg.classList.remove('show');
+  layer.clearLayers(); $('map-legend').style.display='none';
+  if(!tagLayer) tagLayer=L.layerGroup().addTo(map);
+  tagLayer.clearLayers();
+  // breadcrumb del mapa
+  let cb=`<button onclick="geoReset()">Colombia</button>`;
+  GEO.path.forEach((p,i)=>{ cb+=`<span class="sep">›</span><button onclick="geoUpTo(${i})">${h(p.nombre)}</button>`; });
+  cb+=`<span class="sep">›</span><span>${GEO_LABEL[lvl]}</span>`;
+  $('map-crumb').innerHTML=cb;
+
+  let url=`${MAP_API}?tipo=${lvl}&resolution=${GEO_RES[lvl]}`;
+  const idxLvl=GEO_CHAIN.indexOf(lvl);
+  // padre inmediato solo si el drill llegó exactamente a este nivel (path consecutivo)
+  const parentImmediate=(GEO.path.length===idxLvl&&idxLvl>0)?GEO.path[GEO.path.length-1]:null;
+  const heavy=idxLvl>=2; // municipio/zona/comuna/barrio: geometría nacional pesa MB — nunca sin acotar
+  if(parentImmediate&&GEO_PADRE_CAMPO[lvl]){
+    url+=`&padre=${encodeURIComponent(parentImmediate.id)}&padre_campo=${GEO_PADRE_CAMPO[lvl]}`;
+  }else if(heavy){
+    // Sin padre inmediato (se saltó de nivel con el botón): acota a las áreas con
+    // registros del segmento (o a la selección activa) pidiéndolas por id exacto.
+    const idsSrc=GEO.sel.size?[...GEO.sel]
+      :(LAST&&LAST.nivel_mapa===lvl?(LAST.geo_map||[]).filter(g=>g.cnt>0).map(g=>String(g.geo_id)):[]);
+    if(!idsSrc.length){ msg.textContent='No hay áreas con registros para mostrar en este nivel.'; msg.classList.add('show'); return; }
+    url+=`&ids=${idsSrc.slice(0,300).map(encodeURIComponent).join(',')}`;
+  }
+  let feats;
+  try{ const j=await fetch(url).then(r=>r.json()); if(!j.ok) throw new Error(j.error); feats=j.data.features; }
+  catch(e){ msg.textContent='No se pudo cargar la geometría: '+e.message; msg.classList.add('show'); return; }
+  if(!feats.length){ msg.textContent='Sin geometría en este nivel (zona/comuna/barrio solo existen para 5 ciudades).'; msg.classList.add('show'); return; }
+
+  const cnt={}; (LAST&&LAST.nivel_mapa===lvl?(LAST.geo_map||[]):[]).forEach(g=>cnt[String(g.geo_id)]=g.cnt);
+  const max=Math.max(1,...Object.values(cnt));
+
+  // Ambos modos usan la misma escala de "temperatura" (verde→rojo por densidad de leads);
+  // Densidad rellena sólido, Contorno solo tiñe el borde y deja ver el mapa de fondo.
+  let shown=feats;
+  if(GEO.sel.size) shown=feats.filter(f=>GEO.sel.has(String(f.properties.id)));
+  else if(Object.keys(cnt).length) shown=feats.filter(f=>cnt[String(f.properties.id)]>0);
+  if(!shown.length) shown=feats;
+  layer.addData({type:'FeatureCollection',features:shown});
+  const isContour=mapMode==='contour';
+  layer.eachLayer(l=>{
+    const id=String(l.feature.properties.id), c=cnt[id]||0;
+    const col=choroColor(c,max);
+    const base=isContour
+      ? {color:col,weight:2.4,fill:true,fillColor:col,fillOpacity:c>0?.22:.06}
+      : {color:'#0009',weight:.8,fill:true,fillColor:col,fillOpacity:c>0?.85:.32};
+    const hover=isContour ? {weight:3.6,fillOpacity:c>0?.4:.12} : {weight:2.4,color:'#fff'};
+    l.setStyle(base);
+    l.bindTooltip(`<b>${h(l.feature.properties.nombre)}</b><br>${fmtN(c)} leads del segmento`,{sticky:true,className:'seg-tt'});
+    l.on('mouseover',()=>l.setStyle({...base,...hover}));
+    l.on('mouseout',()=>l.setStyle(base));
+    l.on('click',()=>onMapClick(l.feature.properties));
+  });
+  // Etiquetas fijas con nombre y cantidad; en niveles con muchas áreas solo las de mayor volumen.
+  const tagged=[...shown].map(f=>({f,c:cnt[String(f.properties.id)]||0})).filter(x=>x.c>0)
+    .sort((a,b)=>b.c-a.c).slice(0,30);
+  tagged.forEach(({f,c})=>{
+    const pt=labelPoint(f.geometry); if(!pt) return;
+    L.marker(pt,{interactive:false,keyboard:false,icon:L.divIcon({className:'seg-tag',iconSize:[0,0],
+      html:`<span><b>${h(f.properties.nombre)}</b> ${fmtN(c)}</span>`})}).addTo(tagLayer);
+  });
+  fit();
+
+  const lg=$('map-legend'); lg.style.display='block';
+  lg.innerHTML=`<div style="color:var(--text);font-weight:800;margin-bottom:3px">Leads / ${GEO_LABEL[lvl].toLowerCase()}</div>`+
+    [[.9,'≥ '+Math.round(max*.8)],[.7,''+Math.round(max*.6)],[.5,''+Math.round(max*.4)],[.3,''+Math.round(max*.2)],[.1,'1']]
+    .map(([t,txt])=>`<div class="row"><span class="sw" style="background:${choroColor(max*t,max)}"></span>${txt}</div>`).join('')+
+    (LAST&&LAST.sin_geo?`<div class="row" style="margin-top:4px">${fmtN(LAST.sin_geo)} sin ubicación</div>`:'');
+  $('map-note').textContent=LAST?`${fmtN(LAST.mapeados)} de ${fmtN(LAST.total)} leads ubicados`:'';
+}
+function fit(){ try{ map.invalidateSize(); const b=layer.getBounds(); if(b.isValid()) map.fitBounds(b,{padding:[14,14],animate:false}); }catch(e){} }
+async function onMapClick(props){
+  const canDrill=GEO_CHAIN.indexOf(GEO.level)<GEO_CHAIN.length-1;
+  if(canDrill) geoDrill(props.id,props.nombre);
+  else { // último nivel → togglear como filtro
+    const id=String(props.id);
+    if(GEO.sel.has(id)) GEO.sel.delete(id); else { GEO.sel.add(id); GEO.selLabels[id]=props.nombre; }
+    renderGeo(); queueQuery();
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

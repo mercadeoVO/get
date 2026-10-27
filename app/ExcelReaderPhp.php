@@ -1,11 +1,19 @@
 <?php
 /**
- * ExcelReaderPhp — Lector XLSX nativo en PHP
- * Usa ZipArchive + SimpleXML (ambos built-in en PHP/XAMPP).
- * Soporta .xlsx / .xlsm. Para .xls lanza RuntimeException.
+ * ExcelReaderPhp — lectores de hojas de cálculo para el importador de leads.
  *
- * API pública:
- *   $r = new PhpXlsxReader('/path/to/file.xlsx');
+ * Dos lectores, misma API pública (getSheets()/readRows()/close()):
+ *
+ *   PhpXlsxReader        — .xlsx/.xlsm. Nativo (ZipArchive + SimpleXML), sin
+ *                          dependencias externas, rápido. Sigue siendo el
+ *                          camino por defecto para el formato más común.
+ *   PhpSpreadsheetReader  — .xls/.csv/.ods. Delega a PhpSpreadsheet (ya
+ *                          instalado en vendor/, ver composer.json) — formatos
+ *                          binarios/heterogéneos que no vale la pena
+ *                          reimplementar a mano (BIFF de .xls en particular).
+ *
+ * API pública (ambas clases):
+ *   $r = new PhpXlsxReader('/path/to/file.xlsx');   // o PhpSpreadsheetReader
  *   $r->getSheets()              → [['name'=>'Sheet1','rows'=>100,'cols'=>10], ...]
  *   $r->readRows('Sheet1', 21)   → [['col1','col2',...], ['v1','v2',...], ...]
  *   $r->close()
@@ -27,11 +35,6 @@ class PhpXlsxReader
 
     public function __construct(string $path)
     {
-        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        if ($ext === 'xls') {
-            throw new RuntimeException('Formato .xls no soportado. Convierte el archivo a .xlsx en Excel y vuelve a subirlo.');
-        }
-
         $this->zip = new ZipArchive();
         $code = $this->zip->open($path);
         if ($code !== true) {
@@ -332,5 +335,143 @@ class PhpXlsxReader
     public function close(): void
     {
         $this->zip->close();
+    }
+}
+
+/**
+ * Lector de respaldo para .xls (binario legado, formato BIFF) / .csv / .ods,
+ * vía PhpSpreadsheet. Mismo shape de retorno que PhpXlsxReader para que
+ * xlsxGetSheets()/xlsxReadRows() en leads_importer.php no necesiten saber
+ * cuál de los dos lectores están usando.
+ */
+class PhpSpreadsheetReader
+{
+    private \PhpOffice\PhpSpreadsheet\Spreadsheet $book;
+
+    public function __construct(string $path)
+    {
+        $autoload = __DIR__ . '/vendor/autoload.php';
+        if (!file_exists($autoload)) {
+            throw new RuntimeException(
+                'Este formato requiere PhpSpreadsheet (carpeta vendor/ no encontrada). ' .
+                'Ejecuta "composer install" en el proyecto, o convierte el archivo a .xlsx.'
+            );
+        }
+        require_once $autoload;
+
+        // Detección por CONTENIDO, no por extensión — plataformas como Meta Ads
+        // exportan archivos con extensión ".xls" que en realidad son XML
+        // (SpreadsheetML de Excel 2003) o incluso tablas HTML, no binario OLE2
+        // real. Confiar en la extensión rompe con esos casos; IOFactory
+        // sniffea las primeras líneas del archivo y elige el reader correcto.
+        try {
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($path);
+        } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+            throw new RuntimeException('No se pudo identificar el formato del archivo: ' . $e->getMessage());
+        }
+
+        if ($reader instanceof \PhpOffice\PhpSpreadsheet\Reader\Csv) {
+            $reader->setDelimiter($this->detectCsvDelimiter($path));
+            // Encoding: el reader ya auto-detecta BOM/UTF-8 por defecto (Csv::openFileOrMemory),
+            // no hace falta forzarlo.
+        }
+        $reader->setReadDataOnly(true);
+        $this->book = $reader->load($path);
+    }
+
+    /** Excel/exportadores de LATAM suelen usar ';' cuando la coma es separador decimal */
+    private function detectCsvDelimiter(string $path): string
+    {
+        $fh = @fopen($path, 'r');
+        $line = $fh ? (string)fgets($fh) : '';
+        if ($fh) fclose($fh);
+        return substr_count($line, ';') > substr_count($line, ',') ? ';' : ',';
+    }
+
+    public function getSheets(): array
+    {
+        $result = [];
+        foreach ($this->book->getAllSheets() as $sheet) {
+            $highestCol = $sheet->getHighestDataColumn();
+            $result[] = [
+                'name' => $sheet->getTitle(),
+                'rows' => max(0, $sheet->getHighestDataRow() - 1),
+                'cols' => $highestCol
+                    ? \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestCol)
+                    : 0,
+            ];
+        }
+        return $result;
+    }
+
+    public function readRows(string $sheetName, int $maxRows = 0): array
+    {
+        $sheet = $this->book->getSheetByName($sheetName);
+        if (!$sheet) throw new RuntimeException("Hoja '$sheetName' no encontrada en el archivo.");
+
+        $rows = [];
+        $count = 0;
+
+        foreach ($sheet->getRowIterator() as $row) {
+            if ($maxRows > 0 && $count >= $maxRows) break;
+
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+
+            $rowArr = [];
+            foreach ($cellIterator as $cell) {
+                $rowArr[] = $this->cellValue($cell);
+            }
+
+            // Quitar nulos finales
+            while (!empty($rowArr) && end($rowArr) === null) {
+                array_pop($rowArr);
+            }
+
+            $hasData = false;
+            foreach ($rowArr as $v) {
+                if ($v !== null && (string)$v !== '') { $hasData = true; break; }
+            }
+            if (!$hasData) continue;
+
+            $rows[] = $rowArr;
+            $count++;
+        }
+
+        return $rows;
+    }
+
+    /** Normaliza fechas al mismo formato que PhpXlsxReader (Y-m-d [H:i:s]) */
+    private function cellValue(\PhpOffice\PhpSpreadsheet\Cell\Cell $cell): mixed
+    {
+        $val = $cell->getCalculatedValue();
+        if ($val === null || $val === '') return null;
+
+        if (is_numeric($val)) {
+            $fmt = $cell->getStyle()->getNumberFormat()->getFormatCode();
+            if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTimeFormatCode($fmt)) {
+                $dt = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$val);
+                $h = (int)$dt->format('H'); $i = (int)$dt->format('i'); $s = (int)$dt->format('s');
+                return ($h || $i || $s) ? $dt->format('Y-m-d H:i:s') : $dt->format('Y-m-d');
+            }
+            // IDs de Meta Ads (lead id, ad_id, adset_id, campaign_id) llegan como
+            // string exacto de hasta 18-19 dígitos. Un roundtrip por float (double,
+            // ~15-17 dígitos significativos) los redondea de forma silenciosa e
+            // irreversible — preservar el string tal cual llegó en ese caso, sin
+            // convertir. Solo se float-castea lo que cabe sin pérdida.
+            if (is_string($val) && preg_match('/^-?\d+$/', $val) && strlen(ltrim($val, '-')) > 15) {
+                return $val;
+            }
+            $num = (float)$val;
+            if ($num == (int)$num && abs($num) <= 2147483647) return (int)$num;
+            return $num;
+        }
+
+        return $val;
+    }
+
+    public function close(): void
+    {
+        unset($this->book);
     }
 }
