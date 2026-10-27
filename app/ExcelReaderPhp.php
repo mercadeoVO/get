@@ -7,7 +7,8 @@
  *   PhpXlsxReader        — .xlsx/.xlsm. Nativo (ZipArchive + SimpleXML), sin
  *                          dependencias externas, rápido. Sigue siendo el
  *                          camino por defecto para el formato más común.
- *   PhpSpreadsheetReader  — .xls/.csv/.ods. Delega a PhpSpreadsheet (ya
+ *   PhpCsvReader         — .csv. Nativo (detecta codificación y separador).
+ *   PhpSpreadsheetReader  — .xls/.ods. Delega a PhpSpreadsheet (ya
  *                          instalado en vendor/, ver composer.json) — formatos
  *                          binarios/heterogéneos que no vale la pena
  *                          reimplementar a mano (BIFF de .xls en particular).
@@ -339,7 +340,68 @@ class PhpXlsxReader
 }
 
 /**
- * Lector de respaldo para .xls (binario legado, formato BIFF) / .csv / .ods,
+ * Lector CSV/TSV nativo, sin dependencias. Detecta codificación (BOM UTF-8/UTF-16,
+ * o Windows-1252 si no es UTF-8 válido) y separador (',' ';' tab) — los exports
+ * de Meta Ads suelen venir en UTF-16 con tabs. Una sola hoja llamada "CSV".
+ */
+class PhpCsvReader
+{
+    /** @var string[][] */
+    private array $rows = [];
+
+    public function __construct(string $path)
+    {
+        $raw = @file_get_contents($path);
+        if ($raw === false) throw new RuntimeException('No se pudo leer el archivo CSV.');
+
+        if (str_starts_with($raw, "\xFF\xFE"))     $raw = mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16LE');
+        elseif (str_starts_with($raw, "\xFE\xFF")) $raw = mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16BE');
+        else {
+            $raw = ltrim($raw, "\xEF\xBB\xBF");
+            if (!mb_check_encoding($raw, 'UTF-8')) $raw = mb_convert_encoding($raw, 'UTF-8', 'Windows-1252');
+        }
+
+        $firstLine = strtok($raw, "\r\n") ?: '';
+        $delim = ',';
+        $best  = -1;
+        foreach ([',', ';', "\t"] as $d) {
+            $n = substr_count($firstLine, $d);
+            if ($n > $best) { $best = $n; $delim = $d; }
+        }
+
+        $fh = fopen('php://temp', 'r+');
+        fwrite($fh, $raw);
+        rewind($fh);
+        while (($r = fgetcsv($fh, 0, $delim, '"', '')) !== false) {
+            if (!array_filter($r, fn($v) => $v !== null && $v !== '')) continue;
+            $this->rows[] = array_map(fn($v) => (string)$v, $r);
+        }
+        fclose($fh);
+    }
+
+    public function getSheets(): array
+    {
+        return [[
+            'name' => 'CSV',
+            // Igual que PhpSpreadsheetReader: filas de datos, sin contar el encabezado
+            'rows' => max(0, count($this->rows) - 1),
+            'cols' => $this->rows ? max(array_map('count', $this->rows)) : 0,
+        ]];
+    }
+
+    public function readRows(string $sheetName, int $maxRows = 0): array
+    {
+        return $maxRows > 0 ? array_slice($this->rows, 0, $maxRows) : $this->rows;
+    }
+
+    public function close(): void
+    {
+        $this->rows = [];
+    }
+}
+
+/**
+ * Lector de respaldo para .xls (binario legado, formato BIFF) / .ods,
  * vía PhpSpreadsheet. Mismo shape de retorno que PhpXlsxReader para que
  * xlsxGetSheets()/xlsxReadRows() en leads_importer.php no necesiten saber
  * cuál de los dos lectores están usando.
