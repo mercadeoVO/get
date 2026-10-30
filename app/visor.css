@@ -398,3 +398,8 @@ main:has(>.panel){width:100%!important;max-width:none!important;margin:0!importa
 .elec-card:hover{background:var(--accent-soft)}
 .elec-card span{color:var(--muted);font-size:.8rem}
 @media(max-width:900px){.brow,.barras.div .brow{grid-template-columns:1fr}.elec{padding:0 16px 32px!important}.elec-valid{margin-left:0}}
+
+/* Encuesta: cómo combinar varias condiciones (todas / alguna) */
+.eav-modo{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:600;color:var(--muted);margin:4px 0 6px}
+.eav-modo button{border:0;background:var(--surface);color:var(--muted);font:inherit;font-size:.8rem;font-weight:600;padding:5px 14px;border-radius:var(--r-pill);cursor:pointer}
+.eav-modo button.on{background:var(--accent);color:var(--accent-ink)}

@@ -213,7 +213,7 @@ select[multiple]{min-height:78px}
 @keyframes spin{to{transform:rotate(360deg)}}
 footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
 </style>
-<link rel="stylesheet" href="visor.css?v=32">
+<link rel="stylesheet" href="visor.css?v=33">
 <script src="visor.js?v=10"></script>
 </head>
 <body>
@@ -331,7 +331,8 @@ const F={
   sexo:new Set(), rango_edad:new Set(), estrato:new Set(), nivel_educativo:new Set(),
   platform:new Set(), afiliacion_politica:new Set(), temas:new Set(),
   is_organic:'', created_desde:'', created_hasta:'', import_ids:new Set(),
-  preguntas:[]
+  preguntas:[],
+  preguntasModo:'all'   // 'all' = cumple todas las condiciones de encuesta · 'any' = cumple al menos una
 };
 // Drill geográfico: path = ancestros elegidos; sel = selección al nivel actual
 const GEO_CHAIN=['region','departamento','municipio','zona','comuna','barrio'];
@@ -615,9 +616,12 @@ function addEavCondition(){
   F.preguntas.push({pregunta_id:eavPick.id,pregunta:eavPick.pregunta,tema:eavPick.subtema||eavPick.tema,op,valores});
   renderEavList(); closeEavModal(); refreshBadges(); queueQuery();
 }
-function removeEav(i){ F.preguntas.splice(i,1); renderEavList(); refreshBadges(); queueQuery(); }
+function removeEav(i){ F.preguntas.splice(i,1); if(F.preguntas.length<2) F.preguntasModo='all'; renderEavList(); refreshBadges(); queueQuery(); }
+function setEavModo(m){ F.preguntasModo=m; renderEavList(); queueQuery(); }
 function renderEavList(){
-  $('eav-list').innerHTML=F.preguntas.map((c,i)=>`
+  const modo=F.preguntas.length>1?`<div class="eav-modo" role="group" aria-label="Cómo combinar las condiciones"><span>El lead debe cumplir</span>
+    <button class="${F.preguntasModo==='all'?'on':''}" onclick="setEavModo('all')">todas</button><button class="${F.preguntasModo==='any'?'on':''}" onclick="setEavModo('any')">alguna</button></div>`:'';
+  $('eav-list').innerHTML=modo+F.preguntas.map((c,i)=>`
     <div class="eav-cond"><span class="rm" onclick="removeEav(${i})">✕</span>
       <div class="q">${h(c.pregunta)}</div>
       <div class="meta">${c.op==='in'?'Respondió':c.op==='not_in'?'NO respondió':'Respondió cualquier valor'}</div>
@@ -635,6 +639,7 @@ function buildFiltros(){
   if(F.import_ids.size) f.import_ids=[...F.import_ids];
   const g=geoFilter(); if(g) f.geo=g;
   if(F.preguntas.length) f.preguntas=F.preguntas.map(c=>({pregunta_id:c.pregunta_id,op:c.op,valores:c.valores}));
+  if(F.preguntas.length>1&&F.preguntasModo==='any') f.preguntas_modo='any';
   f.nivel_mapa=GEO.level;
   return f;
 }
@@ -644,12 +649,12 @@ function updateSummary(){
   add('Nivel educ.',F.nivel_educativo); add('Afiliación',F.afiliacion_politica);
   if(F.temas.size){ const names=[...F.temas].map(id=>{ const t=(DIMS.temas||[]).find(x=>String(x.id)===id); return t?t.subtema:id; }); parts.push('<span class="k">Tema</span>'+names.slice(0,4).map(n=>`<span class="chip">${h(n)}</span>`).join('')+(names.length>4?` +${names.length-4}`:'')); }
   const g=geoFilter(); if(g){ const nm=GEO.sel.size?[...GEO.sel].map(id=>GEO.selLabels[id]||id):[GEO.path[GEO.path.length-1].nombre]; parts.push(`<span class="k">${GEO_LABEL[g.nivel]}</span>`+nm.slice(0,5).map(n=>`<span class="chip">${h(n)}</span>`).join('')); }
-  F.preguntas.forEach(c=>parts.push('<span class="k">Encuesta</span><span class="chip">'+h(c.pregunta.slice(0,42))+(c.pregunta.length>42?'…':'')+'</span>'));
+  F.preguntas.forEach((c,i)=>parts.push('<span class="k">'+(i===0?'Encuesta':(F.preguntasModo==='any'?'o':'y'))+'</span><span class="chip">'+h(c.pregunta.slice(0,42))+(c.pregunta.length>42?'…':'')+'</span>'));
   $('q-summary').innerHTML = parts.length?parts.join(' '):'Sin filtros — se muestran todos los leads.';
 }
 function clearAll(){
   ['sexo','rango_edad','estrato','nivel_educativo','platform','afiliacion_politica','temas','import_ids'].forEach(k=>F[k].clear());
-  F.is_organic=''; F.created_desde=''; F.created_hasta=''; F.preguntas=[];
+  F.is_organic=''; F.created_desde=''; F.created_hasta=''; F.preguntas=[]; F.preguntasModo='all';
   GEO={level:'region',path:[],sel:new Set(),selLabels:{}};
   buildPanel(); refreshBadges(); runQuery();
 }
@@ -898,6 +903,6 @@ async function onMapClick(props){
 
 boot();
 </script>
-<script src="nl_search.js?v=3"></script>
+<script src="nl_search.js?v=4"></script>
 </body>
 </html>

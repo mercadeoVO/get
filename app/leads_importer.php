@@ -763,6 +763,7 @@ const SEGMENT_GEO_NIVELES = ['region', 'departamento', 'subregion', 'municipio',
  *   import_ids        : array de int
  *   geo               : { nivel: <SEGMENT_GEO_NIVELES>, ids: [ ... ] }
  *   preguntas         : [ { pregunta_id: int, valores: [str], op: 'in'|'not_in'|'answered' }, ... ]
+ *   preguntas_modo    : 'all' (por defecto: cumple todas) | 'any' (cumple al menos una: unión)
  */
 function buildSegmentWhere(array $f, array &$params): string {
     $w = ' WHERE 1=1';
@@ -857,6 +858,7 @@ function buildSegmentWhere(array $f, array &$params): string {
 
     // Condiciones EAV (afinidad de marca / gustos / opinión — preguntas de encuesta)
     if (!empty($f['preguntas']) && is_array($f['preguntas'])) {
+        $condSql = []; $condBind = [];   // una entrada por condición; se combinan con Y (por defecto) o con O
         foreach ($f['preguntas'] as $cond) {
             $pid = (int)($cond['pregunta_id'] ?? 0);
             if ($pid <= 0) continue;
@@ -872,8 +874,14 @@ function buildSegmentWhere(array $f, array &$params): string {
                 $sub .= " AND r.respuesta IN ($ph)";
                 foreach ($valores as $v) $bindSub[] = $v;
             }
-            $w .= ($neg ? ' AND NOT EXISTS (' : ' AND EXISTS (') . $sub . ')';
-            foreach ($bindSub as $b) $params[] = $b;
+            $condSql[]  = ($neg ? 'NOT EXISTS (' : 'EXISTS (') . $sub . ')';
+            $condBind[] = $bindSub;
+        }
+        // preguntas_modo = 'any' → el lead debe cumplir AL MENOS UNA condición (unión); si no, todas (intersección)
+        $union = (($f['preguntas_modo'] ?? 'all') === 'any') && count($condSql) > 1;
+        if ($condSql) {
+            $w .= $union ? ' AND (' . implode(' OR ', $condSql) . ')' : ' AND ' . implode(' AND ', $condSql);
+            foreach ($condBind as $bs) foreach ($bs as $b) $params[] = $b;
         }
     }
 

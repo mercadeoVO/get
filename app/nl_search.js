@@ -36,6 +36,7 @@
     F.preguntas=[]; F.is_organic=''; F.created_desde=''; F.created_hasta='';
     CATS.forEach(k=>(f[k]||[]).forEach(v=>F[k].add(String(v))));
     (f.temas||[]).forEach(id=>F.temas.add(String(id)));
+    F.preguntasModo=(f.preguntas_modo==='any'&&(f.preguntas||[]).length>1)?'any':'all';
     F.preguntas=(f.preguntas||[]).map(c=>{
       const p=(DIMS.preguntas||[]).find(x=>x.id===c.pregunta_id)||{};
       return {pregunta_id:c.pregunta_id,pregunta:p.pregunta||('Pregunta '+c.pregunta_id),tema:p.subtema||p.tema,op:c.op,valores:c.valores||[]};
