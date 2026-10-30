@@ -171,7 +171,7 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
 .elect-badge{display:inline-block;background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;vertical-align:middle;}
 .elect-icon{font-size:13px;vertical-align:middle;}
 </style>
-<link rel="stylesheet" href="visor.css?v=23">
+<link rel="stylesheet" href="visor.css?v=25">
 <script src="visor.js?v=10"></script>
 <script>const ic = V.icon;</script>
 </head>
@@ -1813,6 +1813,30 @@ async function guardarTemaItem(preguntaId){
   renderTemasStep();
 }
 
+// Componentes electorales detectados de una pregunta: objetivo (intención de voto, conocimiento…) y candidato
+function electoralChips(p){
+  const e=p.electoral;
+  if(!e) return '<span class="badge badge-gray">sin componentes detectados</span>';
+  const obj=e.objetivo_label
+    ? `<span class="badge badge-blue" title="Objetivo electoral">${h(e.objetivo_label)}</span>`
+    : '<span class="badge badge-gray">objetivo sin definir</span>';
+  const cand=e.candidato
+    ? `<span class="badge badge-green" title="Candidato del catálogo">${h(e.candidato.nombre)}</span>`
+    : (e.candidato_texto ? `<span class="badge badge-yellow" title="No existe en dim_candidato">«${h(e.candidato_texto)}» — no está en el catálogo de candidatos</span>` : '');
+  return obj+' '+cand;
+}
+// Confirma o corrige a mano si una pregunta es electoral (se guarda en el catálogo de preguntas)
+async function setPreguntaElectoral(preguntaId,val){
+  const fd=new FormData(); fd.append('pregunta_id',preguntaId); fd.append('es_electoral',val);
+  try{
+    const d=await fetch(API+'?action=pregunta_electoral_set',{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error');
+    const item=(state.temasPreguntas||[]).find(p=>p.pregunta_id==preguntaId);
+    if(item){ item.es_electoral=val; item.sugerida_electoral=0; }
+    renderTemasStep();
+  }catch(e){ alert('No se pudo guardar: '+e.message); }
+}
+
 function renderTemasStep(){
   const preguntas=state.temasPreguntas||[];
   const electorales=preguntas.filter(p=>p.es_electoral);
@@ -1821,14 +1845,27 @@ function renderTemasStep(){
 
   let html='';
   if(electorales.length){
-    html+=`<div class="alert alert-info">${electorales.length} pregunta(s) detectadas como Política/Electoral — no necesitan tema, ya usan <code>es_electoral</code>.</div>`;
+    html+=`<div class="alert alert-info">${electorales.length} pregunta(s) detectadas como Política/Electoral — no necesitan tema. Revisa su objetivo y candidato; si alguna no es electoral, desmárcala.</div>`;
+    electorales.forEach(p=>{
+      html+=`<div style="background:var(--surface2);border-radius:var(--r-md);padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}</span>
+        ${electoralChips(p)}
+        <button class="btn btn-outline btn-sm" onclick="setPreguntaElectoral(${p.pregunta_id},0)">No es electoral</button>
+      </div>`;
+    });
   }
   pendientes.forEach(p=>{
     const sugerido=p.temas.map(t=>t.tema_id);
     const sugerenciaTxt=p.temas.length
       ? p.temas.map(t=>`<span class="badge badge-blue">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')
       : '<span class="badge badge-yellow">sin sugerencia — elige manualmente</span>';
+    const sugElec=p.sugerida_electoral
+      ? `<div class="alert alert-warn" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px;">
+           <span>Parece electoral (${h(p.electoral.motivo)}):</span> ${electoralChips(p)}
+           <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="setPreguntaElectoral(${p.pregunta_id},1)">Marcar como electoral</button>
+         </div>` : '';
     html+=`<div class="pending-item" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
+      ${sugElec}
       <div style="font-size:13.5px;margin-bottom:6px;">${h(p.pregunta)}</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${sugerenciaTxt}</div>
       ${renderTemaEditor(p.pregunta_id, sugerido)}

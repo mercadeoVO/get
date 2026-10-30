@@ -47,9 +47,6 @@ function errOut(string $msg, int $code = 400): void {
 // ── Catálogo de preguntas: normalización, es_electoral, tema/subtema ────────
 // Compartido entre el import real (acción 'import') y el paso "Temas" del
 // wizard (acción 'registrar_preguntas') — ver app/docs/taxonomia_temas_subtemas.md §7.4
-const ELECTORAL_KEYWORDS = ['candidat','votar','voto','presiden','alcald','gobernado',
-    'concej','senado','congres','partido pol','elecci','sufrag','confiar',
-    'intencion','imagen candidat','aprueba','campana pol'];
 
 function pregNormalize(string $preg): string {
     $pregNorm = trim($preg);
@@ -59,11 +56,100 @@ function pregNormalize(string $preg): string {
     return $pregNorm === '' ? $preg : $pregNorm;
 }
 
+/** Minúsculas, sin tildes ni signos, espacios colapsados: base común de la detección electoral. */
+function normBasico(string $s): string {
+    $s = mb_strtolower($s, 'UTF-8');
+    $s = strtr($s, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ü'=>'u','ñ'=>'n']);
+    $s = preg_replace('/[^a-z0-9 ]+/u', ' ', $s);
+    return trim(preg_replace('/\s+/', ' ', $s));
+}
+
+/** Palabras clave (sin tildes) que, al INICIO de una palabra, marcan una pregunta como electoral.
+ *  El prefijo de palabra evita falsos positivos como "selección" (contiene "elecci"). */
+const ELECTORAL_KW_NORM = ['candidat','votar','voto','votos','presiden','alcald','gobernado','concej','senado',
+    'congres','partido pol','elecci','sufrag','confiar','intencion','aprueba','campana pol',
+    'precandidat','va a ganar','uribe','uribis','petrist','abstencion'];
+
 function esElectoralPorKeyword(string $pregLower): bool {
-    foreach (ELECTORAL_KEYWORDS as $kw) {
-        if (str_contains($pregLower, $kw)) return true;
+    $n = normBasico($pregLower);
+    foreach (ELECTORAL_KW_NORM as $kw) {
+        if (preg_match('/(?<![a-z0-9])' . preg_quote($kw, '/') . '/', $n)) return true;
     }
     return false;
+}
+
+/** Candidatos del catálogo (dim_candidato) con su nombre normalizado. Se carga una vez por petición. */
+function candidatosCatalogo(PDO $db): array {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        foreach ($db->query("SELECT id_candidato, nombre_completo FROM dim_candidato") as $r) {
+            $cache[] = ['id' => (int)$r['id_candidato'], 'nombre' => $r['nombre_completo'],
+                        'norm' => normBasico($r['nombre_completo'])];
+        }
+    }
+    return $cache;
+}
+
+const ELECTORAL_OBJETIVOS = [
+    'intencion_voto'         => 'Intención de voto',
+    'simpatia_partido'       => 'Simpatía de partido',
+    'conocimiento_candidato' => 'Conocimiento de candidato',
+    'evaluacion_candidato'   => 'Evaluación de candidato',
+    'participacion_electoral'=> 'Participación electoral',
+    'imagen_candidato'       => 'Imagen de candidato',
+];
+
+/** Objetivo electoral probable (clave de ELECTORAL_OBJETIVOS) según el texto normalizado, o null. */
+function objetivoElectoral(string $n): ?string {
+    if (preg_match('/\b(ha votado|voto en|votaste|participo|abstencion|ira a votar)\b/', $n)) return 'participacion_electoral';
+    if (preg_match('/\b(conoce|conoces|conocen|conocimiento)\b/', $n))                       return 'conocimiento_candidato';
+    if (preg_match('/\b(imagen|favorable|desfavorable|opinion|percepcion)\b/', $n))          return 'imagen_candidato';
+    if (preg_match('/\b(aprueba|desaprueba|evalua|califica|gestion|desempeno)\b/', $n))      return 'evaluacion_candidato';
+    if (preg_match('/\b(partido|simpatia|uribis\w*|petrist\w*)\b/', $n))                     return 'simpatia_partido';
+    if (preg_match('/\b(votaria|votar por|intencion|por quien|voto|va a ganar)\b/', $n)) return 'intencion_voto';
+    return null;
+}
+
+/**
+ * Analiza si una pregunta es electoral y de qué componentes: objetivo (intención de voto,
+ * conocimiento, imagen…) y candidato (del catálogo, o el nombre citado si no está).
+ * confianza 'alta' = palabra clave electoral o candidato del catálogo → se marca es_electoral sola.
+ * confianza 'media' = patrón "¿conoce a X?" con X fuera del catálogo → solo se sugiere (puede ser una marca).
+ * @return ?array{objetivo:?string,objetivo_label:?string,candidato:?array,candidato_texto:?string,confianza:string,motivo:string}
+ */
+function analizarElectoral(PDO $db, string $pregLower): ?array {
+    $n = normBasico($pregLower);
+    if ($n === '') return null;
+
+    $candTxt = null;
+    if (preg_match('/\b(?:conoce|conoces|conocen|conocio)\s+a\s+(.+)$/', $n, $m)) $candTxt = trim($m[1]);
+
+    $cand = null;
+    $catalogo = candidatosCatalogo($db);
+    foreach ($catalogo as $c) {                       // nombre completo dentro del texto
+        if ($c['norm'] !== '' && str_contains(' ' . $n . ' ', ' ' . $c['norm'] . ' ')) { $cand = $c; break; }
+    }
+    if (!$cand && $candTxt) {                         // "conoce a X": X contenido en el nombre del candidato
+        $w = explode(' ', $candTxt);
+        foreach ($catalogo as $c) {
+            if (!array_diff($w, explode(' ', $c['norm']))) { $cand = $c; break; }
+        }
+    }
+
+    $porKeyword = esElectoralPorKeyword($pregLower);
+    if (!$porKeyword && !$cand && !$candTxt) return null;
+
+    $obj = objetivoElectoral($n);
+    if (!$obj && $candTxt) $obj = 'conocimiento_candidato';
+    return [
+        'objetivo'        => $obj,
+        'objetivo_label'  => $obj ? ELECTORAL_OBJETIVOS[$obj] : null,
+        'candidato'       => $cand ? ['id' => $cand['id'], 'nombre' => $cand['nombre']] : null,
+        'candidato_texto' => $candTxt,
+        'confianza'       => ($porKeyword || $cand) ? 'alta' : 'media',
+        'motivo'          => $porKeyword ? 'palabra clave electoral' : ($cand ? 'candidato del catálogo' : 'patrón «conoce a»'),
+    ];
 }
 
 /** @return int[] ids de dim_tema cuyo keyword matchea el texto de la pregunta */
@@ -120,7 +206,8 @@ function sugerirTemasDebil(string $pregLower, array $catalogoConKeywords): array
 function registrarPregunta(PDO $db, string $pregRaw, array $temaKeywords): array {
     $pregNorm  = pregNormalize($pregRaw);
     $pregLower = mb_strtolower($pregNorm, 'UTF-8');
-    $isElectoral = esElectoralPorKeyword($pregLower) ? 1 : 0;
+    $analisis = analizarElectoral($db, $pregLower);
+    $isElectoral = ($analisis && $analisis['confianza'] === 'alta') ? 1 : 0;
 
     $db->prepare("INSERT IGNORE INTO import_log_leads_preguntas (pregunta, es_electoral) VALUES (?, ?)")
        ->execute([$pregNorm, $isElectoral]);
@@ -154,6 +241,10 @@ function registrarPregunta(PDO $db, string $pregRaw, array $temaKeywords): array
         'pregunta_id'  => $pregId,
         'pregunta'     => $pregNorm,
         'es_electoral' => $esElectoral,
+        // componentes detectados (objetivo, candidato). Si la pregunta NO está marcada electoral pero
+        // el detector la ve como tal, se ofrece como sugerencia para que el usuario la confirme.
+        'electoral'          => $analisis,
+        'sugerida_electoral' => (!$esElectoral && $analisis) ? 1 : 0,
         'temas'        => $temas->fetchAll(PDO::FETCH_ASSOC),
     ];
 }
@@ -1902,10 +1993,7 @@ try {
                  :nivel_educativo, :id_geo, :import_id)
         ");
         // EAV: usar pregunta_id (FK al catálogo) + import_id directo
-        // es_electoral se detecta por keywords en el texto de la pregunta
-        $electoralKeywords = ['candidat','votar','voto','presiden','alcald','gobernado',
-            'concej','senado','congres','partido pol','elecci','sufrag','confiar',
-            'intencion','imagen candidat','aprueba','campana pol'];
+        // es_electoral se detecta con analizarElectoral() (palabras clave + candidatos del catálogo)
         $stmtInsPreg = $db->prepare(
             "INSERT IGNORE INTO import_log_leads_preguntas (pregunta, es_electoral) VALUES (?, ?)"
         );
@@ -2170,10 +2258,8 @@ try {
                             // Resolver pregunta_id desde catálogo (con cache en memoria)
                             if (!isset($pregIdCache[$pregNorm])) {
                                 $pregLower  = mb_strtolower($pregNorm, 'UTF-8');
-                                $isElectoral = 0;
-                                foreach ($electoralKeywords as $kw) {
-                                    if (str_contains($pregLower, $kw)) { $isElectoral = 1; break; }
-                                }
+                                $an = analizarElectoral($db, $pregLower);
+                                $isElectoral = ($an && $an['confianza'] === 'alta') ? 1 : 0;
                                 $stmtInsPreg->execute([$pregNorm, $isElectoral]);
                                 $esPreguntaNueva = $stmtInsPreg->rowCount() > 0;
                                 $stmtGetPreg->execute([$pregNorm]);
@@ -2471,6 +2557,18 @@ try {
             $resultado[] = registrarPregunta($db, $h, $temaKeywords);
         }
         jsonOut(['ok' => true, 'preguntas' => $resultado, 'catalogo' => $catalogo]);
+    }
+
+    // ── PREGUNTA_ELECTORAL_SET ────────────────────────────────
+    // Confirma o corrige a mano si una pregunta del catálogo es electoral (paso "Temas" del wizard).
+    if ($action === 'pregunta_electoral_set') {
+        $db = getDB();
+        $id = (int)($_POST['pregunta_id'] ?? 0);
+        $val = ((int)($_POST['es_electoral'] ?? 0)) ? 1 : 0;
+        if ($id <= 0) errOut('pregunta_id requerido.');
+        $st = $db->prepare("UPDATE import_log_leads_preguntas SET es_electoral = ? WHERE id = ?");
+        $st->execute([$val, $id]);
+        jsonOut(['ok' => true, 'pregunta_id' => $id, 'es_electoral' => $val]);
     }
 
     // ── TEMAS_PENDIENTES ──────────────────────────────────────
