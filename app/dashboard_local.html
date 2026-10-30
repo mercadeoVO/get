@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MEDFUT · Dashboard Electoral Medellín 2026</title>
+<title>MEDFUT · Electoral</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -86,7 +86,7 @@ tbody tr:hover td{background:#232640}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){main{padding:12px 14px}.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid2,.grid3{grid-template-columns:1fr}header{padding:14px}}
 </style>
-<link rel="stylesheet" href="visor.css?v=25">
+<link rel="stylesheet" href="visor.css?v=26">
 <script src="visor.js?v=10"></script>
 </head>
 <body>
@@ -97,7 +97,7 @@ tbody tr:hover td{background:#232640}
 </div>
 
 <div id="v-nav" data-page="electoral" data-refresh="loadAll()"></div>
-<div class="page-hd"><h1 class="page-title">Electoral Medellín 2026</h1><p class="page-sub">Resultados por comuna y corregimiento, desde la base local C98_MEDFUT.</p></div>
+<div class="page-hd"><h1 class="page-title">Electoral</h1><p class="page-sub">Resultados electorales y encuestas electorales de la base local C98_MEDFUT.</p></div>
 <div class="filter-bar">
   <label class="filter-label" for="fil-zona">Zona</label>
   <select id="fil-zona" class="filter-select" onchange="applyFilters()">
@@ -110,6 +110,16 @@ tbody tr:hover td{background:#232640}
     <option value="all">Todos</option>
   </select>
 </div>
+
+<section class="enc-panel" aria-label="Encuestas electorales">
+  <div class="enc-grid">
+    <div><label for="enc-tipo">Tipo de encuesta</label><select id="enc-tipo" onchange="loadEncuestas()"></select></div>
+    <div><label for="enc-lista">Lista de elección</label><select id="enc-lista" onchange="loadEncuestas()"></select></div>
+    <div><label for="enc-nivel">Nivel</label><select id="enc-nivel" onchange="loadEncuestas()"></select></div>
+    <div class="enc-wide"><label for="enc-sel">Encuesta electoral</label><select id="enc-sel" onchange="renderEncDetalle()"></select></div>
+  </div>
+  <div id="enc-detalle" class="enc-detalle"></div>
+</section>
 
 <main>
   <!-- KPIs -->
@@ -608,6 +618,70 @@ function sortTable(col) {
 // ── INIT ───────────────────────────────────────────────────────
 chartDefaults();
 loadAll();
+</script>
+<script>
+// ── Encuestas electorales: list box + selectores (tipo, lista de elección, nivel) ──────────
+const API_IMP='leads_importer.php';
+let ENC={opciones:null,lista:[],listasLlenas:false};
+const $e=id=>document.getElementById(id);
+const optHtml=(arr,todas,extra)=>`<option value="">${todas}</option>${extra?`<option value="__sin__">${extra}</option>`:''}`+arr.map(o=>`<option value="${o.v}">${o.l}</option>`).join('');
+const lblOpt=(arr,v)=>(arr.find(o=>o.v===v)||{}).l||null;
+const escH=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtFecha=s=>s?String(s).slice(0,10):'';
+
+async function loadEncuestas(){
+  const q=new URLSearchParams({action:'encuestas_electorales',
+    tipo_encuesta:$e('enc-tipo').value||'',lista_eleccion:$e('enc-lista').value||'',nivel_eleccion:$e('enc-nivel').value||''});
+  try{
+    const d=await fetch(`${API_IMP}?${q}`).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error');
+    if(!ENC.opciones){   // los selectores se llenan una sola vez
+      ENC.opciones=d.opciones;
+      $e('enc-tipo').innerHTML =optHtml(d.opciones.tipos,'Todos','Sin clasificar');
+      $e('enc-lista').innerHTML=optHtml(d.opciones.listas,'Todas','Sin clasificar');
+      $e('enc-nivel').innerHTML=optHtml(d.opciones.niveles,'Todos','Sin clasificar');
+    }
+    ENC.lista=d.encuestas;
+    const prev=$e('enc-sel').value;
+    $e('enc-sel').innerHTML=`<option value="">Todas las encuestas electorales (${d.encuestas.length})</option>`+
+      d.encuestas.map(e=>`<option value="${e.id}">#${e.id} · ${escH(e.archivo)} (${fmtFecha(e.importado_en)})</option>`).join('');
+    if(d.encuestas.some(e=>String(e.id)===prev)) $e('enc-sel').value=prev;
+    renderEncDetalle();
+  }catch(err){ $e('enc-detalle').textContent='No se pudieron cargar las encuestas electorales: '+err.message; }
+}
+function renderEncDetalle(){
+  const id=$e('enc-sel').value, box=$e('enc-detalle');
+  if(!ENC.opciones){ box.textContent=''; return; }
+  const o=ENC.opciones, e=ENC.lista.find(x=>String(x.id)===id);
+  if(!e){
+    box.innerHTML=ENC.lista.length?`${ENC.lista.length} encuesta(s) electoral(es) con estos filtros. Elige una para ver su detalle.`:'No hay encuestas electorales con estos filtros.';
+    return;
+  }
+  const chip=(k,v)=>`<span class="enc-chip ${v?'':'enc-chip-vacio'}"><b>${k}</b> ${v?escH(v):'sin clasificar'}</span>`;
+  box.innerHTML=`<span><b>${escH(e.archivo)}</b> · ${Number(e.filas_ins).toLocaleString('es-CO')} respuestas · importada ${fmtFecha(e.importado_en)}</span>
+    ${chip('Tipo',lblOpt(o.tipos,e.tipo_encuesta))}${chip('Lista',lblOpt(o.listas,e.lista_eleccion))}${chip('Nivel',lblOpt(o.niveles,e.nivel_eleccion))}
+    <button class="btn btn-outline btn-sm" onclick="editarEncMeta(${e.id})">Clasificar</button>`;
+}
+function editarEncMeta(id){
+  const e=ENC.lista.find(x=>x.id==id), o=ENC.opciones, box=$e('enc-detalle');
+  const sel=(cid,arr,cur)=>`<select id="${cid}">${arr.map(x=>`<option value="${x.v}" ${x.v===cur?'selected':''}>${x.l}</option>`).join('')}</select>`;
+  box.innerHTML=`<span><b>${escH(e.archivo)}</b></span>
+    <label>Tipo ${sel('em-tipo',[{v:'',l:'— Sin especificar —'},...o.tipos],e.tipo_encuesta||'')}</label>
+    <label>Lista ${sel('em-lista',[{v:'',l:'— Sin especificar —'},...o.listas],e.lista_eleccion||'')}</label>
+    <label>Nivel ${sel('em-nivel',[{v:'',l:'— Sin especificar —'},...o.niveles],e.nivel_eleccion||'')}</label>
+    <button class="btn btn-primary btn-sm" onclick="guardarEncMeta(${id})">Guardar</button>
+    <button class="btn btn-outline btn-sm" onclick="renderEncDetalle()">Cancelar</button>`;
+}
+async function guardarEncMeta(id){
+  const fd=new FormData(); fd.append('import_id',id);
+  fd.append('tipo_encuesta',$e('em-tipo').value); fd.append('lista_eleccion',$e('em-lista').value); fd.append('nivel_eleccion',$e('em-nivel').value);
+  try{
+    const d=await fetch(`${API_IMP}?action=encuesta_meta_set`,{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error');
+    await loadEncuestas(); $e('enc-sel').value=String(id); renderEncDetalle();
+  }catch(err){ alert('No se pudo guardar: '+err.message); }
+}
+document.addEventListener('DOMContentLoaded',loadEncuestas);
 </script>
 <script>V.onTheme(function(){ location.reload(); });</script>
 </body>

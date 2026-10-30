@@ -1848,6 +1848,10 @@ try {
             "ALTER TABLE import_log ADD COLUMN url_carpeta     VARCHAR(500) DEFAULT NULL",
             "ALTER TABLE import_log ADD COLUMN etapa           VARCHAR(50)  DEFAULT 'importado'",
             "ALTER TABLE import_log ADD COLUMN tipo            VARCHAR(20)  DEFAULT 'leads'",
+            // Clasificación de las encuestas electorales (la usa la pantalla Electoral para filtrar)
+            "ALTER TABLE import_log ADD COLUMN tipo_encuesta   VARCHAR(30)  DEFAULT NULL",
+            "ALTER TABLE import_log ADD COLUMN lista_eleccion  VARCHAR(30)  DEFAULT NULL",
+            "ALTER TABLE import_log ADD COLUMN nivel_eleccion  VARCHAR(20)  DEFAULT NULL",
             "ALTER TABLE import_log_leads      ADD COLUMN nivel_educativo  VARCHAR(100) DEFAULT NULL",
             "ALTER TABLE import_log_leads      ADD COLUMN geo_departamento VARCHAR(100) DEFAULT NULL",
             "ALTER TABLE import_log_leads      ADD COLUMN municipio        VARCHAR(100) DEFAULT NULL",
@@ -2069,6 +2073,16 @@ try {
                 );
                 $stmtLog->execute([$archivo, $sheet, $notas, $urlCarpeta ?: null, $urlArchivo ?: null, $tipoImport]);
                 $importId = (int)$db->lastInsertId();
+                // Guarda la clasificación de la encuesta electoral (tipo, lista de elección, nivel)
+                if ($electoralCtx && $importId) {
+                    $db->prepare("UPDATE import_log SET tipo_encuesta = ?, lista_eleccion = ?, nivel_eleccion = ? WHERE id = ?")
+                       ->execute([
+                           $electoralCtx['tipo_encuesta'] ?? null,
+                           !empty($electoralCtx['tipo_eleccion_sel']) ? strtoupper($electoralCtx['tipo_eleccion_sel']) : null,
+                           $electoralCtx['nivel'] ?? null,
+                           $importId,
+                       ]);
+                }
 
                 $proc = 0; $ins = 0; $dup = 0; $dup_file = 0; $dup_db = 0; $err = 0; $enriched = 0; $null_meta = 0;
                 $dimGeoReady = true; // geo se resuelve via c98_geo siempre
@@ -2557,6 +2571,54 @@ try {
             $resultado[] = registrarPregunta($db, $h, $temaKeywords);
         }
         jsonOut(['ok' => true, 'preguntas' => $resultado, 'catalogo' => $catalogo]);
+    }
+
+    // ── ENCUESTAS_ELECTORALES ─────────────────────────────────
+    // Encuestas electorales importadas (import_log.tipo='electoral') + opciones de los selectores de
+    // la pantalla Electoral. Filtros opcionales: tipo_encuesta, lista_eleccion, nivel_eleccion ('' = todas).
+    if ($action === 'encuestas_electorales') {
+        $db = getDB();
+        foreach (["tipo_encuesta VARCHAR(30)", "lista_eleccion VARCHAR(30)", "nivel_eleccion VARCHAR(20)"] as $col) {
+            try { $db->exec("ALTER TABLE import_log ADD COLUMN $col DEFAULT NULL"); } catch (\Exception $e) { /* ya existe */ }
+        }
+        $where = "WHERE tipo = 'electoral'"; $params = [];
+        foreach (['tipo_encuesta', 'lista_eleccion', 'nivel_eleccion'] as $f) {
+            $v = trim((string)($_GET[$f] ?? ''));
+            if ($v === '__sin__')      { $where .= " AND $f IS NULL"; }
+            elseif ($v !== '')         { $where .= " AND $f = ?"; $params[] = $v; }
+        }
+        $st = $db->prepare("SELECT id, archivo, hoja, importado_en, filas_ins, tipo_encuesta, lista_eleccion, nivel_eleccion
+                            FROM import_log $where ORDER BY id DESC");
+        $st->execute($params);
+        $listas = $db->query("SELECT DISTINCT tipo_eleccion FROM dim_participacion ORDER BY tipo_eleccion")->fetchAll(PDO::FETCH_COLUMN);
+        jsonOut([
+            'ok' => true,
+            'encuestas' => $st->fetchAll(PDO::FETCH_ASSOC),
+            'opciones'  => [
+                'tipos' => [
+                    ['v' => 'intencion_voto', 'l' => 'Intención de voto'], ['v' => 'imagen', 'l' => 'Imagen / Reputación'],
+                    ['v' => 'conocimiento', 'l' => 'Conocimiento de candidatos'], ['v' => 'evaluacion', 'l' => 'Evaluación de gestión'],
+                    ['v' => 'exit_poll', 'l' => 'Exit poll'], ['v' => 'omnibus', 'l' => 'Omnibus / General'],
+                ],
+                'listas'  => array_map(fn($l) => ['v' => $l, 'l' => $l === 'CAMARA' ? 'Cámara' : ucfirst(mb_strtolower($l, 'UTF-8'))], $listas),
+                'niveles' => [
+                    ['v' => 'nacional', 'l' => 'Nacional'], ['v' => 'departamental', 'l' => 'Departamental'],
+                    ['v' => 'municipal', 'l' => 'Municipal'], ['v' => 'local', 'l' => 'Local'],
+                ],
+            ],
+        ]);
+    }
+
+    // ── ENCUESTA_META_SET ─────────────────────────────────────
+    // Asigna a mano tipo / lista de elección / nivel a una encuesta electoral ya importada.
+    if ($action === 'encuesta_meta_set') {
+        $db = getDB();
+        $id = (int)($_POST['import_id'] ?? 0);
+        if ($id <= 0) errOut('import_id requerido.');
+        $val = fn($k) => (($v = trim((string)($_POST[$k] ?? ''))) === '') ? null : $v;
+        $db->prepare("UPDATE import_log SET tipo_encuesta = ?, lista_eleccion = ?, nivel_eleccion = ? WHERE id = ? AND tipo = 'electoral'")
+           ->execute([$val('tipo_encuesta'), $val('lista_eleccion'), $val('nivel_eleccion'), $id]);
+        jsonOut(['ok' => true, 'import_id' => $id]);
     }
 
     // ── PREGUNTA_ELECTORAL_SET ────────────────────────────────

@@ -306,3 +306,17 @@ main{padding:20px 24px!important}
 /* Importador: lista de municipios */
 select.mpio-input{padding:9px 14px!important;font-size:.875rem!important;width:340px;max-width:100%}
 .btn-sm{min-height:36px!important;padding:7px 16px!important;font-size:.8rem!important}
+
+/* ── Electoral: encuestas electorales (list box + selectores) ── */
+.enc-panel{margin:0 24px 8px;background:var(--card);border-radius:var(--r-lg);padding:20px 24px}
+.enc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.6fr);gap:16px}
+.enc-grid label,.enc-detalle label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:6px}
+.enc-grid select{width:100%}
+.enc-detalle{margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.875rem;color:var(--muted)}
+.enc-detalle b{color:var(--text);font-weight:600}
+.enc-detalle label{display:flex;align-items:center;gap:6px;margin:0}
+.enc-detalle select{width:auto}
+.enc-chip{background:var(--accent-soft);color:var(--accent);border-radius:var(--r-pill);padding:3px 12px;font-size:.8rem;font-weight:500}
+.enc-chip b{color:inherit;font-weight:600;margin-right:4px}
+.enc-chip-vacio{background:var(--warn-bg);color:var(--warn-ink)}
+@media(max-width:900px){.enc-grid{grid-template-columns:1fr 1fr}.enc-panel{margin:0 16px 8px}}
