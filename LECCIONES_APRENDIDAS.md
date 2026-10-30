@@ -1,4 +1,4 @@
-# C98_MEDFUT — Lecciones aprendidas (lado app/GET)
+# C98_GET — Lecciones aprendidas (lado app/GET)
 
 > Patrones de error del trabajo sobre `app/` (GET, antes MEDFUT) durante la sesión del 2026-07-27/28. Para
 > las lecciones específicas de la carga geoespacial de `geo/` (C98_GEO), ver
@@ -98,3 +98,30 @@ ocupado" y la carpeta en cuestión podría ser el directorio de trabajo de la se
 otro proceso vivo), no reintentar el mismo comando — usar `robocopy /MOVE` (o equivalente
 archivo-por-archivo) y aceptar que la carpeta raíz vacía quede como remanente a limpiar después
 de cerrar la sesión que la bloquea.
+
+## 7. Guardar las definiciones de las vistas en disco ANTES de borrarlas — y no asumir mayúsculas en `SHOW CREATE VIEW`
+
+**Qué pasó (2026-10-30, renombre de la BD a `C98_GET`):** el script borraba las vistas, movía
+las tablas con `RENAME TABLE` y recreaba las vistas con la definición guardada en memoria,
+reemplazando `` `C98_MEDFUT` `` por `` `C98_GET` ``. Pero con `lower_case_table_names=1`
+(Windows) `SHOW CREATE VIEW` devuelve el nombre del schema en minúsculas (`` `c98_medfut` ``), el
+reemplazo no coincidió y `CREATE VIEW` falló. En ese momento las tablas ya estaban movidas, las
+vistas viejas ya borradas y la definición solo existía en la memoria del proceso que acababa de
+morir: el sitio quedó caído hasta reconstruir las vistas a partir del código (la del importador
+las recrea sola; la otra venía de la sesión anterior).
+
+**Regla a aplicar:** (1) volcar a un archivo las definiciones de vistas (y cualquier objeto que
+se vaya a `DROP`) antes de tocar nada; (2) hacer el reemplazo del nombre del schema sin distinguir
+mayúsculas; (3) ordenar el script para que el último paso destructivo sea el último, no uno
+intermedio; (4) cambiar `config.php` en el mismo paso que mueve las tablas.
+
+## 8. PowerShell 5.1 lee los `.ps1` sin BOM como ANSI — las cadenas con tildes no coinciden
+
+**Qué pasó:** un script de reemplazos tenía literales como `'cómo MEDFUT'` o `'—'`; PowerShell
+5.1 los interpretó como ANSI, el texto buscado quedó como `cÃ³mo` y esos reemplazos no
+coincidieron (los literales solo-ASCII sí funcionaron). El script avisó con "no encontrado",
+pero solo porque se programó ese aviso.
+
+**Regla a aplicar:** para reemplazos con acentos usar la herramienta Edit (UTF-8), o guardar el
+script con BOM, o expresar los literales con `[char]0x...`. Y siempre dejar que el script avise
+cuando un patrón esperado no se encuentra, en vez de fallar en silencio.

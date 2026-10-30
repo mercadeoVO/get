@@ -1,7 +1,7 @@
 <?php
 /**
- * MEDFUT · Diagnóstico de import_log_leads
- * http://localhost/medfut/_diag_leads.php
+ * GET · Diagnóstico de import_log_leads
+ * http://localhost/get/_diag_leads.php
  */
 require_once __DIR__ . '/config.php';
 header('Content-Type: application/json; charset=utf-8');

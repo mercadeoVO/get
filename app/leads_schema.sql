@@ -1,6 +1,6 @@
 -- ============================================================
---  MEDFUT · Schema de ingesta de leads Meta Ads (v3 — actualizado)
---  Ejecutar en phpMyAdmin o: mysql -u root -P 3307 medfut < leads_schema.sql
+--  GET · Schema de ingesta de leads Meta Ads (v3 — actualizado)
+--  Ejecutar en phpMyAdmin o: mysql -u root -P 3307 C98_GET < leads_schema.sql
 --
 --  NOTA: dim_geo fue ELIMINADA. El campo id_geo es VARCHAR(15) con código
 --  DANE jerárquico que referencia c98_geo (base de datos separada en el
@@ -14,7 +14,7 @@
 --      → import_log_leads_respuestas (CASCADE)
 -- ============================================================
 
-USE medfut;
+USE C98_GET;
 
 -- ── 1. Log de importaciones ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS import_log (

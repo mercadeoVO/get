@@ -28,7 +28,7 @@ Resumen ejecutivo de lo ya resuelto (detalle completo en `diccionario_datos.md`)
   zona/comuna derivados por `ST_Union`. Niveles de resolución `low`/`mid`/`high` generados.
   `geo_geometry` total: 5.341 filas.
 - **Dashboard sincronizado:** `c98geo_api.php` y `c98geo_map_api.php` migrados a leer 100% de
-  `c98_geo` (antes leían por accidente de `medfut.dim_geo`, una tabla de otro proceso). Sync
+  `c98_geo` (antes leían por accidente de `C98_GET.dim_geo`, una tabla de otro proceso). Sync
   tabla↔mapa por `id` exacto, no por nombre. Zoom automático por nivel implementado.
 - **Pendiente real (Fase 6-7):** FK real/constraint en `geo_geometry`, `SPATIAL INDEX(geom)`,
   vista `v_integridad_geo`, test CI anti-huérfanos, limpieza de las ~7 tablas `*_bkp*`
@@ -67,7 +67,7 @@ Región (5)
 | Componente         | Ubicación                                       | Notas                                |
 | ------------------ | ----------------------------------------------- | ------------------------------------ |
 | Base de datos      | MySQL `127.0.0.1:3307`, schema `c98_geo`        | Acceso vía phpMyAdmin                |
-| Dashboard          | `http://localhost/medfut/c98geo_dashboard.html` | Consume `c98_geo`                    |
+| Dashboard          | `http://localhost/get/c98geo_dashboard.html` | Consume `c98_geo`                    |
 | Excel origen       | `col_divipola_vo.xlsx`                          | Fuente que alimentó la carga inicial |
 | Tabla de geometría | `c98_geo.geo_geometry`                          | 1.326 filas                          |
 

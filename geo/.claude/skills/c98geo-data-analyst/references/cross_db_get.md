@@ -1,18 +1,19 @@
-# Cross-DB: MEDFUT (BD `C98_MEDFUT`) ↔ c98_geo
+# Cross-DB: GET (BD `C98_GET`) ↔ c98_geo
 
-> Renombrada 2026-07-30: la BD del proyecto MEDFUT se llamaba `medfut`, ahora es `C98_MEDFUT`
-> (el proyecto/carpeta/URL siguen llamándose "medfut" — solo cambió el nombre del schema SQL).
+> Renombrada 2026-10-30: la BD del proyecto (antes `medfut`, luego `C98_MEDFUT`) ahora es `C98_GET`
+> y la URL pasó a `http://localhost/get/`. La carpeta raíz sigue llamándose `C98_MEDFUT` hasta que
+> se cierren las sesiones que la bloquean.
 
-`C98_MEDFUT` y `c98_geo` viven en la misma instancia MariaDB (127.0.0.1:3307) — se cruzan con
+`C98_GET` y `c98_geo` viven en la misma instancia MariaDB (127.0.0.1:3307) — se cruzan con
 prefijo `c98_geo.tabla` directo en SQL, sin necesidad de federación.
 
-`C98_MEDFUT.import_log_leads.id_geo` es `VARCHAR(15) NULL` con el código DANE jerárquico de
+`C98_GET.import_log_leads.id_geo` es `VARCHAR(15) NULL` con el código DANE jerárquico de
 `c98_geo` (reemplazó una FK `INT` a `dim_geo`, tabla que sigue existiendo físicamente pero está
 deprecada — ver gotcha #7). Es la **única columna geo que persiste** en `import_log_leads` desde
 el 2026-07-28: `region`, `geo_departamento`, `subregion`, `municipio`, `zona`,
 `comuna_localidad` y `barrio` se ELIMINARON de la tabla (existían como texto libre además de
-`id_geo`, se decidió normalizar). Backup del histórico previo en
-`C98_MEDFUT.import_log_leads_geo_bkp`.
+`id_geo`, se decidió normalizar). El respaldo `import_log_leads_geo_bkp` ya no existe; hoy hay
+`C98_GET.import_log_leads_geo_fix64_bkp` (otro respaldo, ver `MEMORIA.md`).
 
 ## Patrón de resolución por longitud (para leer id_geo ya guardado)
 

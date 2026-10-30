@@ -1,7 +1,7 @@
 <?php
 /**
  * c98geo_map_api.php — Geometrías reales para el mapa
- * Fuente: c98_geo.geo_geometry (independiente de medfut.dim_geo)
+ * Fuente: c98_geo.geo_geometry (independiente de C98_GET.dim_geo)
  * Uso: c98geo_map_api.php?tipo=departamento&resolution=mid[&padre=05]
  */
 header('Content-Type: application/json; charset=utf-8');

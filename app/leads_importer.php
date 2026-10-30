@@ -1,7 +1,7 @@
 <?php
 // ============================================================
-//  MEDFUT · Importador de Leads Meta Ads  (backend PHP nativo)
-//  URL base: http://localhost/medfut/leads_importer.php
+//  GET · Importador de Leads Meta Ads  (backend PHP nativo)
+//  URL base: http://localhost/get/leads_importer.php
 //
 //  Acciones:
 //    ?action=check        — Verifica dependencias PHP

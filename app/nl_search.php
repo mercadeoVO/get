@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-//  MEDFUT · Buscador inteligente de segmentación (lenguaje natural → filtros)
+//  GET · Buscador inteligente de segmentación (lenguaje natural → filtros)
 //
 //  POST JSON {"texto":"mujeres de 25 a 44 en Ituango preocupadas por la seguridad"}
 //  → {ok, filtros:{sexo[],rango_edad[],estrato[],nivel_educativo[],afiliacion_politica[],
@@ -240,7 +240,7 @@ $ctx = "CATÁLOGOS DISPONIBLES\n"
      . "Preguntas candidatas de encuesta (id | pregunta | respuestas frecuentes):\n"
      . ($preguntas ? implode("\n", array_map(fn($id, $p) => "$id | {$p['pregunta']} | " . implode(' ; ', $p['respuestas']), array_keys($preguntas), $preguntas)) : '(ninguna coincide con la frase)');
 
-$system = "Eres el intérprete del buscador de MEDFUT (leads de Meta Ads para marketing político en Colombia). "
+$system = "Eres el intérprete del buscador de GET (leads de Meta Ads para marketing político en Colombia). "
         . "Traduces la frase del usuario a filtros usando SOLO la herramienta aplicar_filtros y SOLO valores de los catálogos. "
         . "Reglas: (1) rellena únicamente lo que la frase pide; no inventes filtros. (2) 'mujeres'→sexo Mujer, 'jóvenes'→rangos de edad bajos, etc., usando los valores exactos del enum. "
         . "(3) Lugares → geo, usando el nivel más específico mencionado (barrio, comuna/localidad, zona, municipio, departamento, región); para zona/comuna/barrio indica siempre el municipio. Ej.: 'zona nororiental de Medellín' → nivel zona, nombre 'Nororiental', municipio 'Medellín'. (4) Opiniones o temas ('preocupados por la seguridad') → temas_ids o preguntas candidatas con sus respuestas exactas; si nada encaja, déjalo en no_resuelto. "

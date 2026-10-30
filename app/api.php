@@ -1,7 +1,7 @@
 <?php
 // ============================================================
-//  MEDFUT · API REST local
-//  URL base: http://localhost/medfut/api.php?endpoint=XXX
+//  GET · API REST local
+//  URL base: http://localhost/get/api.php?endpoint=XXX
 //
 //  Endpoints disponibles:
 //    partidos
@@ -218,7 +218,7 @@ try {
                     'resumen_presidencial',
                     'resumen_alcaldia',
                 ],
-                'ejemplo' => 'http://localhost/medfut/api.php?endpoint=resumen_presidencial'
+                'ejemplo' => 'http://localhost/get/api.php?endpoint=resumen_presidencial'
             ]);
     }
 

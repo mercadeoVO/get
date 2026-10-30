@@ -2,7 +2,7 @@
 /**
  * c98geo_api.php — Jerarquía geográfica completa
  * Niveles: Región → Dpto → Subregión → Municipio → Zona → Comuna → Barrio
- * Fuente única: c98_geo (dim_region..dim_barrio, por FK real). No usa medfut/dim_geo.
+ * Fuente única: c98_geo (dim_region..dim_barrio, por FK real). No usa C98_GET/dim_geo.
  */
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache');

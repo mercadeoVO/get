@@ -1,6 +1,6 @@
 <?php
-// MEDFUT - Script de migración de vista v_import_resumen
-// Visitar UNA VEZ desde: http://localhost/medfut/run_migration.php
+// GET - Script de migración de vista v_import_resumen
+// Visitar UNA VEZ desde: http://localhost/get/run_migration.php
 // Luego eliminar este archivo.
 require_once __DIR__ . '/config.php';
 header('Content-Type: text/plain; charset=utf-8');

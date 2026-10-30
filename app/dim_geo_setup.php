@@ -1,7 +1,7 @@
 <?php
 /**
  * GET · Setup dim_geo
- * Ejecutar UNA VEZ: http://localhost/medfut/dim_geo_setup.php
+ * Ejecutar UNA VEZ: http://localhost/get/dim_geo_setup.php
  * Crea la tabla dim_geo y carga el seed DIVIPOLA Colombia (1,526 registros)
  */
 require_once __DIR__ . '/config.php';

@@ -70,7 +70,7 @@ de investigar causa).
 ## P8 — Sincronización dashboard ↔ BD real
 **Estado:** ✅ Cerrado
 **Resumen:** `c98geo_api.php` y `c98geo_map_api.php` reescritos para leer 100% de `c98_geo` (se
-detectó que antes leían por accidente `medfut.dim_geo`, tabla de otro proceso). Sync tabla↔mapa
+detectó que antes leían por accidente `C98_GET.dim_geo`, tabla de otro proceso). Sync tabla↔mapa
 migrado de matching por nombre a `id` exacto. Zoom automático por nivel (`ST_Contains`)
 implementado y probado end-to-end.
 **Skill sugerida:** ninguna pendiente — mantener con `engineering:documentation` si crece la API.
@@ -92,7 +92,7 @@ legal plena confirmada. No tocar `dim_subregion` de Antioquia hasta que quede en
 **Estado:** ⬜ No auditado
 **Contexto:** `MED/piloto.pbix` (7 MB) existe en el árbol del proyecto pero no fue parte del
 análisis de esta sesión ni de las anteriores documentadas en `diccionario_datos.md`. Desconocido
-si consume `c98_geo` directo, `medfut`, o un extracto estático (`geo_med.xlsx`,
+si consume `c98_geo` directo, `C98_GET`, o un extracto estático (`geo_med.xlsx`,
 `medellin_barrios_topo_v2.json`).
 **Skill sugerida:** `anthropic-skills:powerbi-design` si se retoma o rediseña.
 
@@ -113,7 +113,7 @@ si consume `c98_geo` directo, `medfut`, o un extracto estático (`geo_med.xlsx`,
 ## Skill persistente instalada para este proyecto
 
 Se generó una skill de proyecto (`data-context-extractor`, modo bootstrap) que encapsula el
-esquema de `c98_geo`/`medfut`, la jerarquía DIVIPOLA, y los gotchas descubiertos durante la
+esquema de `c98_geo`/`C98_GET`, la jerarquía DIVIPOLA, y los gotchas descubiertos durante la
 carga (mojibake, padding de códigos, `ST_Union` en vez de agregación nativa, workspace WFS
 correcto de Cali, etc.), para que una sesión nueva de Claude Code no tenga que re-descubrirlos
 leyendo `diccionario_datos.md` completo cada vez.

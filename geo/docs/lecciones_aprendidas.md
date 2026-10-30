@@ -33,7 +33,7 @@ inferencia caso por caso.
 **Qué pasó:** al imprimir nombres con tildes/ñ desde Python en Git Bash sobre Windows, la
 consola muestra `�` o `Usaqu�n` para caracteres que en la base de datos están perfectamente
 codificados en UTF-8. Esto pasó al menos 3 veces en la sesión (Belén de Bajirá, "Bogota"/"Cali"
-en `medfut`, localidades de Bogotá) y cada vez generó una sospecha de corrupción real que
+en `C98_GET`, localidades de Bogotá) y cada vez generó una sospecha de corrupción real que
 requirió verificación adicional.
 
 **Cómo se distingue un falso positivo de corrupción real:** imprimir
@@ -86,7 +86,7 @@ o verificar explícitamente que el código cargado coincide con el archivo antes
 
 ## 5. Dos fuentes de datos que deberían ser una sola generan bugs de sincronización imposibles de prevenir con matching aproximado
 
-**Qué pasó:** mientras la tabla del dashboard leía de `medfut.dim_geo` y el mapa leía de
+**Qué pasó:** mientras la tabla del dashboard leía de `C98_GET.dim_geo` y el mapa leía de
 `c98_geo`, la única forma de sincronizarlos era por nombre aproximado (`LIKE` bidireccional).
 Esto funcionó la mayoría de las veces, pero falló exactamente en el caso donde dos entidades
 distintas comparten parte del nombre entre sí ("La Candelaria" en Bogotá y Medellín, con zonas
@@ -98,7 +98,7 @@ entidades reales colisionan. No es un bug puntual a parchear, es una limitación
 del enfoque.
 
 **Cómo se resolvió de raíz:** cuando se migró la tabla para leer de `c98_geo` también (en vez
-de `medfut.dim_geo`), dejó de haber necesidad de matching aproximado — tabla y mapa ya
+de `C98_GET.dim_geo`), dejó de haber necesidad de matching aproximado — tabla y mapa ya
 comparten los mismos `id` reales, y la sincronización pasó a ser por igualdad exacta de id.
 
 **Regla a aplicar:** si dos componentes de un sistema necesitan estar sincronizados y pueden

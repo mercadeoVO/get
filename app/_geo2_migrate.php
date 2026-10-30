@@ -1,14 +1,14 @@
 <?php
 /**
  * _geo2_migrate.php
- * Migra import_log_leads.id_geo de INT (→ medfut.dim_geo)
+ * Migra import_log_leads.id_geo de INT (→ C98_GET.dim_geo)
  * a VARCHAR(15) (→ c98_geo DANE codes: barrio/zona/municipio)
  *
  * Fases:
  *   1. ADD COLUMN id_geo_c98 VARCHAR(15) (si no existe)
  *   2. Poblar id_geo_c98 vía PHP maps desde c98_geo
  *   3. Swap: DROP id_geo, RENAME id_geo_c98 → id_geo
- *   4. (manual) DROP medfut.dim_geo
+ *   4. (manual) DROP C98_GET.dim_geo
  *
  * ?step=1  → Solo ADD COLUMN
  * ?step=2  → Solo poblar (dry-run por defecto)
@@ -33,7 +33,7 @@ function norm(string $s): string {
 /* ── Estado de columnas ────────────────── */
 function colExists(\PDO $pdo, string $col): bool {
     $r = $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA='medfut' AND TABLE_NAME='import_log_leads' AND COLUMN_NAME='$col'")->fetchColumn();
+        WHERE TABLE_SCHEMA='C98_GET' AND TABLE_NAME='import_log_leads' AND COLUMN_NAME='$col'")->fetchColumn();
     return $r > 0;
 }
 
@@ -42,7 +42,7 @@ $hasNewGeo  = colExists($pdo, 'id_geo_c98');   // VARCHAR trabajo
 $oldGeoType = '';
 if ($hasOldGeo) {
     $oldGeoType = $pdo->query("SELECT DATA_TYPE FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA='medfut' AND TABLE_NAME='import_log_leads' AND COLUMN_NAME='id_geo'")->fetchColumn();
+        WHERE TABLE_SCHEMA='C98_GET' AND TABLE_NAME='import_log_leads' AND COLUMN_NAME='id_geo'")->fetchColumn();
 }
 
 /* ── Cobertura actual ──────────────────── */
@@ -115,8 +115,8 @@ if ($step === 2) {
                    g.nom_mpio, g.nom_barrio, g.nom_zona, g.nom_comuna,
                    COUNT(l.id_lead) n,
                    GROUP_CONCAT(l.id_lead ORDER BY l.id_lead SEPARATOR ',') ids
-            FROM medfut.dim_geo g
-            JOIN medfut.import_log_leads l ON l.id_geo = g.id AND l.id_geo_c98 IS NULL
+            FROM C98_GET.dim_geo g
+            JOIN C98_GET.import_log_leads l ON l.id_geo = g.id AND l.id_geo_c98 IS NULL
             GROUP BY g.id
         ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -201,7 +201,7 @@ if ($step === 3 && $apply) {
             // 1. Eliminar FK constraints sobre id_geo (si existen)
             $fks = $pdo->query("
                 SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
-                WHERE TABLE_SCHEMA='medfut' AND TABLE_NAME='import_log_leads'
+                WHERE TABLE_SCHEMA='C98_GET' AND TABLE_NAME='import_log_leads'
                   AND COLUMN_NAME='id_geo' AND REFERENCED_TABLE_NAME IS NOT NULL
             ")->fetchAll(PDO::FETCH_COLUMN);
             foreach ($fks as $fk) {
@@ -213,12 +213,12 @@ if ($step === 3 && $apply) {
                 DROP COLUMN id_geo,
                 CHANGE COLUMN id_geo_c98 id_geo VARCHAR(15) NULL DEFAULT NULL");
             $msgs[] = ['ok'=>true,'msg'=>"✅ SWAP completado: id_geo ahora es VARCHAR(15) con códigos c98_geo."];
-            $msgs[] = ['ok'=>true,'msg'=>"Siguiente: DROP TABLE medfut.dim_geo (cuando estés listo)."];
+            $msgs[] = ['ok'=>true,'msg'=>"Siguiente: DROP TABLE C98_GET.dim_geo (cuando estés listo)."];
             // Refrescar estado
             $hasOldGeo  = colExists($pdo, 'id_geo');
             $hasNewGeo  = colExists($pdo, 'id_geo_c98');
             $oldGeoType = $pdo->query("SELECT DATA_TYPE FROM information_schema.COLUMNS
-                WHERE TABLE_SCHEMA='medfut' AND TABLE_NAME='import_log_leads' AND COLUMN_NAME='id_geo'")->fetchColumn();
+                WHERE TABLE_SCHEMA='C98_GET' AND TABLE_NAME='import_log_leads' AND COLUMN_NAME='id_geo'")->fetchColumn();
         }
     }
 }
@@ -363,7 +363,7 @@ foreach ($phases as $ph => $info): $c=$planResult['phases'][$ph]; $l=$planResult
 </div>
 
 <div class="step">
-  <b>Step 4 — DROP TABLE medfut.dim_geo</b><br>
+  <b>Step 4 — DROP TABLE C98_GET.dim_geo</b><br>
   <small class="<?= ($hasOldGeo&&$oldGeoType!=='int')?'warn':'err' ?>">
     <?= ($hasOldGeo&&$oldGeoType!=='int') ? '⏳ Listo para eliminar — ejecuta cuando confirmes que todo funciona.' : 'Requiere Steps 1-3 primero.' ?>
   </small>

@@ -62,8 +62,8 @@ $dimGeoRows = $pdo->query("
     SELECT g.id, g.nivel,
            g.nom_mpio, g.nom_barrio, g.nom_zona, g.nom_comuna, g.nom_dpto,
            COUNT(l.id_lead) AS n_leads
-    FROM medfut.dim_geo g
-    JOIN medfut.import_log_leads l ON l.id_geo = g.id
+    FROM C98_GET.dim_geo g
+    JOIN C98_GET.import_log_leads l ON l.id_geo = g.id
     GROUP BY g.id
     ORDER BY n_leads DESC
 ")->fetchAll(PDO::FETCH_ASSOC);

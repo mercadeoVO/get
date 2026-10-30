@@ -9,7 +9,7 @@
  *    Columnas de texto de leads:  _ → espacio · trim · colapsar espacios
  *
  *  Idempotente — detecta el estado actual y continúa desde donde corresponde.
- *  Ejecutar: http://localhost/medfut/_migration_id_lead.php
+ *  Ejecutar: http://localhost/get/_migration_id_lead.php
  */
 require_once __DIR__ . '/config.php';
 header('Content-Type: text/html; charset=utf-8');
@@ -389,6 +389,6 @@ code{background:#0f1117;padding:1px 5px;border-radius:3px;color:#a5b4fc}
 <?php foreach ($log as $line): ?><p><?= $line ?></p><?php endforeach; ?>
 </div>
 <p style="margin-top:12px;color:#7b84a3;font-size:.78rem">
-  <a href="/medfut/leads_analytics.html" style="color:#6366f1">← Dashboard</a>
+  <a href="/get/leads_analytics.html" style="color:#6366f1">← Dashboard</a>
 </p>
 </body></html>

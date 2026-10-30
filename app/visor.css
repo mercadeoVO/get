@@ -1,4 +1,4 @@
-/* Visor — sistema de diseño compartido de MEDFUT.
+/* Visor — sistema de diseño compartido de GET.
    Cargar DESPUÉS del <style> de cada página: define los tokens (claro/oscuro)
    y reemplaza el aspecto de los componentes comunes. */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');

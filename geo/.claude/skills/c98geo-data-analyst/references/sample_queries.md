@@ -45,11 +45,11 @@ LEFT JOIN dim_municipio m ON m.id = g.id_tipo
 WHERE g.tipo = 'municipio' AND m.id IS NULL;
 ```
 
-## Cross-DB: leads por departamento (patrón MEDFUT)
+## Cross-DB: leads por departamento (patrón GET)
 
 ```sql
 SELECT dpto.nombre, COUNT(*) AS leads
-FROM C98_MEDFUT.import_log_leads l
+FROM C98_GET.import_log_leads l
 LEFT JOIN c98_geo.dim_departamento dpto ON dpto.id = LEFT(l.id_geo, 2)
 WHERE l.id_geo IS NOT NULL
 GROUP BY dpto.nombre

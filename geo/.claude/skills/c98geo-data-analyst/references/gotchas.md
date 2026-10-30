@@ -33,7 +33,7 @@ detalle en `docs/diccionario_datos.md`; aquí solo el resumen accionable.
    error. Comparar explícitamente contra `false`, no usar el atajo `?:` con resultados de
    `array_search`.
 
-7. **`C98_MEDFUT.dim_geo`** (BD renombrada 2026-07-30, antes `medfut`) **está deprecada.** Si algún código PHP todavía la consulta (ej. una versión
+7. **`C98_GET.dim_geo`** (BD renombrada a `C98_GET` el 2026-10-30; antes `medfut` y luego `C98_MEDFUT`) **está deprecada.** Si algún código PHP todavía la consulta (ej. una versión
    vieja de `c98geo_api.php`), es un bug de otra era del proyecto, no una fuente válida. Además
    esa tabla nunca tuvo barrio/comuna salvo Medellín y arrastraba los 5 duplicados DIVIPOLA del
    Excel original — cualquier conteo que salga de ahí va a estar mal.

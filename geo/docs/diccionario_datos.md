@@ -2,7 +2,7 @@
 
 > Generado en sesión de reconocimiento FASE 1. Fuente: conexión directa de solo lectura a
 > `127.0.0.1:3307/c98_geo` (MariaDB 10.4.32) vía `mysql-connector-python`, complementada con
-> `information_schema`. **No se tocó la base `medfut`** (fuera de alcance).
+> `information_schema`. **No se tocó la base `C98_GET`** (fuera de alcance).
 >
 > ⚠️ Este diccionario **reemplaza las suposiciones de la Sección 2/3 del `CLAUDE.md` original**.
 > El esquema real ya no es el modelo plano `GEO_DPTOS` / `GEO_MPIO` + `geo_geometry` polimórfico
@@ -228,12 +228,12 @@ Ejemplo real (Antioquia, departamento `05`): **44.385 vértices en `high` → 2.
 ## 6. Discrepancia dashboard vs. BD — RESUELTA: `c98geo_api.php` migrado a `c98_geo`
 
 > Causa raíz encontrada en sesión posterior: `c98geo_api.php` nunca consultaba `c98_geo`.
-> Leía de `medfut.dim_geo`, una tabla plana con columna `nivel` (otro proceso, integrado
+> Leía de `C98_GET.dim_geo`, una tabla plana con columna `nivel` (otro proceso, integrado
 > inicialmente pero independiente) que jamás tuvo datos de barrio/comuna salvo para Medellín,
 > y cuyos conteos de municipio arrastraban los 5 duplicados DIVIPOLA del Excel original
 > (H-01) porque nunca pasó por la deduplicación que sí se aplicó en `c98_geo`.
 
-**Decisión del usuario:** eliminar toda referencia a `medfut.dim_geo` del dashboard de
+**Decisión del usuario:** eliminar toda referencia a `C98_GET.dim_geo` del dashboard de
 Geografía — `dim_geo` es de otro proceso que estaba integrado por accidente. Todo el módulo
 de Geografía (tabla + mapa) debe leer exclusivamente de `c98_geo`, respetando sus FK reales.
 
@@ -243,22 +243,22 @@ depto→región). Ahora:
 - Trae las 7 tablas de `c98_geo` (`dim_region` → `dim_barrio`) completas.
 - Arma el árbol navegando las FK reales (`id_region`, `id_departamento`, `id_subregion`,
   `id_municipio`, `id_zona`, `id_comuna`) — sin mapeos hardcodeados ni matching de texto.
-- Ya no depende de `config.php` (que apunta a `medfut`) — conexión propia a `c98_geo`.
+- Ya no depende de `config.php` (que apunta a `C98_GET`) — conexión propia a `c98_geo`.
 
 **KPIs verificados exactos tras el cambio** (antes vs. ahora, BD real en ambos casos):
 
-| Métrica | Antes (medfut/dim_geo) | Ahora (c98_geo) |
+| Métrica | Antes (C98_GET/dim_geo) | Ahora (c98_geo) |
 |---|---|---|
 | Municipios | 1.128 | **1.123** ✅ |
 | Zonas | 19 | **2.257** ✅ |
 | Comunas | 68 | **84** ✅ (incluye las 16 nuevas de Cartagena) |
 | Barrios | 330 | **2.793** ✅ |
 
-Efecto colateral positivo: Bogotá, Cali, Barranquilla y Cartagena — que en `medfut` nunca
+Efecto colateral positivo: Bogotá, Cali, Barranquilla y Cartagena — que en `C98_GET` nunca
 tuvieron barrio/comuna cargado — ahora despliegan su jerarquía completa en la tabla, igual
 que ya la mostraba el mapa desde antes.
 
-`medfut` no se modificó en ningún momento — solo se dejó de leer de ahí para este módulo.
+`C98_GET` no se modificó en ningún momento — solo se dejó de leer de ahí para este módulo.
 
 ## 7. Cobertura sub-municipal (H-08, confirma briefing)
 

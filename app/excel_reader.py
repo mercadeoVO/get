@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MEDFUT Excel Reader
+GET Excel Reader
 Uso:
   python excel_reader.py get_sheets <filepath>
   python excel_reader.py read       <filepath> <sheet> [max_rows]

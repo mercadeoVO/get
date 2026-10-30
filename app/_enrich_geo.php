@@ -316,7 +316,7 @@ if ($run):
         echo "</div>";
 
         // ── PASO 3: Rellenar geo_departamento desde municipio vía dim_geo ───────────
-        // Usa dim_geo (medfut, misma conexión y charset) en lugar de c98_geo
+        // Usa dim_geo (C98_GET, misma conexión y charset) en lugar de c98_geo
         // para evitar problemas de charset y columnas distintas.
         echo "<div class='paso'><div class='paso-title'>── PASO 3: Rellenar geo_departamento desde municipio (dim_geo) ──</div>";
 
@@ -541,8 +541,8 @@ endif;
 <?php endif; ?>
 
 <div style="margin-top:16px;color:#7b84a3;font-size:11px">
-  ← <a href="/medfut/leads_analytics.html" style="color:#818cf8">Dashboard Analytics</a> ·
-  <a href="/medfut/_migration_id_lead.php" style="color:#818cf8">Migración</a>
+  ← <a href="/get/leads_analytics.html" style="color:#818cf8">Dashboard Analytics</a> ·
+  <a href="/get/_migration_id_lead.php" style="color:#818cf8">Migración</a>
 </div>
 </body>
 </html>

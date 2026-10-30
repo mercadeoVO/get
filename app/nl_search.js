@@ -1,4 +1,4 @@
-// MEDFUT · Buscador inteligente de segmentación.
+// GET · Buscador inteligente de segmentación.
 // Se carga al final de leads_segmentacion.html (<script src="nl_search.js"></script>) y usa sus globales
 // (F, GEO, DIMS, buildPanel, refreshBadges, queueQuery). Inyecta su propia barra y estilos.
 (function(){

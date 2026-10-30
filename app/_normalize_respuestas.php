@@ -7,7 +7,7 @@
  *    · Elimina espacios al inicio y al final (TRIM)
  *    · Colapsa espacios múltiples
  *
- *  Idempotente. Ejecutar: http://localhost/medfut/_normalize_respuestas.php
+ *  Idempotente. Ejecutar: http://localhost/get/_normalize_respuestas.php
  */
 require_once __DIR__ . '/config.php';
 header('Content-Type: text/html; charset=utf-8');
@@ -67,6 +67,6 @@ h2{color:#6366f1;margin-bottom:4px}.sub{color:#7b84a3;font-size:.82rem;margin-bo
 <?php foreach ($log as $line): ?><p><?= $line ?></p><?php endforeach; ?>
 </div>
 <p style="margin-top:12px;color:#7b84a3;font-size:.78rem">
-  <a href="/medfut/leads_analytics.html" style="color:#6366f1">← Dashboard</a>
+  <a href="/get/leads_analytics.html" style="color:#6366f1">← Dashboard</a>
 </p>
 </body></html>

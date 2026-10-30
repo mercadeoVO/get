@@ -1,9 +1,11 @@
 # GET — Contexto para Claude Code
 
-> **Renombre de marca (2026-10-30):** el producto antes llamado **MEDFUT** ahora se llama
-> **GET**. El cambio es solo de nombre visible (títulos, encabezados, logo del menú y
-> documentación). La URL `/medfut/`, la carpeta `C98_MEDFUT`, la BD `C98_MEDFUT` y los nombres
-> de archivo siguen igual a propósito, para no romper Apache ni favoritos.
+> **Renombre MEDFUT → GET (2026-10-30):** el producto antes llamado **MEDFUT** ahora se llama
+> **GET** en todo: marca visible, URL (`/medfut/` → `/get/`), BD (`medfut` → `C98_MEDFUT` →
+> `C98_GET`), junction de Apache y nombres de archivo. **Única excepción pendiente:** la
+> carpeta raíz del repo sigue llamándose `C98_MEDFUT` (Windows no la dejó renombrar porque
+> sesiones de Claude Code la tenían abierta); renombrarla a `C98_GET` es un paso manual que
+> está descrito en `../MEMORIA.md` (decisión 9).
 
 ## Qué es este proyecto
 
@@ -12,17 +14,17 @@ operaciones de marketing político en Colombia. Corre sobre XAMPP (Apache + Mari
 
 **Stack:**
 - PHP 8.2 + PDO (MariaDB 10.x en XAMPP, puerto 3307)
-- MariaDB: base `C98_MEDFUT` (antes `medfut`, renombrada 2026-07-30) + base `c98_geo` (misma instancia, cross-BD)
+- MariaDB: base `C98_GET` (antes `medfut`, luego `C98_MEDFUT`; renombrada 2026-10-30) + base `c98_geo` (misma instancia, cross-BD)
 - HTML/JS vanilla (sin frameworks) para los dashboards
 - Sin Composer en producción — todo vanilla PHP
 
-**URL local:** `http://localhost/medfut/`
+**URL local:** `http://localhost/get/`
 
-> **Ubicación real de los archivos (desde 2026-07-30):**
-> `C:\Users\impag\Documents\C98_MEDFUT\app\`. `C:\xampp\htdocs\medfut` sigue existiendo como
-> **symlink** hacia esa carpeta — Apache y la URL de arriba no cambiaron. Editar en cualquiera
-> de las dos rutas edita el mismo archivo. Ver `../MEMORIA.md` para el contexto de la mudanza y
-> del proyecto hermano `../geo/` (C98_GEO).
+> **Ubicación real de los archivos:** `C:\Users\impag\Documents\C98_MEDFUT\app\` (la carpeta
+> raíz pasará a `C98_GET` cuando se pueda renombrar). `C:\xampp\htdocs\get` es una **junction**
+> hacia esa carpeta, que es lo que Apache sirve en `http://localhost/get/`. Editar en cualquiera
+> de las dos rutas edita el mismo archivo. Ver `../MEMORIA.md` para el contexto y del proyecto
+> hermano `../geo/` (C98_GEO).
 
 ---
 
@@ -30,7 +32,7 @@ operaciones de marketing político en Colombia. Corre sobre XAMPP (Apache + Mari
 
 `config.php` — define `getDB(): PDO`:
 ```
-host=127.0.0.1  port=3307  dbname=C98_MEDFUT  user=root  pass=''
+host=127.0.0.1  port=3307  dbname=C98_GET  user=root  pass=''
 ```
 
 Para queries cross-BD se usa el prefijo `c98_geo.tabla` directamente en SQL.
@@ -39,7 +41,7 @@ Para queries cross-BD se usa el prefijo `c98_geo.tabla` directamente en SQL.
 
 ## Bases de datos
 
-### `C98_MEDFUT` (BD, antes `medfut`) — tablas principales
+### `C98_GET` (BD, antes `medfut` y `C98_MEDFUT`) — tablas principales
 
 | Tabla | Descripción |
 |-------|-------------|
@@ -197,10 +199,10 @@ $result = xlsxReadRows($path, $sheet, 21); // → ['ok'=>true,'rows'=>[...]]
 ## Cómo correr
 
 1. XAMPP corriendo (Apache en 80, MySQL en 3307)
-2. BD `C98_MEDFUT` y `c98_geo` existentes en MariaDB
-3. Abrir `http://localhost/medfut/leads_import.html` para importar
-4. Abrir `http://localhost/medfut/leads_analytics.html` para analytics
-5. Para Claude Code: `cd C:\xampp\htdocs\medfut` y luego `claude`
+2. BD `C98_GET` y `c98_geo` existentes en MariaDB
+3. Abrir `http://localhost/get/leads_import.html` para importar
+4. Abrir `http://localhost/get/leads_analytics.html` para analytics
+5. Para Claude Code: `cd C:\xampp\htdocs\get` y luego `claude`
 
 ---
 

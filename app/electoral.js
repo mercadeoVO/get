@@ -1,4 +1,4 @@
-// MEDFUT · Pantalla Electoral: resumen de UNA encuesta electoral (leads_importer.php?action=electoral_resumen).
+// GET · Pantalla Electoral: resumen de UNA encuesta electoral (leads_importer.php?action=electoral_resumen).
 // Usa globales de dashboard_local.html: $e, escH, ENC (encuesta elegida) y window.ELECTORAL_GEO (ubicación).
 (function(){
   const ELEC={tab:null,corte:'',datos:null,validos:false,seq:0};

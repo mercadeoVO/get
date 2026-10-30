@@ -1,6 +1,6 @@
 <?php
 /**
- * MEDFUT · Validación de integridad referencial completa
+ * GET · Validación de integridad referencial completa
  *
  *  Cadena esperada:
  *    import_log (PK id)
@@ -9,7 +9,7 @@
  *    import_log_leads (PK id VARCHAR 64)
  *      → import_log_leads_respuestas.lead_id  CASCADE DELETE ✓
  *
- * Ejecutar en: http://localhost/medfut/_validate_refs.php
+ * Ejecutar en: http://localhost/get/_validate_refs.php
  */
 require_once __DIR__ . '/config.php';
 header('Content-Type: application/json; charset=utf-8');

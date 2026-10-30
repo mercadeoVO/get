@@ -10,7 +10,7 @@
 Base de datos MySQL/MariaDB (`c98_geo`, `127.0.0.1:3307`) con la jerarquía geográfica completa
 de Colombia — región → departamento → subregión → municipio → zona → comuna → barrio — con
 geometría real (polígonos, no solo centroides) y un dashboard (`c98geo_dashboard.html` en
-`medfut`) con tabla jerárquica y mapa de coropletas interactivo, sincronizados entre sí.
+`app/`) con tabla jerárquica y mapa de coropletas interactivo, sincronizados entre sí.
 
 ## Estado actual (resumen ejecutivo)
 
@@ -39,9 +39,9 @@ en el diccionario de datos. Este README no lo repite.
 - **[`../MEMORIA.md`](../MEMORIA.md)** — estado y contexto del proyecto consolidado
   (`C98_MEDFUT` = `geo/` + `app/`) para retomar el trabajo en una sesión futura: qué quedó
   pendiente, qué decisiones están tomadas y no hay que volver a discutir.
-- **`medfut/c98geo_dashboard.html`** + **`c98geo_api.php`** + **`c98geo_map_api.php`** —
+- **`app/c98geo_dashboard.html`** + **`c98geo_api.php`** + **`c98geo_map_api.php`** —
   dashboard de Geografía. Lee exclusivamente de `c98_geo` (ver lecciones aprendidas — antes leía
-  de `medfut.dim_geo` por error de integración).
+  de `C98_GET.dim_geo` por error de integración).
 - **`data_dane/`, `data_barrios/`** — descargas crudas de fuentes externas (DANE, Datos
   Abiertos Bogotá/Cartagena/Barranquilla, Alcaldía de Cali) usadas para poblar la geometría.
   Se conservan para trazabilidad y por si hace falta reprocesar.
@@ -52,7 +52,7 @@ en el diccionario de datos. Este README no lo repite.
 
 - **Cali**: sin fuente de barrio/comuna accesible (WFS oficial roto, ArcGIS con token). Sigue
   con solo centroide/geometría de municipio.
-- **`medfut`**: tiene el mismo problema de encoding (mojibake) que se corrigió en `c98_geo` —
+- **`C98_GET`**: tiene el mismo problema de encoding (mojibake) que se corrigió en `c98_geo` —
   no se tocó, sigue pendiente para quien mantenga esa base.
 - **Antioquia**: reforma territorial en curso (9→17 regiones) — no vigente aún, no se aplicó.
 - **Resolución `low`/`mid`**: solo existe para región/departamento/subregión/municipio. Zona/

@@ -1,25 +1,27 @@
-# C98_MEDFUT — Memoria del proyecto
+# C98_GET — Memoria del proyecto
 
 > Punto de entrada para retomar el trabajo en una sesión futura sin releer todo el historial.
-> Última actualización: 2026-07-30 (día de la consolidación de C98_GEO + MEDFUT en esta carpeta).
+> Última actualización: 2026-10-30 (renombre MEDFUT → GET y cierre de los worktrees).
+>
+> **Nota de nombres:** el proyecto se llama **GET** (antes MEDFUT). La carpeta raíz todavía se
+> llama `C98_MEDFUT` en disco — ver decisión 9 para completar ese último renombre.
 
 ## Qué es esto
 
 Carpeta consolidada que une los dos proyectos que antes vivían separados:
 
-- **`app/`** — GET (antes MEDFUT), la aplicación activa (PHP + MariaDB) de ingesta y análisis de leads de
-  Meta Ads. Antes vivía en `C:\xampp\htdocs\medfut`. **Ese path sigue existiendo como symlink**
-  apuntando aquí (`app/`) — Apache lo sigue sirviendo en `http://localhost/medfut/` sin ningún
-  cambio de configuración. No borrar el symlink.
+- **`app/`** — GET (antes MEDFUT), la aplicación activa (PHP + MariaDB) de ingesta y análisis de
+  leads de Meta Ads. Antes vivía en `C:\xampp\htdocs\medfut`. Hoy `C:\xampp\htdocs\get` es una
+  **junction** hacia `app/`; Apache la sirve en `http://localhost/get/`. No borrar la junction.
 - **`geo/`** — C98_GEO, la capa geográfica maestra de Colombia (BD `c98_geo`, MariaDB) que
   alimenta a `app/` vía JOIN cross-BD. Antes vivía en `C:\Users\impag\Documents\C98_GEO`.
 
-Ambas bases de datos (`medfut` y `c98_geo`) siguen en la misma instancia MariaDB
-(`127.0.0.1:3307`) — la consolidación es solo de archivos, no de bases de datos.
+Dos bases de datos en la misma instancia MariaDB (`127.0.0.1:3307`): **`C98_GET`** (la app; antes
+`medfut`, luego `C98_MEDFUT`) y **`c98_geo`** (la capa geográfica).
 
 ## Documentación por subproyecto (no duplicar aquí)
 
-- `app/CLAUDE.md` — contexto técnico de GET (antes MEDFUT): esquema de `import_log_leads`, convenciones,
+- `app/CLAUDE.md` — contexto técnico de GET: esquema de `import_log_leads`, convenciones,
   patrones de código.
 - `geo/CLAUDE.md` — briefing original de C98_GEO + estado real (sección 0).
 - `geo/README.md` — punto de entrada rápido de C98_GEO.
@@ -37,35 +39,47 @@ Ambas bases de datos (`medfut` y `c98_geo`) siguen en la misma instancia MariaDB
    municipio/zona/comuna_localidad/barrio fueron eliminadas el 2026-07-28). `id_geo`
    (VARCHAR(15), código DANE) es la única fuente de verdad geográfica en esa tabla — se resuelve
    en memoria al importar (`reconcileLeadGeo()` + `autoParseLeadGeo()` opt-in + `resolveGeoId()`
-   en `leads_importer.php`) y se descarta el texto crudo. Backup del histórico previo a este
-   cambio en la tabla `medfut.import_log_leads_geo_bkp` (77.980 filas, snapshot 2026-07-28).
+   en `leads_importer.php`) y se descarta el texto crudo. La tabla de respaldo original
+   (`import_log_leads_geo_bkp`) ya no existe; hoy hay `C98_GET.import_log_leads_geo_fix64_bkp`.
 2. **La extracción automática de ubicación desde `adset_name`/`campaign_name`/`ad_name` es
    opt-in, apagada por defecto.** El usuario decidió explícitamente que el sistema no debe
    adivinar geografía en silencio — hay un toggle en el wizard de `leads_import.html`
    ("🧭 Extracción automática de ubicación") donde se elige columna origen y niveles.
-3. **`medfut.dim_geo` está ELIMINADA** (era de otra era del proyecto, con datos desincronizados
-   de `c98_geo`). Cualquier código que la referencie es un bug remanente, no una fuente válida.
+3. **`C98_GET.dim_geo` está deprecada** (era de otra era del proyecto, con datos desincronizados
+   de `c98_geo`). La tabla sigue existiendo físicamente (la usa la vista
+   `v_participacion_historica`) pero ningún código nuevo debe leerla; la geografía sale de `c98_geo`.
 4. **`c98_geo` no se migró a adjacency-list.** El modelo real es 7 tablas dimensionales
    encadenadas por FK real al padre inmediato (`dim_region → ... → dim_barrio`). `geo_geometry`
    sigue con FK polimórfica sin constraint de motor.
 5. **Cobertura de barrio/comuna limitada a 5 ciudades >1M hab.** (Bogotá, Medellín, Cali,
    Barranquilla, Cartagena). Expandir a más municipios es una decisión de alcance no tomada
    (ver `geo/docs/procesos.md`, proceso P9).
-6. **`http://localhost/medfut/`** redirige automáticamente a `leads_analytics.html`
+6. **`http://localhost/get/`** redirige automáticamente a `leads_analytics.html`
    (`app/index.php`) — es la página de entrada del sitio.
-7. **Marca renombrada MEDFUT → GET (2026-10-30), solo en lo visible.** Cambiaron los `<title>`,
-   encabezados/logos/footers de los HTML de `app/`, el texto de `api.php` y la documentación.
-   **Quedaron sin cambio a propósito:** la URL `/medfut/` (y la junction `C:\xampp\htdocs\medfut`),
-   la carpeta `C98_MEDFUT`, la BD `C98_MEDFUT`, nombres de archivo (ej. `cross_db_medfut.md`),
-   comentarios de código y la skill `c98geo-data-analyst`. Un renombre completo (URL, BD, carpetas)
-   sigue pendiente, pero ya no hay worktrees que lo bloqueen (ver decisión 8).
+7. **Marca renombrada MEDFUT → GET (2026-10-30).** `<title>`, encabezados, logo del menú
+   (`visor.js`), footers, texto de `api.php` y documentación dicen GET.
 8. **Un solo árbol (2026-10-30).** Se cerraron los 3 worktrees (`anuncios-url-datos`,
    `csv-upload-error`, `unificar-diseno-proyecto`): `master` avanzó por fast-forward a la rama
    `unificar-diseno-proyecto` (que ya contenía a `csv-upload-error`) y las 3 ramas `claude/*`
-   se eliminaron por estar fusionadas. `C:\xampp\htdocs\medfut` apunta ahora (junction) a
-   `C98_MEDFUT\app` de `master`, ya no a un worktree. Lo que estaba sin commitear quedó respaldado
-   en ramas `respaldo/*-20261030` (estado de `master`, y cambios sueltos de los worktrees `csv` y
+   se eliminaron por estar fusionadas. Lo que estaba sin commitear quedó respaldado en ramas
+   `respaldo/*-20261030` (estado de `master`, y cambios sueltos de los worktrees `csv` y
    `anuncios`); no se integró porque eran borradores anteriores a lo que ya tiene `master`.
+9. **Renombre completo a GET (2026-10-30), salvo la carpeta raíz.** Hecho: URL `/medfut/` →
+   `/get/` (junction `C:\xampp\htdocs\get`; la vieja `medfut` se eliminó y da 404), BD
+   `C98_MEDFUT` → `C98_GET` (14 tablas + 2 vistas con `RENAME TABLE`, `config.php` actualizado),
+   archivo `cross_db_medfut.md` → `cross_db_get.md`, y los textos/rutas que decían medfut.
+   **Pendiente (manual):** la carpeta `C:\Users\impag\Documents\C98_MEDFUT` no se pudo renombrar
+   porque hay sesiones de Claude Code con ella abierta (Windows bloquea el renombre). Con **todas**
+   las sesiones cerradas, ejecutar en PowerShell:
+   ```powershell
+   Rename-Item C:\Users\impag\Documents\C98_MEDFUT C98_GET
+   cmd /c rmdir C:\xampp\htdocs\get
+   cmd /c mklink /J C:\xampp\htdocs\get C:\Users\impag\Documents\C98_GET\app
+   ```
+   y después sustituir `Documents\C98_MEDFUT` por `Documents\C98_GET` en los `.md` que citan la
+   ruta (`app/CLAUDE.md`, `geo/CLAUDE.md`, `geo/README.md`, `geo/.claude/skills/.../SKILL.md`,
+   este archivo). No tocar el path externo `C:\Users\impag\Documents\Claude\MEDFUT\SOFTWARE`
+   (backup viejo, es otra carpeta).
 
 ## Pendiente real (no repetir reconocimiento — ver `geo/docs/procesos.md` para el detalle)
 
@@ -74,25 +88,22 @@ Ambas bases de datos (`medfut` y `c98_geo`) siguen en la misma instancia MariaDB
   seguimiento de la reforma territorial de Antioquia (9→17 subregiones, aún no vigente), estado
   del piloto Power BI (`geo/MED/piloto.pbix`, no auditado), todo lo de demografía/audiencias
   digitales (bloqueado hasta cerrar Fase 6 de integridad).
-- **Lado `app/`:** decidir qué hacer con `import_log_leads_geo_bkp` (¿por cuánto tiempo
-  conservarlo?), y evaluar si vale la pena repoblar `id_geo` retroactivamente para leads
-  importados antes de que existiera `autoParseLeadGeo()` (no hay forma de recuperar texto geo
-  crudo ya descartado, pero sí se podría re-parsear desde `adset_name`/`campaign_name` si
-  todavía están guardados en esas filas).
+- **Lado `app/`:** decidir qué hacer con `import_log_leads_geo_fix64_bkp` (¿por cuánto tiempo
+  conservarlo?) y las ramas `respaldo/*-20261030` y stashes que quedaron del cierre de worktrees.
 - **Compartido:** el backup en `C:\Users\impag\Documents\Claude\MEDFUT\SOFTWARE` quedó
-  desactualizado respecto al estado post-consolidación — decidir si se sincroniza o se
-  descontinúa ahora que `C98_MEDFUT` es la ubicación canónica.
+  desactualizado respecto al estado actual — decidir si se sincroniza o se descontinúa ahora
+  que esta carpeta es la ubicación canónica.
 
-## Estructura tras la consolidación (2026-07-30)
+## Estructura (2026-10-30)
 
 ```
-C:\Users\impag\Documents\C98_MEDFUT\
+C:\Users\impag\Documents\C98_MEDFUT\      ← pasará a C98_GET (decisión 9)
 ├── MEMORIA.md                  ← este archivo
-├── LECCIONES_APRENDIDAS.md     ← lecciones del lado app/MEDFUT
-├── app\                        ← ex C:\xampp\htdocs\medfut (symlink activo en esa ruta original)
+├── LECCIONES_APRENDIDAS.md     ← lecciones del lado app/GET
+├── app\                        ← ex C:\xampp\htdocs\medfut (junction activa: C:\xampp\htdocs\get)
 └── geo\                        ← ex C:\Users\impag\Documents\C98_GEO
 ```
 
 `C:\Users\impag\Documents\C98_GEO` (la carpeta original) quedó como cascarón vacío — no se pudo
-eliminar en la sesión que hizo la mudanza porque era el directorio de trabajo activo del propio
-agente en ese momento. Se puede borrar manualmente una vez cerrada esa sesión.
+eliminar porque era el directorio de trabajo activo del propio agente. Se puede borrar
+manualmente una vez cerradas las sesiones.

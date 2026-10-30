@@ -1,4 +1,4 @@
-# ── MEDFUT (app/) ──────────────────────────────────────────────
+# ── GET (app/) ──────────────────────────────────────────────
 # Excel subidos durante importación — transitorio, no versionar
 app/tmp/
 # Dependencias PHP — reinstalar con `composer install`

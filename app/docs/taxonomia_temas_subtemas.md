@@ -4,7 +4,7 @@
 de diseño según feedback de negocio. No implica cambios de esquema ni de código.
 
 Fecha de análisis: 2026-08-26. Fuente: catálogo completo de `import_log_leads_preguntas`
-(393 filas) consultado en modo solo-lectura contra `C98_MEDFUT` (127.0.0.1:3307).
+(393 filas) consultado en modo solo-lectura contra `C98_GET` (127.0.0.1:3307).
 
 ---
 
@@ -393,7 +393,7 @@ Adicionalmente, en esta migración:
 
 ### 7.7 Estado de implementación
 
-Ejecutado contra `C98_MEDFUT` (127.0.0.1:3307) el 2026-08-26:
+Ejecutado contra `C98_GET` (127.0.0.1:3307) el 2026-08-26:
 
 - `dim_tema`, `pregunta_tema`, `respuesta_tema` creadas según el DDL de 7.2.
 - `dim_tema` poblada con 37 filas (uno por cada combinación real de tema/subtema
