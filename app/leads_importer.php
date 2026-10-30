@@ -161,14 +161,15 @@ function registrarPregunta(PDO $db, string $pregRaw, array $temaKeywords): array
 
 /**
  * Elige el lector según extensión — .xlsx/.xlsm usan el nativo (rápido, sin
- * dependencias); .xls/.csv/.ods delegan a PhpSpreadsheet. Ver ExcelReaderPhp.php.
+ * dependencias); .csv usa el lector CSV nativo; .xls/.ods delegan a
+ * PhpSpreadsheet. Ver ExcelReaderPhp.php.
  */
 function makeSpreadsheetReader(string $filePath)
 {
     $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-    return in_array($ext, ['xlsx', 'xlsm'], true)
-        ? new PhpXlsxReader($filePath)
-        : new PhpSpreadsheetReader($filePath);
+    if (in_array($ext, ['xlsx', 'xlsm'], true)) return new PhpXlsxReader($filePath);
+    if ($ext === 'csv') return new PhpCsvReader($filePath);
+    return new PhpSpreadsheetReader($filePath);
 }
 
 /**
