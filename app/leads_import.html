@@ -1779,11 +1779,11 @@ function temasCatalogoAgrupado(){
   return byTema;
 }
 
-function renderTemaEditor(preguntaId, preseleccion){
+function renderTemaEditor(preguntaId, preseleccion, cancelable){
   const grupos=temasCatalogoAgrupado();
   let html='<div class="editor-temas" data-pregunta-id="'+preguntaId+'" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">';
   Object.keys(grupos).forEach(grupo=>{
-    html+='<div style="margin-bottom:8px;"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">'+h(grupo)+'</div><div style="display:flex;flex-wrap:wrap;gap:5px;">';
+    html+='<div style="margin-bottom:8px;"><div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">'+h(grupo)+'</div><div style="display:flex;flex-wrap:wrap;gap:5px;">';
     grupos[grupo].forEach(t=>{
       const checked=preseleccion.includes(t.id)?'checked':'';
       html+='<label style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:3px 9px 3px 7px;font-size:11.5px;cursor:pointer;">'+
@@ -1792,10 +1792,17 @@ function renderTemaEditor(preguntaId, preseleccion){
     });
     html+='</div></div>';
   });
-  html+='<button class="btn btn-success btn-sm" style="margin-top:6px;" onclick="guardarTemaItem('+preguntaId+')">Guardar</button></div>';
+  html+='<button class="btn btn-success btn-sm" style="margin-top:6px;" onclick="guardarTemaItem('+preguntaId+')">Guardar</button>'+
+    (cancelable?' <button class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="editarTema('+preguntaId+',false)">Cancelar</button>':'')+'</div>';
   return html;
 }
 
+// Preguntas ya clasificadas que se están editando (se abre su editor bajo la fila)
+state.temasEdit=state.temasEdit||new Set();
+function editarTema(preguntaId,on){
+  if(on) state.temasEdit.add(String(preguntaId)); else state.temasEdit.delete(String(preguntaId));
+  renderTemasStep();
+}
 async function guardarTemaItem(preguntaId){
   const editor=document.querySelector('.editor-temas[data-pregunta-id="'+preguntaId+'"]');
   const ids=Array.from(editor.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value);
@@ -1810,6 +1817,7 @@ async function guardarTemaItem(preguntaId){
     item.temas=(state.temasCatalogo||[]).filter(t=>ids.includes(String(t.id)))
       .map(t=>({tema_id:t.id, codigo:t.codigo, tema:t.tema, subtema:t.subtema, pendiente_revision:0}));
   }
+  state.temasEdit.delete(String(preguntaId));
   renderTemasStep();
 }
 
@@ -1872,9 +1880,14 @@ function renderTemasStep(){
     </div>`;
   });
   confirmadas.forEach(p=>{
-    html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span style="font-size:13px;flex:1;min-width:200px;">${h(p.pregunta)}</span>
-      ${p.temas.map(t=>`<span class="badge badge-green">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')}
+    const editando=state.temasEdit.has(String(p.pregunta_id));
+    html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="font-size:13px;flex:1;min-width:200px;">${h(p.pregunta)}</span>
+        ${p.temas.map(t=>`<span class="badge badge-green">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')}
+        ${editando?'':`<button class="btn btn-outline btn-sm" onclick="editarTema(${p.pregunta_id},true)">Editar</button>`}
+      </div>
+      ${editando?renderTemaEditor(p.pregunta_id,p.temas.map(t=>t.tema_id),true):''}
     </div>`;
   });
   document.getElementById('temas-body').innerHTML = html || '<div class="alert alert-info">Nada que revisar.</div>';
