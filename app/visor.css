@@ -347,3 +347,4 @@ main:has(>.panel){width:100%!important;max-width:none!important;margin:0!importa
   #geo-slot{grid-column:3;grid-row:1}
   .seg-top>.rcard{grid-column:3;grid-row:2}
 }
+.status{margin-bottom:12px}

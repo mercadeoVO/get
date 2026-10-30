@@ -22,8 +22,10 @@
         placeholder="Describe el segmento: «mujeres de 25 a 44 en Ituango que se preocupan por la seguridad»">
       <button id="nl-btn" type="button">✨ Buscar</button></div>
     <div class="nl-out" id="nl-out"></div>`;
-  const anchor=document.querySelector('.status')||document.querySelector('main');
-  anchor.parentNode.insertBefore(bar,anchor);
+  // El total del segmento (.status) va arriba; el buscador queda justo debajo.
+  const status=document.querySelector('.status');
+  if(status) status.parentNode.insertBefore(bar,status.nextSibling);
+  else { const m=document.querySelector('main'); m.parentNode.insertBefore(bar,m); }
 
   const $q=bar.querySelector('#nl-q'), $b=bar.querySelector('#nl-btn'), $o=bar.querySelector('#nl-out');
   const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
