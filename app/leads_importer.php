@@ -2768,6 +2768,42 @@ try {
 
     // ── RESPUESTAS_MUESTRA ────────────────────────────────────
     // Distribución real de respuestas de una pregunta — contexto para clasificarla.
+    // ── SEGMENTO_PREGUNTAS ────────────────────────────────────
+    // Preguntas de encuesta respondidas por los leads del SEGMENTO ACTUAL (mismos filtros que 'segmentar'),
+    // con cuántos leads del segmento respondieron cada una. Alimenta el modal "Condición de encuesta".
+    if ($action === 'segmento_preguntas') {
+        $db = getDB();
+        $filtros = json_decode($_POST['filtros'] ?? '{}', true) ?: [];
+        $params = [];
+        $where = buildSegmentWhere($filtros, $params);
+        $st = $db->prepare("SELECT r.pregunta_id, COUNT(DISTINCT r.lead_id) AS n
+                            FROM import_log_leads l
+                            JOIN import_log_leads_respuestas r ON r.lead_id = l.id_lead
+                            $where GROUP BY r.pregunta_id");
+        $st->execute($params);
+        $out = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) { $out[(string)$r['pregunta_id']] = (int)$r['n']; }
+        jsonOut(['ok' => true, 'conteos' => $out]);
+    }
+
+    // ── SEGMENTO_RESPUESTAS ───────────────────────────────────
+    // Distribución de respuestas de UNA pregunta dentro del segmento actual.
+    if ($action === 'segmento_respuestas') {
+        $db = getDB();
+        $filtros = json_decode($_POST['filtros'] ?? '{}', true) ?: [];
+        $preguntaId = (int)($_POST['pregunta_id'] ?? 0);
+        if (!$preguntaId) errOut('Falta pregunta_id.');
+        $params = [];
+        $where = buildSegmentWhere($filtros, $params);
+        $st = $db->prepare("SELECT r.respuesta, COUNT(*) AS n
+                            FROM import_log_leads l
+                            JOIN import_log_leads_respuestas r ON r.lead_id = l.id_lead
+                            $where AND r.pregunta_id = ?
+                            GROUP BY r.respuesta ORDER BY n DESC LIMIT 50");
+        $st->execute([...$params, $preguntaId]);
+        jsonOut(['ok' => true, 'pregunta_id' => $preguntaId, 'respuestas' => $st->fetchAll(PDO::FETCH_ASSOC)]);
+    }
+
     if ($action === 'respuestas_muestra') {
         $db = getDB();
         $preguntaId = (int)($_GET['pregunta_id'] ?? 0);

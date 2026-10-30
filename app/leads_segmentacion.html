@@ -280,6 +280,7 @@ footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
   <div class="modal">
     <div class="modal-h"><span>Condición de encuesta</span><span class="x" onclick="closeEavModal()">✕</span></div>
     <div class="modal-b">
+      <div class="mini" id="q-seg-note" style="margin:0 0 8px"></div>
       <input type="text" id="q-search" placeholder="Buscar pregunta (texto, tema, marca)…" oninput="renderQList()">
       <label class="mini" style="display:flex;gap:6px;margin-top:8px;align-items:center">
         <input type="checkbox" id="q-show-elec" style="width:auto" onchange="renderQList()"> incluir preguntas electorales
@@ -537,26 +538,50 @@ function toggleTema(el){
 
 // ── Modal EAV ─────────────────────────────────────────────────
 let eavPick=null;
-function openEavModal(){ eavPick=null; $('q-search').value=''; $('q-values-block').style.display='none';
-  $('q-add-btn').disabled=true; renderQList(); $('eav-modal').classList.add('show'); }
+// ¿Hay filtros activos? (sin filtros el segmento es todo y valen los conteos globales del catálogo)
+function segmentoConFiltros(){ return Object.keys(buildFiltros()).some(k=>k!=='nivel_mapa'); }
+let SEG_Q=null;   // {pregunta_id: leads del segmento que la respondieron}, o null = sin filtros (global)
+async function openEavModal(){
+  eavPick=null; $('q-search').value=''; $('q-values-block').style.display='none'; $('q-add-btn').disabled=true;
+  SEG_Q=null; $('eav-modal').classList.add('show');
+  if(!segmentoConFiltros()){ $('q-seg-note').textContent='Sin filtros: se muestran todas las preguntas.'; renderQList(); return; }
+  $('q-seg-note').textContent='Buscando las preguntas que responde el segmento actual…';
+  $('q-list').innerHTML='<div class="q-item">Calculando…</div>';
+  try{
+    const body=new URLSearchParams(); body.set('filtros',JSON.stringify(buildFiltros()));
+    const d=await fetch(`${API}?action=segmento_preguntas`,{method:'POST',body}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error');
+    SEG_Q=d.conteos;
+    const n=DIMS.preguntas.filter(p=>SEG_Q[String(p.id)]>0).length;
+    $('q-seg-note').textContent=`Solo preguntas respondidas por los leads del segmento actual (${n}). Los conteos son del segmento.`;
+  }catch(e){ SEG_Q=null; $('q-seg-note').textContent='No se pudo filtrar por el segmento: '+e.message+'. Se muestran todas las preguntas.'; }
+  renderQList();
+}
 function closeEavModal(){ $('eav-modal').classList.remove('show'); }
 function renderQList(){
   const q=($('q-search').value||'').toLowerCase(), showElec=$('q-show-elec').checked;
   const rows=DIMS.preguntas.filter(p=>{
+    if(SEG_Q&&!(SEG_Q[String(p.id)]>0)) return false;
     if(p.es_electoral&&!showElec) return false;
     if(!q) return true;
     return (p.pregunta+' '+(p.tema||'')+' '+(p.subtema||'')+' '+(p.dominio||'')).toLowerCase().includes(q);
-  }).slice(0,200);
+  });
+  if(SEG_Q) rows.sort((a,b)=>(SEG_Q[String(b.id)]||0)-(SEG_Q[String(a.id)]||0));   // las más respondidas del segmento primero
+  rows.splice(200);
   $('q-list').innerHTML = rows.map(p=>`
     <div class="q-item${eavPick&&eavPick.id===p.id?' on':''}" onclick="pickQ(${p.id})">${h(p.pregunta)}
-      <div class="qt">${p.tema?h(p.tema)+' › ':''}${h(p.subtema||'sin tema')} · ${fmtN(p.n)} resp.${p.es_electoral?' · ':''}</div>
+      <div class="qt">${p.tema?h(p.tema)+' › ':''}${h(p.subtema||'sin tema')} · ${fmtN(SEG_Q?SEG_Q[String(p.id)]:p.n)} resp.${p.es_electoral?' · electoral':''}</div>
     </div>`).join('')||'<div class="q-item">Sin coincidencias.</div>';
 }
 async function pickQ(id){
   eavPick=DIMS.preguntas.find(p=>p.id===id); renderQList();
   $('q-values-block').style.display='block'; $('q-op').value='in';
   $('q-values').innerHTML='<div class="mini">Cargando…</div>'; onOpChange();
-  const d=await fetch(`${API}?action=respuestas_muestra&pregunta_id=${id}`).then(r=>r.json());
+  let d;
+  if(SEG_Q){
+    const body=new URLSearchParams(); body.set('filtros',JSON.stringify(buildFiltros())); body.set('pregunta_id',id);
+    d=await fetch(`${API}?action=segmento_respuestas`,{method:'POST',body}).then(r=>r.json());
+  }else d=await fetch(`${API}?action=respuestas_muestra&pregunta_id=${id}`).then(r=>r.json());
   eavPick._vals=(d.respuestas||[]).map(r=>({v:r.respuesta||'(vacío)',n:r.n}));
   $('q-values').innerHTML=(eavPick._vals||[]).map(r=>`<label><input type="checkbox" value="${h(r.v)}" style="width:auto"><span>${h(r.v)}</span><span class="vc">${fmtN(r.n)}</span></label>`).join('')||'<div class="mini">Sin respuestas.</div>';
   $('q-add-btn').disabled=false;
