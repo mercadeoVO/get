@@ -281,7 +281,7 @@ footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
     <div class="modal-h"><span>Condición de encuesta</span><span class="x" onclick="closeEavModal()">✕</span></div>
     <div class="modal-b">
       <div class="mini" id="q-seg-note" style="margin:0 0 8px"></div>
-      <input type="text" id="q-search" placeholder="Buscar pregunta (texto, tema, marca)…" oninput="renderQList()">
+      <input type="text" id="q-search" placeholder="Buscar pregunta o respuesta (texto, tema, marca, candidato)…" oninput="onQSearch()">
       <label class="mini" style="display:flex;gap:6px;margin-top:8px;align-items:center">
         <input type="checkbox" id="q-show-elec" style="width:auto" onchange="renderQList()"> incluir preguntas electorales
       </label>
@@ -558,10 +558,27 @@ async function openEavModal(){
   renderQList();
 }
 function closeEavModal(){ $('eav-modal').classList.remove('show'); }
+// Búsqueda también por RESPUESTAS: "manuel villa" encuentra "¿por cuál de ellos votaría…?", cuya respuesta es ese nombre.
+let ANS_HITS={}, ANS_Q='', ansTimer=null;
+function onQSearch(){
+  renderQList();
+  clearTimeout(ansTimer);
+  const q=($('q-search').value||'').trim();
+  if(q.length<3){ ANS_HITS={}; ANS_Q=''; return; }
+  ansTimer=setTimeout(async()=>{
+    try{
+      const d=await fetch(`${API}?action=buscar_respuestas&q=${encodeURIComponent(q)}`).then(r=>r.json());
+      if(($('q-search').value||'').trim()!==q) return;   // la búsqueda cambió mientras tanto
+      ANS_HITS=d.hits||{}; ANS_Q=q; renderQList();
+    }catch(e){}
+  },350);
+}
 function renderQList(){
   const q=($('q-search').value||'').toLowerCase(), showElec=$('q-show-elec').checked;
+  const hits=(ANS_Q&&ANS_Q.toLowerCase()===q.trim())?ANS_HITS:{};
   const rows=DIMS.preguntas.filter(p=>{
     if(SEG_Q&&!(SEG_Q[String(p.id)]>0)) return false;
+    if(hits[String(p.id)]) return true;   // alguna de sus respuestas coincide (aunque sea electoral)
     if(p.es_electoral&&!showElec) return false;
     if(!q) return true;
     return (p.pregunta+' '+(p.tema||'')+' '+(p.subtema||'')+' '+(p.dominio||'')).toLowerCase().includes(q);
@@ -571,6 +588,7 @@ function renderQList(){
   $('q-list').innerHTML = rows.map(p=>`
     <div class="q-item${eavPick&&eavPick.id===p.id?' on':''}" onclick="pickQ(${p.id})">${h(p.pregunta)}
       <div class="qt">${p.tema?h(p.tema)+' › ':''}${h(p.subtema||'sin tema')} · ${fmtN(SEG_Q?SEG_Q[String(p.id)]:p.n)} resp.${p.es_electoral?' · electoral':''}</div>
+      ${hits[String(p.id)]?`<div class="qt" style="color:var(--accent);font-weight:600">Respuesta: ${hits[String(p.id)].slice(0,3).map(a=>h(a.respuesta)+(SEG_Q?'':' ('+fmtN(a.n)+')')).join(' · ')}</div>`:''}
     </div>`).join('')||'<div class="q-item">Sin coincidencias.</div>';
 }
 async function pickQ(id){
@@ -584,6 +602,8 @@ async function pickQ(id){
   }else d=await fetch(`${API}?action=respuestas_muestra&pregunta_id=${id}`).then(r=>r.json());
   eavPick._vals=(d.respuestas||[]).map(r=>({v:r.respuesta||'(vacío)',n:r.n}));
   $('q-values').innerHTML=(eavPick._vals||[]).map(r=>`<label><input type="checkbox" value="${h(r.v)}" style="width:auto"><span>${h(r.v)}</span><span class="vc">${fmtN(r.n)}</span></label>`).join('')||'<div class="mini">Sin respuestas.</div>';
+  const marcar=((ANS_Q&&ANS_Q.toLowerCase()===($('q-search').value||'').trim().toLowerCase()?ANS_HITS:{})[String(id)]||[]).map(a=>a.respuesta);
+  if(marcar.length) $('q-values').querySelectorAll('input').forEach(c=>{ if(marcar.includes(c.value)) c.checked=true; });
   $('q-add-btn').disabled=false;
 }
 function onOpChange(){ $('q-values').style.display=$('q-op').value==='answered'?'none':'flex'; $('q-add-btn').disabled=!eavPick; }
@@ -878,6 +898,6 @@ async function onMapClick(props){
 
 boot();
 </script>
-<script src="nl_search.js?v=2"></script>
+<script src="nl_search.js?v=3"></script>
 </body>
 </html>

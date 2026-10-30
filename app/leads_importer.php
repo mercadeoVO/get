@@ -2768,6 +2768,27 @@ try {
 
     // ── RESPUESTAS_MUESTRA ────────────────────────────────────
     // Distribución real de respuestas de una pregunta — contexto para clasificarla.
+    // ── BUSCAR_RESPUESTAS ─────────────────────────────────────
+    // Preguntas cuyo VALOR DE RESPUESTA contiene el texto buscado (p. ej. "manuel villa" → la pregunta de
+    // "¿por cuál de ellos votaría…?", cuya pregunta no nombra al candidato pero sus respuestas sí).
+    if ($action === 'buscar_respuestas') {
+        $db = getDB();
+        $q = trim((string)($_GET['q'] ?? ''));
+        if (mb_strlen($q) < 3) jsonOut(['ok' => true, 'hits' => []]);
+        $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_substr($q, 0, 80)) . '%';
+        $st = $db->prepare("SELECT r.pregunta_id, r.respuesta, COUNT(*) AS n
+                            FROM import_log_leads_respuestas r
+                            WHERE r.respuesta LIKE ?
+                            GROUP BY r.pregunta_id, r.respuesta
+                            ORDER BY n DESC LIMIT 60");
+        $st->execute([$like]);
+        $hits = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $hits[(string)$r['pregunta_id']][] = ['respuesta' => $r['respuesta'], 'n' => (int)$r['n']];
+        }
+        jsonOut(['ok' => true, 'hits' => $hits]);
+    }
+
     // ── SEGMENTO_PREGUNTAS ────────────────────────────────────
     // Preguntas de encuesta respondidas por los leads del SEGMENTO ACTUAL (mismos filtros que 'segmentar'),
     // con cuántos leads del segmento respondieron cada una. Alimenta el modal "Condición de encuesta".
