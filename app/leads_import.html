@@ -133,6 +133,32 @@ input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent);}
 textarea{resize:vertical;min-height:60px;}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* Ubicación (obligatoria): estado + pestañas Manual / Automática */
+#loc-card.loc-req{border-color:rgba(201,154,0,.45);}
+.loc-status{display:flex;align-items:flex-start;gap:8px;font-size:12px;border-radius:6px;padding:9px 12px;margin-bottom:12px;line-height:1.5;}
+.loc-status .ic{flex-shrink:0;margin-top:1px;}
+.loc-status.req{background:rgba(201,154,0,.09);border:1px solid rgba(201,154,0,.4);color:var(--text);}
+.loc-status.req .ic{color:var(--yellow);}
+.loc-status.ok{background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
+.loc-status.ok .ic{color:var(--accent);}
+.loc-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:14px;}
+.loc-tab{background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--muted);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+.loc-tab:hover{color:var(--text);}
+.loc-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.loc-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.loc-dot{display:none;width:7px;height:7px;border-radius:50%;background:var(--accent);}
+.loc-note{color:var(--muted);font-size:12px;margin:0;display:flex;align-items:center;gap:6px;}
+.loc-intro{color:var(--muted);font-size:12px;margin:0 0 10px;line-height:1.5;}
+.mpio-chip{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:999px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.mpio-chip:hover{border-color:var(--accent);color:var(--accent);}
+.mpio-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.mpio-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
+.mpio-row:last-child{margin-bottom:0;}
+.mpio-row .mpio-lbl{color:var(--small);font-size:11px;min-width:120px;}
+.mpio-input{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:5px 10px;font-size:12px;width:300px;max-width:100%;}
+.mpio-input:focus{outline:none;border-color:var(--accent);}
+.mpio-foot{color:var(--small);font-size:11px;margin-top:6px;}
 code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5px;border-radius:3px;font-size:12px;}
 
 /* Sheet tabs in step 3 */
@@ -145,7 +171,7 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
 .elect-badge{display:inline-block;background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;vertical-align:middle;}
 .elect-icon{font-size:13px;vertical-align:middle;}
 </style>
-<link rel="stylesheet" href="visor.css?v=22">
+<link rel="stylesheet" href="visor.css?v=23">
 <script src="visor.js?v=10"></script>
 <script>const ic = V.icon;</script>
 </head>
@@ -273,26 +299,33 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
     </div>
   </div>
 
-  <div class="card">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-      <div class="card-title" style="margin:0;">Extracción automática de ubicación</div>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-left:auto;cursor:pointer;">
-        <input type="checkbox" id="autogeo-toggle" onchange="toggleAutoGeo(this.checked)">
-        Activar
-      </label>
+  <!-- Ubicación: obligatoria. Cada hoja necesita una fuente de municipio:
+       columna mapeada, regla de extracción, extracción automática con nivel Municipio, o municipio manual. -->
+  <div class="card" id="loc-card">
+    <div class="card-title" style="margin-bottom:10px;">Ubicación <span id="loc-badge" class="badge"></span></div>
+    <div id="loc-status"></div>
+    <div class="loc-tabs" role="tablist" aria-label="Cómo asignar la ubicación">
+      <button type="button" class="loc-tab" id="loc-tab-manual" role="tab" onclick="setLocTab('manual')">Manual<span class="loc-dot" id="loc-dot-manual"></span></button>
+      <button type="button" class="loc-tab" id="loc-tab-auto" role="tab" onclick="setLocTab('auto')">Automática desde un campo<span class="loc-dot" id="loc-dot-auto"></span></button>
     </div>
-    <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
-      Apagado por defecto. Si el formulario no trae columnas de ubicación, puedes activar esto
-      para que el sistema intente reconocer región/departamento/municipio/zona/comuna/barrio
-      dentro del texto de una columna (ej. nombre del adset). Elige tú de qué columna y qué
-      niveles — no se hace nada si no lo activas.
-    </p>
-    <div id="autogeo-body" style="display:none;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-        <span class="ext-lbl">Columna origen</span>
-        <select id="autogeo-source" onchange="state.autoGeo.source=this.value"></select>
+    <div id="loc-panel-manual"><div id="s3-mpio-box"></div></div>
+    <div id="loc-panel-auto" style="display:none;">
+      <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
+        Reconoce departamento/municipio/zona/comuna/barrio dentro del texto de una columna
+        (ej. el nombre del adset). Elige de qué columna y qué niveles. Para cumplir el requisito
+        de ubicación debe incluir el nivel <strong>Municipio</strong>.
+      </p>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:12px;cursor:pointer;">
+        <input type="checkbox" id="autogeo-toggle" onchange="toggleAutoGeo(this.checked)">
+        Activar extracción automática
+      </label>
+      <div id="autogeo-body" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <span class="ext-lbl">Columna origen</span>
+          <select id="autogeo-source" onchange="state.autoGeo.source=this.value"></select>
+        </div>
+        <div id="autogeo-levels" style="display:flex;flex-wrap:wrap;gap:14px;"></div>
       </div>
-      <div id="autogeo-levels" style="display:flex;flex-wrap:wrap;gap:14px;"></div>
     </div>
   </div>
 
@@ -315,7 +348,8 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
 
   <div class="row" style="margin-bottom:24px;">
     <button class="btn btn-outline" onclick="goStep(2)">← Volver</button>
-    <button class="btn btn-primary" id="btn-go-step4" onclick="goToStepTemas()" style="margin-left:auto;">Revisar y aprobar →</button>
+    <span id="s3-loc-req" style="margin-left:auto;font-size:12px;color:var(--yellow);"></span>
+    <button class="btn btn-primary" id="btn-go-step4" onclick="goToStepTemas()">Revisar y aprobar →</button>
   </div>
 </div>
 
@@ -722,6 +756,7 @@ function renderS3Tabs(){
       ${h(name)}
       <span class="badge ${active?'badge-blue':'badge-gray'}">${(sh?.rows||0).toLocaleString()}</span>
       ${!loaded&&!active?'<span style="font-size:10px;color:var(--yellow)">●</span>':''}
+      <span class="s3-loc-flag" title="Falta definir la ubicación de esta hoja" style="display:none;color:var(--yellow);">${ic('alert',13)}</span>
     </button>`;
   }).join('');
 }
@@ -850,7 +885,173 @@ function renderColumnMap(){
       </tr>`;
     }).join('');
   }
+  renderLocCard();
   updateS3Stats();
+}
+
+// ─── Ubicación (obligatoria): manual o automática desde un campo ─────────────
+// Cada hoja necesita una fuente de MUNICIPIO para poder avanzar: una columna mapeada, una regla
+// de extracción manual, la extracción automática con el nivel Municipio, o un municipio elegido
+// a mano. Sin municipio resolveGeoId() no puede ubicar zona/comuna/barrio (nombres repetidos como
+// "La Candelaria" existen en Bogotá y Medellín) y el municipio no sale al descargar los datos.
+// El municipio manual se aplica en el backend solo a filas que no traen municipio propio.
+const GEO_BELOW_MPIO  = ['zona','comuna_localidad','barrio'];
+const GEO_BELOW_LABEL = {zona:'Zona', comuna_localidad:'Comuna/Localidad', barrio:'Barrio'};
+const GEO_ANY_FIELDS  = ['geo_departamento','subregion','municipio','zona','comuna_localidad','barrio'];
+
+function sheetMappedFields(sm){
+  return Object.keys(sm.colActions||{})
+    .filter(i=>sm.colActions[i]==='field' && sm.colFields[i])
+    .map(i=>sm.colFields[i]);
+}
+function sheetLowerGeoFields(sm){
+  return [...new Set(sheetMappedFields(sm).filter(f=>GEO_BELOW_MPIO.includes(f)))];
+}
+// De dónde sale el municipio, si ya está resuelto sin intervención manual (o null)
+function municipioSourceLabel(sm){
+  if(sheetMappedFields(sm).includes('municipio')) return 'una columna de esta hoja';
+  if(state.extractions.some(ex=>ex.target==='municipio')) return 'una regla de extracción manual';
+  if(state.autoGeo.enabled && state.autoGeo.levels.includes('municipio')) return 'la extracción automática';
+  return null;
+}
+function sheetLocationReady(sm){ return municipioSourceLabel(sm)!==null || !!sm.geoDefault; }
+// Hojas ya cargadas que todavía no tienen ubicación definida
+function sheetsMissingLocation(){
+  return state.selectedSheets.filter(n=>{
+    const sm=state.sheetMappings[n];
+    return sm && sm.loaded && !sheetLocationReady(sm);
+  });
+}
+// Municipio manual efectivo: solo cuenta si no hay otra fuente (lo que se envía al backend)
+function sheetManualMunicipio(sm){
+  return (sm.geoDefault && municipioSourceLabel(sm)===null) ? sm.geoDefault : null;
+}
+
+const mpioLabel = m => `${m.nombre} — ${m.departamento}`;
+// Códigos DANE de las principales ciudades (se muestran primero en la lista de municipios)
+const MPIO_PRINCIPALES=['11001','05001','76001','08001','13001','68001','54001','66001','47001','73001','17001','50001','52001',
+  '23001','41001','63001','20001','19001','70001','15001','05088','05266','05360','25754','08758','76520'];
+
+async function ensureMunicipios(){
+  if(state.municipios) return state.municipios;
+  try{
+    const d=await fetch(API+'?action=municipios_lista').then(r=>r.json());
+    state.municipios = d.ok ? d.municipios : [];
+  }catch{ state.municipios = []; }
+  return state.municipios;
+}
+
+function pickMunicipio(id){
+  const sm=state.sheetMappings[state.activeMapSheet];
+  if(!sm) return;
+  const m=(state.municipios||[]).find(x=>x.id===id);
+  sm.geoDefault = m ? {id:m.id, nombre:m.nombre, departamento:m.departamento} : null;
+  renderLocCard();
+}
+function onMpioInput(inp){
+  const v=inp.value.trim();
+  const m=(state.municipios||[]).find(x=>mpioLabel(x)===v);
+  if(m) pickMunicipio(m.id);
+}
+
+function setLocTab(t){
+  state.locTab=t;
+  renderLocCard();
+}
+
+// Tarjeta "Ubicación": línea de estado, badge, pestañas y panel manual. Se vuelve a pintar cada vez
+// que cambia algo que afecta la fuente de municipio (mapeo, reglas, automática, municipio manual).
+function renderLocCard(){
+  const card=document.getElementById('loc-card');
+  if(!card) return;
+  const sm=state.sheetMappings[state.activeMapSheet];
+  if(!sm||!sm.loaded) return;
+
+  const src=municipioSourceLabel(sm);
+  const manual=sheetManualMunicipio(sm);
+  const autoOn=state.autoGeo.enabled && state.autoGeo.levels.length>0;
+  const lowerArr=sheetLowerGeoFields(sm).map(f=>GEO_BELOW_LABEL[f]);
+  const ready=sheetLocationReady(sm);
+
+  let msg;
+  if(src)                 msg=`El municipio viene de ${src}.`;
+  else if(manual)         msg=`Municipio manual: ${manual.nombre} (${manual.departamento}).`;
+  else if(autoOn)         msg='La extracción automática no incluye el nivel Municipio.';
+  else if(lowerArr.length) msg=`Esta hoja ubica por ${lowerArr.join(', ')} pero no trae municipio.`;
+  else if(sheetMappedFields(sm).some(f=>GEO_ANY_FIELDS.includes(f))) msg='Esta hoja no trae municipio.';
+  else                    msg='Esta hoja no trae ubicación.';
+
+  document.getElementById('loc-status').innerHTML=ready
+    ? `<div class="loc-status ok">${ic('check',16)}<span>${h(msg)}</span></div>`
+    : `<div class="loc-status req">${ic('alert',16)}<span><strong>Obligatorio:</strong> ${h(msg)} Elige cómo ubicar los leads para continuar.</span></div>`;
+  card.classList.toggle('loc-req',!ready);
+  const badge=document.getElementById('loc-badge');
+  badge.className='badge '+(ready?'badge-green':'badge-orange');
+  badge.textContent=ready?'Lista':'Obligatorio';
+
+  // Pestañas: la elegida se ve; el punto marca cuál de las dos está aportando la ubicación
+  const tab=state.locTab||'manual';
+  ['manual','auto'].forEach(t=>{
+    const b=document.getElementById('loc-tab-'+t);
+    b.classList.toggle('active',t===tab);
+    b.setAttribute('aria-selected',t===tab?'true':'false');
+    document.getElementById('loc-panel-'+t).style.display=t===tab?'block':'none';
+  });
+  document.getElementById('loc-dot-manual').style.display=manual?'inline-block':'none';
+  document.getElementById('loc-dot-auto').style.display=(autoOn&&state.autoGeo.levels.includes('municipio'))?'inline-block':'none';
+
+  renderMunicipioBox();
+  updateGoStep4Btn();
+  flagS3Tabs();
+}
+
+// Marca con un ícono las pestañas de hoja a las que aún les falta la ubicación
+function flagS3Tabs(){
+  const miss=new Set(sheetsMissingLocation());
+  document.querySelectorAll('.s3-tab').forEach(t=>{
+    const f=t.querySelector('.s3-loc-flag');
+    if(f) f.style.display=miss.has(t.dataset.sheet)?'inline-flex':'none';
+  });
+}
+
+// Panel manual: elegir el municipio de la hoja (atajos + buscador entre los 1.123 de c98_geo)
+function renderMunicipioBox(){
+  const box=document.getElementById('s3-mpio-box');
+  if(!box) return;
+  const sm=state.sheetMappings[state.activeMapSheet];
+  if(!sm||!sm.loaded){ box.innerHTML=''; return; }
+  if(!state.municipios){ ensureMunicipios().then(renderMunicipioBox); }
+
+  const src=municipioSourceLabel(sm);
+  if(src){
+    box.innerHTML=`<p class="loc-note">${ic('check',14)} No hace falta: el municipio ya viene de ${h(src)}.</p>`;
+    return;
+  }
+  const lower=sheetLowerGeoFields(sm).map(f=>GEO_BELOW_LABEL[f]).join(', ');
+  const sel=sm.geoDefault;
+  if(sel){
+    box.innerHTML=`<p class="loc-intro">Todas las filas de esta hoja sin municipio propio quedan en <strong>${h(sel.nombre)} (${h(sel.departamento)})</strong>.${lower?` ${h(lower)} se resuelve dentro de ese municipio.`:''} El municipio sale al descargar los datos.</p>
+      <div class="mpio-row"><button class="mpio-chip" onclick="pickMunicipio(null)">Cambiar municipio</button></div>`;
+    return;
+  }
+  const lista=state.municipios||[];
+  const atajos=lista.filter(m=>m.tiene_detalle).map(m=>
+    `<button class="mpio-chip" onclick="pickMunicipio('${h(m.id)}')">${h(m.nombre)}</button>`).join('');
+  // Lista desplegable: primero las principales ciudades, luego todos los municipios (A–Z).
+  const porId=new Map(lista.map(m=>[m.id,m]));
+  const principales=MPIO_PRINCIPALES.map(id=>porId.get(id)).filter(Boolean);
+  const optM=m=>`<option value="${h(m.id)}">${h(mpioLabel(m))}</option>`;
+  const opts=`<option value="">Elige un municipio…</option>`+
+    (principales.length?`<optgroup label="Principales ciudades">${principales.map(optM).join('')}</optgroup>`:'')+
+    `<optgroup label="Todos los municipios">${[...lista].sort((a,b)=>a.nombre.localeCompare(b.nombre,'es')).map(optM).join('')}</optgroup>`;
+  box.innerHTML=`<p class="loc-intro">${lower
+      ? `Esta hoja ubica por <strong>${h(lower)}</strong> pero no trae columna de municipio. Elige a cuál pertenecen para ubicarlas bien.`
+      : 'Elige el municipio al que pertenecen todas las filas de esta hoja.'}</p>
+    ${atajos?`<div class="mpio-row"><span class="mpio-lbl">Con comunas y barrios</span>${atajos}</div>`:''}
+    <div class="mpio-row"><span class="mpio-lbl">Otro municipio</span>
+      <select class="mpio-input" onchange="if(this.value) pickMunicipio(this.value)" aria-label="Municipio al que pertenecen las filas">${opts}</select>
+    </div>
+    <div class="mpio-foot">Se aplica solo a las filas que no traen municipio propio.</div>`;
 }
 
 function setColAction(idx,action){
@@ -860,11 +1061,13 @@ function setColAction(idx,action){
   const td=document.getElementById('colfld-'+idx);
   const field=sm.colFields[idx]||OPT_FIELDS[0][0];
   td.innerHTML=action==='field'?`<select class="sel" style="width:100%;" onchange="setColField(${idx},this.value)">${optOpts(field)}</select>`:'';
+  renderLocCard();
   updateS3Stats();
 }
 function setColField(idx,v){
   const sm=state.sheetMappings[state.activeMapSheet];
   if(sm) sm.colFields[idx]=v;
+  renderLocCard();
 }
 
 function updateS3Stats(){
@@ -908,11 +1111,13 @@ function toggleAutoGeo(checked){
   state.autoGeo.enabled = checked;
   document.getElementById('autogeo-body').style.display = checked ? 'block' : 'none';
   if(checked) renderAutoGeoUI();
+  renderLocCard();
 }
 function toggleAutoGeoLevel(level, checked){
   const idx = state.autoGeo.levels.indexOf(level);
   if(checked && idx===-1) state.autoGeo.levels.push(level);
   if(!checked && idx!==-1) state.autoGeo.levels.splice(idx,1);
+  renderLocCard();
 }
 function renderAutoGeoUI(){
   const srcSel = document.getElementById('autogeo-source');
@@ -930,9 +1135,13 @@ function renderAutoGeoUI(){
 function addExtraction(){
   state.extractions.push({from:'adset_name',delimiter:'_',position:0,target:OPT_FIELDS[0][0]});
   renderExtractions();
+  renderLocCard();
 }
-function removeExtraction(i){ state.extractions.splice(i,1); renderExtractions(); }
-function updExt(i,f,v){ state.extractions[i][f]=f==='position'?parseInt(v)||0:v; }
+function removeExtraction(i){ state.extractions.splice(i,1); renderExtractions(); renderLocCard(); }
+function updExt(i,f,v){
+  state.extractions[i][f]=f==='position'?parseInt(v)||0:v;
+  if(f==='target') renderLocCard();   // una regla con destino Municipio cuenta como fuente
+}
 
 function renderExtractions(){
   const el=document.getElementById('extractions-list');
@@ -978,14 +1187,17 @@ function updateGoStep4Btn(){
   const btn = document.getElementById('btn-go-step4');
   if(!btn) return;
   const hasPending = state.selectedSheets.some(name => !state.sheetMappings[name]?.loaded);
-  btn.disabled = hasPending;
-  if(hasPending){
+  const missingLoc = hasPending ? [] : sheetsMissingLocation();   // la ubicación es obligatoria en cada hoja
+  btn.disabled = hasPending || missingLoc.length>0;
+  const reqEl = document.getElementById('s3-loc-req');
+  if(reqEl) reqEl.textContent = missingLoc.length ? `Falta definir la ubicación en: ${missingLoc.join(', ')}` : '';
+  if(hasPending || missingLoc.length){
     btn.style.background  = '#f59e0b';
     btn.style.color       = '#1a1a1a';
     btn.style.borderColor = '#f59e0b';
     btn.style.opacity     = '1';
     btn.style.cursor      = 'not-allowed';
-    btn.innerHTML         = ic('alert')+' Hojas sin revisar';
+    btn.innerHTML         = ic('alert')+(hasPending ? ' Hojas sin revisar' : ' Falta la ubicación');
   } else {
     btn.style.background  = '';
     btn.style.color       = '';
@@ -1511,6 +1723,12 @@ function proceedFromElectoral(){
 
 // ─── Routing hacia el paso 4 (Temas): pasa por Electoral (3.5) si aplica ────
 function goToStepTemas(){
+  // La ubicación es obligatoria: si alguna hoja no la tiene, se vuelve a Columnas a definirla
+  if(sheetsMissingLocation().length){
+    goStep(3);
+    renderLocCard();
+    return;
+  }
   if(hasElectoralFields() && !state.electoralCtx){
     renderStep35();
     goStep(35);
@@ -1671,7 +1889,13 @@ function goToStep5(){
   const autoGeoRow = state.autoGeo.enabled && state.autoGeo.levels.length
     ? `<div style="font-size:12px;padding:2px 0;">Auto desde <span style="color:var(--orange)">${h(state.autoGeo.source)}</span> → <span style="color:var(--green)">${state.autoGeo.levels.map(h).join(', ')}</span></div>`
     : '';
-  document.getElementById('appr-eavs-exts').innerHTML=(eavRows+extRows+autoGeoRow)||'<span style="color:var(--muted);font-size:12px;">Ninguno</span>';
+  const mpioRows=state.selectedSheets.map(name=>{
+    const sm=state.sheetMappings[name];
+    const man=sm&&sm.loaded?sheetManualMunicipio(sm):null;
+    if(!man) return '';
+    return `<div style="font-size:12px;padding:2px 0;">Municipio de <code>${h(name)}</code> → <span style="color:var(--green)">${h(man.nombre)} (${h(man.departamento)})</span></div>`;
+  }).join('');
+  document.getElementById('appr-eavs-exts').innerHTML=(eavRows+extRows+autoGeoRow+mpioRows)||'<span style="color:var(--muted);font-size:12px;">Ninguno</span>';
 
   // Resumen de contexto electoral
   const electoralWrap = document.getElementById('appr-electoral-wrap');
@@ -1705,13 +1929,17 @@ function goToStep5(){
   document.getElementById('appr-spinner').style.display='none';
 
   // Deshabilitar "Confirmar" si hay hojas pendientes (sin mapeo cargado)
+  // y también si a alguna hoja le falta la ubicación (obligatoria)
   const hasPending = state.selectedSheets.some(name => !state.sheetMappings[name]?.loaded);
+  const missingLoc = sheetsMissingLocation();
+  const blocked = hasPending || missingLoc.length>0;
   const btnConfirm = document.getElementById('btn-confirm');
   btnConfirm.style.display='';
-  btnConfirm.disabled = hasPending;
-  btnConfirm.title = hasPending ? 'Hay hojas sin mapear — regresa y carga todas las hojas antes de importar' : '';
-  btnConfirm.style.opacity = hasPending ? '0.4' : '';
-  btnConfirm.style.cursor  = hasPending ? 'not-allowed' : '';
+  btnConfirm.disabled = blocked;
+  btnConfirm.title = hasPending ? 'Hay hojas sin mapear — regresa y carga todas las hojas antes de importar'
+                   : missingLoc.length ? `Falta definir la ubicación en: ${missingLoc.join(', ')}` : '';
+  btnConfirm.style.opacity = blocked ? '0.4' : '';
+  btnConfirm.style.cursor  = blocked ? 'not-allowed' : '';
 
   goStep(5);
 }
@@ -1725,6 +1953,7 @@ document.getElementById('btn-confirm').addEventListener('click', async()=>{
 
   // Build per-sheet mappings {sheetName: {colIndex: 'field'|'__eav'|'__skip'}}
   const sheetMappingsPayload={};
+  const sheetGeoDefaults={};   // {sheet: {id,nombre,departamento}} solo si la hoja lo necesita
   state.selectedSheets.forEach(name=>{
     const sm=state.sheetMappings[name];
     if(!sm||!sm.loaded) return;
@@ -1736,6 +1965,8 @@ document.getElementById('btn-confirm').addEventListener('click', async()=>{
       else if(act==='field') m[col.index]=sm.colFields[col.index]||'__skip';
     });
     sheetMappingsPayload[name]=m;
+    const man=sheetManualMunicipio(sm);
+    if(man) sheetGeoDefaults[name]=man;
   });
 
   const fd=new FormData();
@@ -1746,6 +1977,7 @@ document.getElementById('btn-confirm').addEventListener('click', async()=>{
   fd.append('url_archivo',document.getElementById('appr-url-archivo').value);
   fd.append('url_carpeta',document.getElementById('appr-url').value);
   fd.append('sheet_mappings',JSON.stringify(sheetMappingsPayload));
+  fd.append('sheet_geo_defaults',JSON.stringify(sheetGeoDefaults));
   fd.append('extractions',JSON.stringify(state.extractions));
   fd.append('auto_geo_enabled', state.autoGeo.enabled && state.autoGeo.levels.length ? '1' : '0');
   fd.append('auto_geo_source', state.autoGeo.source);

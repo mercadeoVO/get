@@ -13,6 +13,7 @@
 //    ?action=temas_guardar      — Confirma/corrige el tema de una pregunta
 //    ?action=respuestas_muestra — Distribución de respuestas de una pregunta
 //    ?action=crear_tema         — Crea un tema/subtema nuevo en dim_tema
+//    ?action=municipios_lista   — Municipios de c98_geo (selector del wizard)
 // ============================================================
 
 require_once __DIR__ . '/config.php';
@@ -750,6 +751,9 @@ function resolveGeoId(array $lead, \PDO $db): ?string {
     $zona   = trim((string)($lead['zona']             ?? ''));
     $comuna = trim((string)($lead['comuna_localidad'] ?? ''));
     $mpio   = trim((string)($lead['municipio']        ?? ''));
+    // Municipio elegido por el usuario en el wizard (id DANE de 5 chars): no depende del
+    // nombre, así que resuelve bien aunque existan municipios homónimos en otros deptos.
+    $mpioId = trim((string)($lead['_mpio_id'] ?? ''));
 
     // Normalizar Bogotá localidades
     if ($mpio !== '' && stripos($mpio, 'LOCALIDAD') !== false) {
@@ -757,53 +761,68 @@ function resolveGeoId(array $lead, \PDO $db): ?string {
     }
 
     $mNorm = normalizeGeoStr($mpio);
+    $hasMpio = ($mpio !== '' || $mpioId !== '');
+    // Condición/params del municipio: por id si lo tenemos, si no por nombre/abreviatura.
+    if ($mpioId !== '') {
+        $mCond   = "m.id = ?";
+        $mParams = [$mpioId];
+    } else {
+        $mCond   = "("._nsql('m.nombre')." = ? OR "._nsql('m.abreviatura')." = ?)";
+        $mParams = [$mNorm, $mNorm];
+    }
 
     // P1 – Barrio: busca barrio en el municipio correcto
-    if ($barrio !== '' && $mpio !== '') {
+    if ($barrio !== '' && $hasMpio) {
         $st = $db->prepare(
             "SELECT b.id FROM c98_geo.dim_barrio b
              JOIN c98_geo.dim_comuna  c ON c.id = b.id_comuna
              JOIN c98_geo.dim_zona    z ON z.id = c.id_zona
              JOIN c98_geo.dim_municipio m ON m.id = z.id_municipio
              WHERE "._nsql('b.nombre')." = ?
-               AND ("._nsql('m.nombre')." = ? OR "._nsql('m.abreviatura')." = ?)
+               AND $mCond
              LIMIT 1"
         );
-        $st->execute([normalizeGeoStr($barrio), $mNorm, $mNorm]);
+        $st->execute(array_merge([normalizeGeoStr($barrio)], $mParams));
         $id = $st->fetchColumn();
         if ($id !== false) return (string)$id;
     }
 
     // P2 – Comuna
-    if ($comuna !== '' && $mpio !== '') {
+    if ($comuna !== '' && $hasMpio) {
         $st = $db->prepare(
             "SELECT c.id FROM c98_geo.dim_comuna c
              JOIN c98_geo.dim_zona      z ON z.id = c.id_zona
              JOIN c98_geo.dim_municipio m ON m.id = z.id_municipio
              WHERE "._nsql('c.nombre')." = ?
-               AND ("._nsql('m.nombre')." = ? OR "._nsql('m.abreviatura')." = ?)
+               AND $mCond
              LIMIT 1"
         );
-        $st->execute([normalizeGeoStr($comuna), $mNorm, $mNorm]);
+        $st->execute(array_merge([normalizeGeoStr($comuna)], $mParams));
         $id = $st->fetchColumn();
         if ($id !== false) return (string)$id;
     }
 
     // P2b – Zona
-    if ($zona !== '' && $mpio !== '') {
+    if ($zona !== '' && $hasMpio) {
         $st = $db->prepare(
             "SELECT z.id FROM c98_geo.dim_zona z
              JOIN c98_geo.dim_municipio m ON m.id = z.id_municipio
              WHERE "._nsql('z.nombre')." = ?
-               AND ("._nsql('m.nombre')." = ? OR "._nsql('m.abreviatura')." = ?)
+               AND $mCond
              LIMIT 1"
         );
-        $st->execute([normalizeGeoStr($zona), $mNorm, $mNorm]);
+        $st->execute(array_merge([normalizeGeoStr($zona)], $mParams));
         $id = $st->fetchColumn();
         if ($id !== false) return (string)$id;
     }
 
-    // P3 – Municipio fallback
+    // P3 – Municipio fallback (por id si el usuario lo eligió; si no, por nombre)
+    if ($mpioId !== '') {
+        $st = $db->prepare("SELECT id FROM c98_geo.dim_municipio WHERE id = ? LIMIT 1");
+        $st->execute([$mpioId]);
+        $id = $st->fetchColumn();
+        if ($id !== false) return (string)$id;
+    }
     if ($mpio !== '') {
         $st = $db->prepare(
             "SELECT id FROM c98_geo.dim_municipio
@@ -1717,6 +1736,10 @@ try {
         $mappingsFallback   = json_decode($_POST['mappings'] ?? '{}', true) ?? [];
         // [{"from":"adset_name","delimiter":"_","position":0,"target":"municipio_zona"},...]
         $extractions = json_decode($_POST['extractions'] ?? '[]', true) ?? [];
+        // Municipio por defecto por hoja: {sheetName: {id:'05001', nombre:'Medellín', departamento:'Antioquia'}}.
+        // Se usa cuando la hoja mapea una ubicación inferior a municipio (zona/comuna/barrio) sin
+        // columna de municipio: sin él no se puede resolver id_geo ni mostrar municipio al descargar.
+        $sheetGeoDefaults = json_decode($_POST['sheet_geo_defaults'] ?? '{}', true) ?? [];
         // Extracción automática de ubicación — opt-in, apagada por defecto (ver autoParseLeadGeo)
         $autoGeoEnabled = ($_POST['auto_geo_enabled'] ?? '0') === '1';
         $autoGeoSource  = $_POST['auto_geo_source'] ?? 'adset_name';
@@ -2038,6 +2061,17 @@ try {
                         $parts  = array_map('trim', explode($delim, $srcVal));
                         $extracted = $parts[$pos] ?? '';
                         if ($extracted !== '') $lead[$target] = $extracted;
+                    }
+
+                    // ── Municipio por defecto de la hoja (elegido en el wizard) ──
+                    // Solo rellena filas sin municipio propio: si el Excel trae la columna, esa manda.
+                    $geoDef = $sheetGeoDefaults[$sheet] ?? null;
+                    if (is_array($geoDef) && !empty($geoDef['id']) && empty($lead['municipio'])) {
+                        $lead['municipio'] = (string)($geoDef['nombre'] ?? '');
+                        $lead['_mpio_id']  = (string)$geoDef['id'];
+                        if (empty($lead['geo_departamento']) && !empty($geoDef['departamento'])) {
+                            $lead['geo_departamento'] = (string)$geoDef['departamento'];
+                        }
                     }
 
                     // ── Reconciliación geo (siempre — usa solo datos ya presentes) ──
@@ -2832,6 +2866,27 @@ try {
         }
         fclose($fh);
         exit;
+    }
+
+    // ── MUNICIPIOS_LISTA ──────────────────────────────────────
+    // Lista liviana de municipios (c98_geo) para el selector "municipio por defecto" del wizard.
+    // `tiene_detalle` = el municipio tiene comunas cargadas (único caso donde comuna/barrio resuelven;
+    // hoy son 6: Bogotá, Cali, Medellín, Cartagena, Barranquilla, Rionegro). Todos tienen alguna zona
+    // genérica, por eso zona sola no sirve como criterio.
+    if ($action === 'municipios_lista') {
+        $db = getDB();
+        $rows = $db->query("
+            SELECT m.id, m.nombre, d.nombre AS departamento,
+                   EXISTS(SELECT 1 FROM c98_geo.dim_zona z
+                          JOIN c98_geo.dim_comuna c ON c.id_zona = z.id
+                          WHERE z.id_municipio = m.id) AS tiene_detalle
+            FROM c98_geo.dim_municipio m
+            JOIN c98_geo.dim_departamento d ON d.id = m.id_departamento
+            ORDER BY tiene_detalle DESC, m.nombre
+        ")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($rows as &$r) { $r['tiene_detalle'] = (int)$r['tiene_detalle']; }
+        unset($r);
+        jsonOut(['ok' => true, 'municipios' => $rows]);
     }
 
     errOut('Acción no reconocida: ' . htmlspecialchars($action));
