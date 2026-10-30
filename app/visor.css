@@ -320,3 +320,11 @@ select.mpio-input{padding:9px 14px!important;font-size:.875rem!important;width:3
 .enc-chip b{color:inherit;font-weight:600;margin-right:4px}
 .enc-chip-vacio{background:var(--warn-bg);color:var(--warn-ink)}
 @media(max-width:900px){.enc-grid{grid-template-columns:1fr 1fr}.enc-panel{margin:0 16px 8px}}
+.enc-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.6fr) minmax(0,1fr)!important}
+.enc-titulo{font-size:1rem;font-weight:600;margin:0 0 14px;letter-spacing:-.01em}
+.geo-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.geo-grid label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:6px}
+.geo-grid select{width:100%}
+.geo-grid select:disabled{opacity:.5}
+@media(max-width:1100px){.geo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.enc-grid{grid-template-columns:1fr 1fr!important}.geo-grid{grid-template-columns:1fr 1fr}}

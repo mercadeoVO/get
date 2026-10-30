@@ -86,7 +86,7 @@ tbody tr:hover td{background:#232640}
 @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
 @media(max-width:768px){main{padding:12px 14px}.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid2,.grid3{grid-template-columns:1fr}header{padding:14px}}
 </style>
-<link rel="stylesheet" href="visor.css?v=26">
+<link rel="stylesheet" href="visor.css?v=27">
 <script src="visor.js?v=10"></script>
 </head>
 <body>
@@ -98,27 +98,32 @@ tbody tr:hover td{background:#232640}
 
 <div id="v-nav" data-page="electoral" data-refresh="loadAll()"></div>
 <div class="page-hd"><h1 class="page-title">Electoral</h1><p class="page-sub">Resultados electorales y encuestas electorales de la base local C98_MEDFUT.</p></div>
-<div class="filter-bar">
-  <label class="filter-label" for="fil-zona">Zona</label>
-  <select id="fil-zona" class="filter-select" onchange="applyFilters()">
-    <option value="all">Todas</option>
-    <option value="COMUNA">Solo comunas</option>
-    <option value="CORREGIMIENTO">Solo corregimientos</option>
-  </select>
-  <label class="filter-label" for="fil-cand">Candidato presidencial</label>
-  <select id="fil-cand" class="filter-select" onchange="applyFilters()">
-    <option value="all">Todos</option>
-  </select>
+<!-- Zona y candidato presidencial ya no se muestran; el código de las gráficas los lee, así que quedan ocultos con su valor por defecto. -->
+<div hidden>
+  <select id="fil-zona"><option value="all">Todas</option></select>
+  <select id="fil-cand"><option value="all">Todos</option></select>
 </div>
 
 <section class="enc-panel" aria-label="Encuestas electorales">
   <div class="enc-grid">
-    <div><label for="enc-tipo">Tipo de encuesta</label><select id="enc-tipo" onchange="loadEncuestas()"></select></div>
-    <div><label for="enc-lista">Lista de elección</label><select id="enc-lista" onchange="loadEncuestas()"></select></div>
     <div><label for="enc-nivel">Nivel</label><select id="enc-nivel" onchange="loadEncuestas()"></select></div>
+    <div><label for="enc-lista">Lista de elección</label><select id="enc-lista" onchange="loadEncuestas()"></select></div>
     <div class="enc-wide"><label for="enc-sel">Encuesta electoral</label><select id="enc-sel" onchange="renderEncDetalle()"></select></div>
+    <div><label for="enc-tipo">Tipo de encuesta</label><select id="enc-tipo" onchange="loadEncuestas()"></select></div>
   </div>
   <div id="enc-detalle" class="enc-detalle"></div>
+</section>
+
+<section class="enc-panel" id="geo-panel" aria-label="Ubicación">
+  <h2 class="enc-titulo">Ubicación</h2>
+  <div class="geo-grid">
+    <div><label for="geo-reg">Región</label><select id="geo-reg" onchange="onGeoChange('reg')"></select></div>
+    <div><label for="geo-dep">Departamento</label><select id="geo-dep" onchange="onGeoChange('dep')"></select></div>
+    <div><label for="geo-mun">Municipio</label><select id="geo-mun" onchange="onGeoChange('mun')"></select></div>
+    <div><label for="geo-zon">Zona</label><select id="geo-zon" onchange="onGeoChange('zon')"></select></div>
+    <div><label for="geo-com">Comuna / Localidad</label><select id="geo-com" onchange="onGeoChange('com')"></select></div>
+    <div><label for="geo-bar">Barrio</label><select id="geo-bar" onchange="onGeoChange('bar')"></select></div>
+  </div>
 </section>
 
 <main>
@@ -682,6 +687,47 @@ async function guardarEncMeta(id){
   }catch(err){ alert('No se pudo guardar: '+err.message); }
 }
 document.addEventListener('DOMContentLoaded',loadEncuestas);
+
+// ── Filtros geográficos en cascada: Región → Departamento → Municipio → Zona → Comuna → Barrio ──
+// Fuente: c98geo_api.php (árbol completo). La selección queda en window.ELECTORAL_GEO.
+const GEO_NIVELES=[
+  {k:'reg',id:'geo-reg',todos:'Todas',hijos:n=>n,                                  nom:n=>n.r},
+  {k:'dep',id:'geo-dep',todos:'Todos',hijos:r=>r.dptos||[],                       nom:n=>n.d},
+  {k:'mun',id:'geo-mun',todos:'Todos',hijos:d=>(d.subrs||[]).flatMap(s=>s.mpios||[]),nom:n=>n.m},
+  {k:'zon',id:'geo-zon',todos:'Todas',hijos:m=>m.detail||[],                      nom:n=>n.z},
+  {k:'com',id:'geo-com',todos:'Todas',hijos:z=>z.coms||[],                        nom:n=>n.c},
+  {k:'bar',id:'geo-bar',todos:'Todos',hijos:c=>c.bars||[],                        nom:n=>n.n},
+];
+let GEOT=[];
+window.ELECTORAL_GEO={};
+function geoNodo(i){            // nodo elegido en el nivel i (o null)
+  const v=$e(GEO_NIVELES[i].id).value; if(!v) return null;
+  return (GEO_NIVELES[i]._lista||[]).find(n=>String(n.id)===v)||null;
+}
+function geoRefill(desde){
+  for(let i=desde;i<GEO_NIVELES.length;i++){
+    const nv=GEO_NIVELES[i], padre=i===0?GEOT:geoNodo(i-1);
+    const lista=i===0?GEOT:(padre?nv.hijos(padre):[]);
+    nv._lista=lista;
+    const sel=$e(nv.id);
+    sel.innerHTML=`<option value="">${nv.todos}</option>`+lista.map(n=>`<option value="${escH(n.id)}">${escH(nv.nom(n))}</option>`).join('');
+    sel.disabled=i>0&&!padre;
+  }
+}
+function onGeoChange(k){
+  const i=GEO_NIVELES.findIndex(n=>n.k===k);
+  geoRefill(i+1);
+  window.ELECTORAL_GEO=Object.fromEntries(GEO_NIVELES.map((n,j)=>[n.k,$e(n.id).value||null]));
+  document.dispatchEvent(new CustomEvent('electoral:geo',{detail:window.ELECTORAL_GEO}));
+}
+async function loadGeoFiltros(){
+  try{
+    const d=await fetch('c98geo_api.php').then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error');
+    GEOT=d.data; geoRefill(0);
+  }catch(err){ $e('geo-panel').insertAdjacentHTML('beforeend',`<p class="enc-detalle">No se pudo cargar la ubicación: ${escH(err.message)}</p>`); }
+}
+document.addEventListener('DOMContentLoaded',loadGeoFiltros);
 </script>
 <script>V.onTheme(function(){ location.reload(); });</script>
 </body>
