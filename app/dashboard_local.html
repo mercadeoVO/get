@@ -4,111 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MEDFUT · Electoral</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
-
-/* HEADER */
-header{background:linear-gradient(135deg,#1a1d2e,#0f1117);border-bottom:1px solid var(--border);padding:18px 28px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.brand h1{font-size:1.25rem;font-weight:700;background:linear-gradient(90deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.brand p{font-size:.72rem;color:var(--muted);margin-top:2px}
-.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;display:inline-block;vertical-align:middle;margin-left:4px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.filter-pill{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)}
-.filter-pill select{background:transparent;border:none;color:var(--text);font-size:.75rem;cursor:pointer;outline:none}
-.btn-refresh{background:var(--accent);border:none;border-radius:8px;padding:7px 14px;color:#fff;font-size:.75rem;cursor:pointer;font-weight:600;transition:opacity .15s}
-.btn-refresh:hover{opacity:.85}
-
-/* LOADING */
-#loading{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px}
-.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{color:var(--muted);font-size:.85rem}
-
-/* LAYOUT */
-main{padding:20px 28px;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
-
-/* KPI */
-.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
-.kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-.kpi .label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
-.kpi .value{font-size:1.7rem;font-weight:800;line-height:1}
-.kpi .sub{font-size:.7rem;color:var(--muted);margin-top:5px}
-.kpi.winner::before{background:linear-gradient(90deg,#8b5cf6,#a78bfa)}
-.kpi.winner .value{background:linear-gradient(90deg,#8b5cf6,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.kpi.leader::before{background:linear-gradient(90deg,#10b981,#34d399)}
-.kpi.leader .value{background:linear-gradient(90deg,#10b981,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-
-/* GRIDS */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.grid3{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:18px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
-.card h3{font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
-.chart-wrap{position:relative}
-.chart-wrap canvas{max-width:100%}
-
-/* SECTION TITLE */
-.section-title{font-size:.7rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;padding:4px 0 0 2px}
-
-/* TABS */
-.tab-row{display:flex;gap:4px;margin-bottom:14px}
-.tab-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:.72rem;color:var(--muted);cursor:pointer;transition:all .15s}
-.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
-.tab-btn:hover:not(.active){border-color:var(--accent);color:var(--text)}
-
-/* TABLE */
-.tbl-wrap{overflow-x:auto;max-height:380px;overflow-y:auto}
-table{width:100%;border-collapse:collapse;font-size:.78rem}
-thead th{position:sticky;top:0;background:var(--card);color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;cursor:pointer;white-space:nowrap;user-select:none}
-thead th:hover{color:var(--text)}
-tbody td{padding:9px 12px;border-bottom:1px solid #1a1d2e;vertical-align:middle}
-tbody tr:hover td{background:#232640}
-.bar-inline{display:flex;align-items:center;gap:6px}
-.bar-inline-fill{height:5px;border-radius:3px}
-.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65rem;font-weight:700}
-
-/* SPECTRUM */
-.spectrum{height:24px;border-radius:6px;overflow:hidden;display:flex;margin:10px 0}
-.spec-seg{display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700;color:#fff;transition:width .5s;overflow:hidden}
-
-/* LEGEND */
-.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:.7rem;color:var(--muted)}
-.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-
-/* DIVIDER */
-.divider{border:none;border-top:1px solid var(--border);margin:4px 0}
-
-/* RESPONSIVE */
-@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:768px){main{padding:12px 14px}.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid2,.grid3{grid-template-columns:1fr}header{padding:14px}}
-</style>
-<link rel="stylesheet" href="visor.css?v=31">
+<link rel="stylesheet" href="visor.css?v=32">
 <script src="visor.js?v=10"></script>
 </head>
 <body>
 
-<div id="loading">
-  <div class="spinner"></div>
-  <span class="loading-text">Conectando con API local…</span>
-</div>
-
-<div id="v-nav" data-page="electoral" data-refresh="loadAll()"></div>
+<div id="v-nav" data-page="electoral" data-refresh="cargarResumen()"></div>
 <div class="page-hd"><h1 class="page-title">Electoral</h1><p class="page-sub">Resultados electorales y encuestas electorales de la base local C98_MEDFUT.</p></div>
-<!-- Zona y candidato presidencial ya no se muestran; el código de las gráficas los lee, así que quedan ocultos con su valor por defecto. -->
-<div hidden>
-  <select id="fil-zona"><option value="all">Todas</option></select>
-  <select id="fil-cand"><option value="all">Todos</option></select>
-</div>
+
 
 <section class="enc-panel" aria-label="Encuestas electorales">
   <div class="enc-grid">
     <div><label for="enc-nivel">Nivel</label><select id="enc-nivel" onchange="loadEncuestas()"></select></div>
     <div><label for="enc-lista">Lista de elección</label><select id="enc-lista" onchange="loadEncuestas()"></select></div>
-    <div class="enc-wide"><label for="enc-sel">Encuesta electoral</label><select id="enc-sel" onchange="renderEncDetalle()"></select></div>
+    <div class="enc-wide"><label for="enc-sel">Encuesta electoral</label><select id="enc-sel" onchange="onSelEncuesta()"></select></div>
     <div><label for="enc-tipo">Tipo de encuesta</label><select id="enc-tipo" onchange="loadEncuestas()"></select></div>
   </div>
   <div id="enc-detalle" class="enc-detalle"></div>
@@ -126,504 +35,19 @@ tbody tr:hover td{background:#232640}
   </div>
 </section>
 
-<main>
-  <!-- KPIs -->
-  <div class="kpi-grid" id="kpi-grid"></div>
-
-  <!-- FILA 1: Presidencial + Espectro + Participación -->
-  <div style="font-size:.7rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.8px">Resultados Preconteo · Presidencial 1ª Vuelta 2026 · Medellín por Comuna
-  </div>
-  <div class="grid3">
-    <div class="card">
-      <h3>Votos por candidato <span style="color:var(--accent);font-size:.65rem">PRESIDENCIAL 1V 2026</span></h3>
-      <div class="chart-wrap" style="height:300px"><canvas id="ch-preconteo"></canvas></div>
+<main class="elec">
+  <section id="elec-kpis" class="elec-kpis" aria-label="Resumen de la encuesta"></section>
+  <section class="enc-panel elec-viz" aria-label="Resultados">
+    <div class="elec-tools" id="elec-tools" hidden>
+      <div class="elec-tabs" id="elec-tabs" role="tablist"></div>
+      <div class="elec-cortar"><span>Cortar por</span><div class="elec-tabs" id="elec-cortes"></div></div>
+      <label class="elec-valid" id="elec-valid-wrap" hidden><input type="checkbox" id="elec-valid" onchange="window.elecValidos(this.checked)"> Solo votos válidos</label>
     </div>
-    <div class="card">
-      <h3>Espectro político <span style="color:var(--accent);font-size:.65rem">PRES. 1V 2026</span></h3>
-      <div class="chart-wrap" style="height:200px"><canvas id="ch-espectro"></canvas></div>
-      <div class="spectrum" id="spec-bar"></div>
-      <div class="legend" id="spec-legend"></div>
-    </div>
-    <div class="card">
-      <h3>Participación histórica <span style="color:var(--accent);font-size:.65rem">MEDELLÍN</span></h3>
-      <div class="chart-wrap" style="height:200px"><canvas id="ch-part"></canvas></div>
-      <div class="legend" style="margin-top:8px">
-        <div class="legend-item"><div class="ldot" style="background:#8b5cf6"></div>Presidencial</div>
-        <div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>Territorial</div>
-        <div class="legend-item"><div class="ldot" style="background:#3b82f6"></div>Cámara/Senado</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- FILA 2: Encuesta alcaldía + Duel -->
-  <div style="font-size:.7rem;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.8px">Encuesta Intención de Voto · Alcaldía Medellín 2026 · Meta Ads Mayo 2026
-  </div>
-  <div class="grid2">
-    <div class="card">
-      <h3>Intención de voto por segmento <span style="color:var(--green);font-size:.65rem">ALCALDÍA 2026</span></h3>
-      <div class="tab-row">
-        <button class="tab-btn active" onclick="switchEncTab('sexo',this)">Por Género</button>
-        <button class="tab-btn" onclick="switchEncTab('edad',this)">Por Edad</button>
-        <button class="tab-btn" onclick="switchEncTab('zona',this)">Por Zona</button>
-      </div>
-      <div class="chart-wrap" style="height:260px"><canvas id="ch-encuesta"></canvas></div>
-    </div>
-    <div class="card">
-      <h3>Abelardo vs Cepeda por zona <span style="color:var(--accent);font-size:.65rem">% votos válidos</span></h3>
-      <div class="chart-wrap" style="height:300px"><canvas id="ch-duel"></canvas></div>
-    </div>
-  </div>
-
-  <!-- FILA 3: Tabla votos presidencial -->
-  <div class="card">
-    <h3>
-      Tabla completa · Presidencial 1V 2026 por zona y candidato
-      <span style="font-size:.65rem;color:var(--muted);font-weight:400" id="tbl-count"></span>
-    </h3>
-    <div class="tbl-wrap">
-      <table id="main-table">
-        <thead>
-          <tr>
-            <th onclick="sortTable('zona')">Zona ↕</th>
-            <th onclick="sortTable('tipo')">Tipo ↕</th>
-            <th onclick="sortTable('candidato')">Candidato ↕</th>
-            <th onclick="sortTable('partido')">Partido ↕</th>
-            <th onclick="sortTable('espectro')">Espectro ↕</th>
-            <th onclick="sortTable('votos')">Votos ↕</th>
-            <th onclick="sortTable('pct')">% ↕</th>
-            <th style="min-width:100px">Barra</th>
-          </tr>
-        </thead>
-        <tbody id="tbl-body"></tbody>
-      </table>
-    </div>
-  </div>
+    <div id="elec-body" class="elec-body"><div class="elec-vacio">Cargando encuestas…</div></div>
+  </section>
+  <p class="elec-nota" id="elec-nota"></p>
 </main>
 
-<script>
-// ── CONFIG ─────────────────────────────────────────────────────
-const API = 'http://localhost/medfut/api.php';
-
-const COLORS_PRES = {
-  abelardo:          '#8b5cf6',
-  cepeda:            '#ef4444',
-  fajardo:           '#3b82f6',
-  paloma_valencia:   '#10b981',
-  raul_botero:       '#f59e0b',
-  claudia_lopez:     '#06b6d4',
-  oscar_lizcano:     '#84cc16',
-  miguel_uribe:      '#f43f5e',
-  sondra_macollins:  '#a78bfa',
-  roy_barreras:      '#e11d48',
-  luis_murillo:      '#fb923c',
-  carlos_caicedo:    '#dc2626',
-  gustavo_matamoros: '#64748b',
-};
-
-const COLORS_ALC = {
-  andres_tobon:       V.css('--accent'),
-  anibal_gaviria:     '#f59e0b',
-  carlos_raul_yepes:  '#10b981',
-  claudia_carrasquilla:'#8b5cf6',
-  daniel_carvhalo:    '#06b6d4',
-  david_escobar:      '#84cc16',
-  jose_luis_marin:    '#ef4444',
-  manuel_villa:       '#64748b',
-  sebastian_lopez:    '#f43f5e',
-};
-
-const SPEC_COLOR = {
-  Izquierda:'#ef4444', 'Centro-Izquierda':'#f97316',
-  Centro:'#3b82f6', 'Centro-Derecha':'#8b5cf6', Derecha:'#10b981'
-};
-
-// ── STATE ──────────────────────────────────────────────────────
-let DB = { votos:[], encuesta:[], participacion:[], candidatos:[], geos:[] };
-let encTab = 'sexo';
-let sortCol = 'votos', sortDir = 'desc';
-let CHARTS = {};
-let _tblData = [];
-
-// ── FETCH ──────────────────────────────────────────────────────
-async function apiFetch(endpoint, params = '') {
-  const res = await fetch(`${API}?endpoint=${endpoint}${params}`);
-  if (!res.ok) throw new Error(`API error ${res.status} en ${endpoint}`);
-  return res.json();
-}
-
-async function loadAll() {
-  document.getElementById('loading').style.display = 'flex';
-  try {
-    const [votos, enc, part, cands, geos] = await Promise.all([
-      apiFetch('votos', '&anio=2026&cargo=PRESIDENTE'),
-      apiFetch('encuesta'),
-      apiFetch('participacion'),
-      apiFetch('candidatos'),
-      apiFetch('geografia'),
-    ]);
-    DB = { votos, encuesta: enc, participacion: part, candidatos: cands, geos };
-    populateCandFilter();
-    applyFilters();
-  } catch(e) {
-    alert('Error cargando datos: ' + e.message + '\n\nVerifica que XAMPP/Apache esté corriendo y la API en http://localhost/medfut/api.php');
-    console.error(e);
-  } finally {
-    document.getElementById('loading').style.display = 'none';
-  }
-}
-
-// ── FILTERS ────────────────────────────────────────────────────
-function applyFilters() {
-  renderKPIs();
-  renderPreconteoBar();
-  renderEspectro();
-  renderParticipacion();
-  renderEncuesta();
-  renderDuel();
-  renderTable();
-}
-
-function populateCandFilter() {
-  const sel = document.getElementById('fil-cand');
-  // Clear existing options except "Todos"
-  while (sel.options.length > 1) sel.remove(1);
-  const keys = [...new Set(DB.votos.map(r => r.candidato_key))].sort();
-  keys.forEach(k => {
-    const o = document.createElement('option');
-    o.value = k;
-    const cand = DB.candidatos.find(c => c.candidato_key === k);
-    o.textContent = cand ? cand.nombre_completo.split(' ').slice(0,2).join(' ') : k;
-    sel.appendChild(o);
-  });
-}
-
-// ── UTILS ──────────────────────────────────────────────────────
-const fmt   = n => (n||0).toLocaleString('es-CO');
-const fmtP  = n => (+( n||0)).toFixed(1) + '%';
-
-function getFilteredVotos() {
-  const zona = document.getElementById('fil-zona').value;
-  const cand = document.getElementById('fil-cand').value;
-  return DB.votos.filter(r => {
-    if (zona !== 'all' && r.tipo_geo !== zona) return false;
-    if (cand !== 'all' && r.candidato_key !== cand) return false;
-    return true;
-  });
-}
-
-function chartDefaults() {
-  Chart.defaults.color = V.css('--muted');
-  Chart.defaults.borderColor = V.css('--line');
-  Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
-  Chart.defaults.font.size = 11;
-}
-function destroyChart(id) { if(CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
-
-// ── KPIs ───────────────────────────────────────────────────────
-function renderKPIs() {
-  const zona = document.getElementById('fil-zona').value;
-  const filtVotos = DB.votos.filter(r => zona === 'all' || r.tipo_geo === zona);
-
-  // Sum by candidate
-  const byKey = {};
-  const totalValidosByGeo = {};
-  filtVotos.forEach(r => {
-    byKey[r.candidato_key] = (byKey[r.candidato_key]||0) + (r.votos||0);
-    totalValidosByGeo[r.geo] = r.total_validos || 0;
-  });
-  const totalVotos = Object.values(totalValidosByGeo).reduce((a,b)=>a+b,0);
-  const sorted = Object.entries(byKey).sort((a,b)=>b[1]-a[1]);
-  const winner = sorted[0] || ['N/D', 0];
-
-  // Encuesta alcaldía — leader
-  const encByKey = {};
-  DB.encuesta.forEach(r => {
-    if (zona !== 'all' && r.tipo_geo !== zona) return;
-    encByKey[r.candidato_key] = (encByKey[r.candidato_key]||0) + (r.n||0);
-  });
-  const encSorted = Object.entries(encByKey).sort((a,b)=>b[1]-a[1]);
-  const encLeader = encSorted[0] || ['N/D', 0];
-  const encTotal  = Object.values(encByKey).reduce((a,b)=>a+b,0);
-
-  const part2026 = DB.participacion.find(p => p.anio===2026 && p.tipo_eleccion==='CAMARA');
-  const partPct  = part2026 ? (+part2026.pct_participacion*100).toFixed(1)+'%' : 'N/D';
-
-  const winnerName = DB.candidatos.find(c=>c.candidato_key===winner[0]);
-  const encName    = DB.candidatos.find(c=>c.candidato_key===encLeader[0]);
-
-  const kpis = [
-    { label:'Votos Preconteo Pres.',  val: fmt(totalVotos), sub:'Votos válidos · Medellín', cls:'' },
-    { label:'Líder Presidencial',  val: fmtP(totalVotos>0 ? winner[1]/totalVotos*100 : 0), sub: winnerName ? winnerName.nombre_completo.split(' ').slice(0,2).join(' ') : winner[0], cls:'winner' },
-    { label:'Líder Alcaldía',      val: fmtP(encTotal>0 ? encLeader[1]/encTotal*100 : 0), sub: (encName ? encName.nombre_completo.split(' ').slice(0,2).join(' ') : encLeader[0]) + ' · Encuesta', cls:'leader' },
-    { label:'Participación 2026',     val: partPct, sub:'Cámara · Potencial '+fmt(part2026?.potencial), cls:'' },
-    { label:'Muestra Encuesta Alc.',  val: fmt(DB.encuesta.reduce((a,r)=>a+(r.n||0),0)), sub:'Respuestas · Meta Ads · Mayo 2026', cls:'' },
-  ];
-
-  document.getElementById('kpi-grid').innerHTML = kpis.map(k =>
-    `<div class="kpi ${k.cls}">
-      <div class="label">${k.label}</div>
-      <div class="value">${k.val}</div>
-      <div class="sub">${k.sub}</div>
-    </div>`
-  ).join('');
-}
-
-// ── BARRA PRESIDENCIAL ─────────────────────────────────────────
-function renderPreconteoBar() {
-  const filt = getFilteredVotos();
-  const byKey = {};
-  filt.forEach(r => byKey[r.candidato_key] = (byKey[r.candidato_key]||0) + (r.votos||0));
-
-  const sorted = Object.entries(byKey).sort((a,b)=>b[1]-a[1]);
-  const labels = sorted.map(([k]) => {
-    const c = DB.candidatos.find(x => x.candidato_key === k);
-    return c ? c.nombre_completo.split(' ').slice(0,2).join(' ') : k;
-  });
-  const data   = sorted.map(([,v]) => v);
-  const colors = sorted.map(([k]) => COLORS_PRES[k]||V.css('--accent'));
-  const total  = data.reduce((a,b)=>a+b,0);
-
-  destroyChart('preconteo');
-  const ctx = document.getElementById('ch-preconteo').getContext('2d');
-  CHARTS['preconteo'] = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets:[{ data, backgroundColor:colors.map(c=>c+'cc'), borderColor:colors, borderWidth:1, borderRadius:6, borderSkipped:false }] },
-    options: {
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${fmt(c.raw)} votos (${fmtP(c.raw/total*100)})`}} },
-      scales:{
-        x:{grid:{color:V.css('--line')}, ticks:{callback:v=>(v/1000).toFixed(0)+'K'}},
-        y:{grid:{display:false}, ticks:{color:V.css('--text'), font:{size:10}}}
-      }
-    }
-  });
-}
-
-// ── ESPECTRO ───────────────────────────────────────────────────
-function renderEspectro() {
-  const filt = getFilteredVotos();
-  const byEsp = {};
-  filt.forEach(r => byEsp[r.espectro] = (byEsp[r.espectro]||0) + (r.votos||0));
-
-  const order  = ['Izquierda','Centro-Izquierda','Centro','Centro-Derecha','Derecha'];
-  const labels = order.filter(k => byEsp[k]);
-  const data   = labels.map(k => byEsp[k]);
-  const colors = labels.map(k => SPEC_COLOR[k]||V.css('--accent'));
-  const total  = data.reduce((a,b)=>a+b,0);
-
-  destroyChart('espectro');
-  CHARTS['espectro'] = new Chart(document.getElementById('ch-espectro').getContext('2d'), {
-    type: 'doughnut',
-    data: { labels, datasets:[{ data, backgroundColor:colors.map(c=>c+'cc'), borderColor:colors, borderWidth:2 }] },
-    options: {
-      responsive:true, maintainAspectRatio:false, cutout:'55%',
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.label}: ${fmtP(c.parsed/total*100)}`}} }
-    }
-  });
-
-  document.getElementById('spec-bar').innerHTML = order.map(k => {
-    const v = byEsp[k]||0;
-    const p = total>0 ? v/total*100 : 0;
-    if (p<0.5) return '';
-    return `<div class="spec-seg" style="width:${p}%;background:${SPEC_COLOR[k]}" title="${k}: ${fmtP(p)}">${p>6?fmtP(p):''}</div>`;
-  }).join('');
-
-  document.getElementById('spec-legend').innerHTML = order.filter(k=>byEsp[k]).map(k =>
-    `<div class="legend-item"><div class="ldot" style="background:${SPEC_COLOR[k]}"></div>${k}: ${fmtP((byEsp[k]||0)/total*100)}</div>`
-  ).join('');
-}
-
-// ── PARTICIPACIÓN ──────────────────────────────────────────────
-function renderParticipacion() {
-  const part = [...DB.participacion].sort((a,b)=>a.anio-b.anio);
-  const labels = part.map(p => {
-    const sfx = p.tipo_eleccion==='PRESIDENCIAL' ? (p.vuelta===2?' 2V':' 1V') : '';
-    return `${p.tipo_eleccion.substring(0,4)} ${p.anio}${sfx}`;
-  });
-  const data   = part.map(p => +((p.pct_participacion||0)*100).toFixed(1));
-  const colors = part.map(p => {
-    if (p.tipo_eleccion==='PRESIDENCIAL') return '#8b5cf6';
-    if (p.tipo_eleccion==='TERRITORIAL')  return '#f59e0b';
-    return '#3b82f6';
-  });
-
-  destroyChart('part');
-  CHARTS['part'] = new Chart(document.getElementById('ch-part').getContext('2d'), {
-    type: 'bar',
-    data: { labels, datasets:[{ data, backgroundColor:colors.map(c=>c+'bb'), borderColor:colors, borderWidth:1, borderRadius:5, borderSkipped:false }] },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>` ${c.raw.toFixed(1)}%`}} },
-      scales:{ y:{min:40,max:75,grid:{color:V.css('--line')},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false},ticks:{font:{size:9},maxRotation:30}} }
-    }
-  });
-}
-
-// ── ENCUESTA ALCALDÍA ──────────────────────────────────────────
-function switchEncTab(tab, btn) {
-  encTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderEncuesta();
-}
-
-function renderEncuesta() {
-  const zona = document.getElementById('fil-zona').value;
-
-  // Top 5 alcaldía por n total
-  const totByKey = {};
-  DB.encuesta.forEach(r => { if(zona==='all'||r.tipo_geo===zona) totByKey[r.candidato_key]=(totByKey[r.candidato_key]||0)+(r.n||0); });
-  const top5 = Object.entries(totByKey).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k])=>k);
-
-  let groupKey, labels;
-  if (encTab==='sexo') {
-    groupKey = 'sexo'; labels = ['Hombre','Mujer'];
-  } else if (encTab==='edad') {
-    groupKey = 'rango_edad'; labels = ['18a24','25a34','35a44','45a65+'];
-  } else {
-    // zona: top comunas by n
-    const byGeo = {};
-    DB.encuesta.forEach(r => { if(zona==='all'||r.tipo_geo===zona) byGeo[r.geo]=(byGeo[r.geo]||0)+(r.n||0); });
-    labels = Object.entries(byGeo).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([g])=>g.replace('COMUNA ','C').replace('CORREGIMIENTO ','Crrg.'));
-    groupKey = 'geo';
-  }
-
-  const datasets = top5.map(ckey => {
-    const cand = DB.candidatos.find(c=>c.candidato_key===ckey);
-    const name = cand ? cand.nombre_completo.split(' ')[0] : ckey;
-    const color = COLORS_ALC[ckey]||V.css('--accent');
-
-    const data = labels.map(lbl => {
-      const geoLabel = encTab==='zona' ? lbl.replace('C.','CORREGIMIENTO ').replace(/^C(\d)/,'COMUNA $1') : lbl;
-      const rows = DB.encuesta.filter(r => {
-        if (zona!=='all' && r.tipo_geo!==zona) return false;
-        if (r.candidato_key!==ckey) return false;
-        if (encTab==='zona') return r.geo.replace('COMUNA ','C').replace('CORREGIMIENTO ','Crrg.')===lbl;
-        return r[groupKey]===lbl;
-      });
-      const total_g = DB.encuesta.filter(r => {
-        if (zona!=='all' && r.tipo_geo!==zona) return false;
-        if (encTab==='zona') return r.geo.replace('COMUNA ','C').replace('CORREGIMIENTO ','Crrg.')===lbl;
-        return r[groupKey]===lbl;
-      }).reduce((a,r)=>a+(r.n||0),0);
-      const n = rows.reduce((a,r)=>a+(r.n||0),0);
-      return total_g>0 ? +(n/total_g*100).toFixed(1) : 0;
-    });
-
-    return { label:name, data, backgroundColor:color+'99', borderColor:color, borderWidth:1, borderRadius:4 };
-  });
-
-  destroyChart('encuesta');
-  CHARTS['encuesta'] = new Chart(document.getElementById('ch-encuesta').getContext('2d'), {
-    type:'bar',
-    data:{ labels, datasets },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'top',labels:{padding:12,boxWidth:10,font:{size:10}}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}%`}} },
-      scales:{ y:{grid:{color:V.css('--line')},ticks:{callback:v=>v+'%'}}, x:{grid:{display:false}} }
-    }
-  });
-}
-
-// ── DUEL: Abelardo vs Cepeda ───────────────────────────────────
-function renderDuel() {
-  const zona = document.getElementById('fil-zona').value;
-  const byGeo = {};
-
-  DB.votos.forEach(r => {
-    if (zona!=='all' && r.tipo_geo!==zona) return;
-    if (!['abelardo','cepeda'].includes(r.candidato_key)) return;
-    const g = r.geo;
-    if (!byGeo[g]) byGeo[g] = { tv:r.total_validos||0, abelardo:0, cepeda:0 };
-    byGeo[g][r.candidato_key] = r.votos||0;
-    if (r.total_validos) byGeo[g].tv = r.total_validos;
-  });
-
-  const entries = Object.entries(byGeo)
-    .filter(([,v])=>v.tv>0)
-    .sort((a,b)=>b[1].abelardo/b[1].tv - a[1].abelardo/a[1].tv)
-    .slice(0,16);
-
-  const labels    = entries.map(([n])=>n.replace('COMUNA ','C').replace('CORREGIMIENTO ','Crrg.'));
-  const abelData  = entries.map(([,v])=>+(v.abelardo/v.tv*100).toFixed(1));
-  const cepData   = entries.map(([,v])=>+(v.cepeda/v.tv*100).toFixed(1));
-
-  destroyChart('duel');
-  CHARTS['duel'] = new Chart(document.getElementById('ch-duel').getContext('2d'), {
-    type:'bar',
-    data:{ labels, datasets:[
-      { label:'Abelardo %', data:abelData, backgroundColor:'#8b5cf6bb', borderColor:'#8b5cf6', borderWidth:1, borderRadius:3 },
-      { label:'Cepeda %',   data:cepData,  backgroundColor:'#ef4444bb', borderColor:'#ef4444', borderWidth:1, borderRadius:3 },
-    ]},
-    options:{
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'top',labels:{padding:10,boxWidth:10}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}%`}} },
-      scales:{ x:{min:0,max:80,grid:{color:V.css('--line')},ticks:{callback:v=>v+'%'}}, y:{grid:{display:false},ticks:{font:{size:9}}} }
-    }
-  });
-}
-
-// ── TABLA ──────────────────────────────────────────────────────
-function renderTable() {
-  const zona = document.getElementById('fil-zona').value;
-  const cand = document.getElementById('fil-cand').value;
-
-  _tblData = DB.votos
-    .filter(r => {
-      if (zona!=='all' && r.tipo_geo!==zona) return false;
-      if (cand!=='all' && r.candidato_key!==cand) return false;
-      return true;
-    })
-    .map(r => ({
-      zona:      r.geo,
-      tipo:      r.tipo_geo,
-      candidato: r.candidato,
-      partido:   r.partido||'',
-      espectro:  r.espectro||'',
-      votos:     r.votos||0,
-      pct:       +(r.pct||0),
-      key:       r.candidato_key,
-    }));
-
-  document.getElementById('tbl-count').textContent = `${_tblData.length} filas`;
-  _renderSorted();
-}
-
-function _renderSorted() {
-  const sorted = [..._tblData].sort((a,b) => {
-    const av=a[sortCol], bv=b[sortCol];
-    const cmp = typeof av==='number' ? av-bv : String(av).localeCompare(String(bv));
-    return sortDir==='asc' ? cmp : -cmp;
-  });
-
-  const rows = sorted.slice(0,300).map(r => {
-    const c  = COLORS_PRES[r.key]||V.css('--accent');
-    const sc = SPEC_COLOR[r.espectro]||V.css('--accent');
-    return `<tr>
-      <td style="font-weight:600;font-size:.75rem">${r.zona}</td>
-      <td style="color:var(--muted);font-size:.72rem">${r.tipo}</td>
-      <td style="font-weight:600">${r.candidato}</td>
-      <td style="color:var(--muted);font-size:.72rem">${r.partido}</td>
-      <td><span class="badge" style="background:${sc}22;color:${sc};border:1px solid ${sc}44">${r.espectro}</span></td>
-      <td style="font-weight:700">${fmt(r.votos)}</td>
-      <td style="color:${c};font-weight:700">${r.pct.toFixed(1)}%</td>
-      <td><div class="bar-inline"><div class="bar-inline-fill" style="width:${Math.max(r.pct*2,2)}px;background:${c}"></div></div></td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('tbl-body').innerHTML = rows;
-}
-
-function sortTable(col) {
-  if (sortCol===col) sortDir = sortDir==='asc'?'desc':'asc';
-  else { sortCol=col; sortDir='desc'; }
-  _renderSorted();
-}
-
-// ── INIT ───────────────────────────────────────────────────────
-chartDefaults();
-loadAll();
-</script>
 <script>
 // ── Encuestas electorales: list box + selectores (tipo, lista de elección, nivel) ──────────
 const API_IMP='leads_importer.php';
@@ -653,7 +77,8 @@ async function loadEncuestas(){
     $e('enc-sel').innerHTML=`<option value="">Todas las encuestas electorales (${d.encuestas.length})</option>`+
       d.encuestas.map(e=>`<option value="${e.id}">#${e.id} · ${escH(e.archivo)} (${fmtFecha(e.importado_en)})</option>`).join('');
     if(d.encuestas.some(e=>String(e.id)===prev)) $e('enc-sel').value=prev;
-    renderEncDetalle();
+    if(!$e('enc-sel').value && d.encuestas.length && !ENC.auto){ $e('enc-sel').value=String(d.encuestas[0].id); ENC.auto=true; }
+    onSelEncuesta();
   }catch(err){ $e('enc-detalle').textContent='No se pudieron cargar las encuestas electorales: '+err.message; }
 }
 function renderEncDetalle(){
@@ -685,9 +110,10 @@ async function guardarEncMeta(id){
   try{
     const d=await fetch(`${API_IMP}?action=encuesta_meta_set`,{method:'POST',body:fd}).then(r=>r.json());
     if(!d.ok) throw new Error(d.error||'Error');
-    await loadEncuestas(); $e('enc-sel').value=String(id); renderEncDetalle();
+    await loadEncuestas(); $e('enc-sel').value=String(id); onSelEncuesta();
   }catch(err){ alert('No se pudo guardar: '+err.message); }
 }
+function onSelEncuesta(){ renderEncDetalle(); if(window.cargarResumen) window.cargarResumen(); }
 document.addEventListener('DOMContentLoaded',loadEncuestas);
 
 // ── Filtros geográficos en cascada: Región → Departamento → Municipio → Zona → Comuna → Barrio ──
@@ -731,6 +157,7 @@ async function loadGeoFiltros(){
 }
 document.addEventListener('DOMContentLoaded',loadGeoFiltros);
 </script>
+<script src="electoral.js?v=5"></script>
 <script>V.onTheme(function(){ location.reload(); });</script>
 </body>
 </html>

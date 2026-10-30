@@ -348,3 +348,53 @@ main:has(>.panel){width:100%!important;max-width:none!important;margin:0!importa
   .seg-top>.rcard{grid-column:3;grid-row:2}
 }
 .status{margin-bottom:12px}
+
+/* ── Electoral: resumen por encuesta ─────────────────────── */
+.elec{padding:0 24px 40px!important;display:flex;flex-direction:column;gap:16px}
+.elec-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+.elec-viz{margin:0!important}
+.elec-tools{display:flex;flex-wrap:wrap;align-items:center;gap:14px 24px;margin-bottom:18px}
+.elec-tools[hidden],[hidden]{display:none!important}
+.elec-cortar{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.85rem;font-weight:600}
+.elec-tabs{display:inline-flex;background:var(--surface);border-radius:var(--r-pill);padding:4px;gap:2px}
+.elec-tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:.85rem;font-weight:600;padding:8px 16px;border-radius:var(--r-pill);cursor:pointer;min-height:36px;transition:background-color .15s,color .15s}
+.elec-tabs button:hover:not(.on){color:var(--text)}
+.elec-tabs button.on{background:var(--accent);color:var(--accent-ink)}
+.elec-valid{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;font-weight:500;color:var(--text);margin-left:auto}
+.elec-valid input{accent-color:var(--accent);width:16px;height:16px}
+.elec-body{display:flex;flex-direction:column;gap:28px}
+.elec-vacio{color:var(--muted);padding:32px 0;text-align:center}
+.elec-nota{color:var(--muted);font-size:.8rem;margin:0}
+.elec-q{font-size:1rem;font-weight:600;letter-spacing:-.01em;margin:0 0 14px;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.elec-q small{color:var(--muted);font-weight:400;font-size:.8rem}
+/* barras */
+.barras{display:flex;flex-direction:column;gap:10px}
+.brow{display:grid;grid-template-columns:minmax(120px,210px) minmax(0,1fr) minmax(150px,auto);align-items:center;gap:14px}
+.bname{font-size:.9rem;font-weight:500}
+.btrack{background:var(--surface);border-radius:var(--r-pill);height:14px;overflow:hidden}
+.bfill{display:block;height:100%;background:var(--sky);border-radius:var(--r-pill)}
+.bfill.lider{background:var(--accent)}
+.bval{font-size:.9rem;white-space:nowrap}
+.bval small{color:var(--muted);font-size:.78rem;margin-left:6px}
+.barras.div .brow{grid-template-columns:minmax(120px,210px) minmax(0,1fr) minmax(250px,auto)}
+.bdiv{display:grid;grid-template-columns:1fr 1fr;height:16px;position:relative}
+.bdiv::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--line)}
+.bneg,.bpos{display:flex;height:100%}
+.bneg{justify-content:flex-end;padding-right:1px}
+.bneg i,.bpos i{display:block;height:100%}
+.bneg i{background:var(--coral);border-radius:var(--r-pill) 0 0 var(--r-pill)}
+.bpos i{background:var(--accent);border-radius:0 var(--r-pill) var(--r-pill) 0}
+.sube{color:var(--accent)}.baja{color:var(--coral)}
+/* tabla de calor (cortes) */
+.elec-tabla{overflow-x:auto}
+.elec-tabla table{border-collapse:separate;border-spacing:3px;width:100%;font-size:.85rem}
+.elec-tabla th{font-weight:600;color:var(--muted);text-align:center;padding:6px 10px;border:0!important;background:transparent!important;font-size:.8rem!important}
+.elec-tabla tbody th{text-align:left;color:var(--text);font-weight:500;white-space:nowrap}
+.elec-tabla td{text-align:center;padding:9px 10px;border-radius:var(--r-sm);border:0!important;background:var(--surface)}
+.elec-tabla tbody tr:hover td{background:var(--surface)}
+/* listado de encuestas */
+.elec-lista{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.elec-card{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--surface);border:0;border-radius:var(--r-md);padding:16px 18px;font:inherit;color:var(--text);cursor:pointer}
+.elec-card:hover{background:var(--accent-soft)}
+.elec-card span{color:var(--muted);font-size:.8rem}
+@media(max-width:900px){.brow,.barras.div .brow{grid-template-columns:1fr}.elec{padding:0 16px 32px!important}.elec-valid{margin-left:0}}

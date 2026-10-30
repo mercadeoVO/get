@@ -2673,6 +2673,72 @@ try {
         ]);
     }
 
+    // ── ELECTORAL_RESUMEN ─────────────────────────────────────
+    // Resumen de UNA encuesta electoral para la pantalla Electoral: ficha, cobertura y, por cada pregunta
+    // electoral (intención de voto, imagen, conocimiento), la distribución de respuestas, opcionalmente
+    // cortada por sexo / rango_edad / estrato y filtrada por segmento y ubicación (mismos filtros que 'segmentar').
+    if ($action === 'electoral_resumen') {
+        $db = getDB();
+        $importId = (int)($_POST['import_id'] ?? $_GET['import_id'] ?? 0);
+        if ($importId <= 0) errOut('import_id requerido.');
+        $filtros = json_decode($_POST['filtros'] ?? '{}', true) ?: [];
+        $filtros['import_ids'] = [$importId];
+        $corte = in_array(($_POST['corte'] ?? ''), ['sexo', 'rango_edad', 'estrato'], true) ? $_POST['corte'] : null;
+
+        $info = $db->prepare("SELECT id, archivo, hoja, importado_en, filas_ins, tipo_encuesta, lista_eleccion, nivel_eleccion
+                              FROM import_log WHERE id = ?");
+        $info->execute([$importId]);
+        $ficha = $info->fetch(PDO::FETCH_ASSOC);
+        if (!$ficha) errOut('Encuesta no encontrada.', 404);
+
+        $params = [];
+        $where = buildSegmentWhere($filtros, $params);
+        $st = $db->prepare("SELECT COUNT(*) AS total, COUNT(DISTINCT LEFT(l.id_geo,2)) AS dptos, COUNT(DISTINCT LEFT(l.id_geo,5)) AS munis
+                            FROM import_log_leads l $where");
+        $st->execute($params);
+        $tot = $st->fetch(PDO::FETCH_ASSOC);
+
+        $grp = $corte ? "COALESCE(NULLIF(l.`$corte`, ''), 'Sin dato')" : "''";
+        $st = $db->prepare("SELECT r.pregunta_id, $grp AS grupo, r.respuesta, COUNT(*) AS n
+                            FROM import_log_leads l
+                            JOIN import_log_leads_respuestas r ON r.lead_id = l.id_lead
+                            $where GROUP BY r.pregunta_id, grupo, r.respuesta");
+        $st->execute($params);
+        $porPregunta = [];
+        foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $porPregunta[(int)$r['pregunta_id']][] = ['grupo' => $r['grupo'], 'respuesta' => (string)$r['respuesta'], 'n' => (int)$r['n']];
+        }
+
+        $preguntas = [];
+        if ($porPregunta) {
+            $ids = implode(',', array_map('intval', array_keys($porPregunta)));
+            $rows = $db->query("SELECT id, pregunta, es_electoral FROM import_log_leads_preguntas WHERE id IN ($ids) ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $p) {
+                $low = mb_strtolower($p['pregunta'], 'UTF-8');
+                $n   = normBasico($low);
+                $an  = analizarElectoral($db, $low);
+                $obj = $an['objetivo'] ?? objetivoElectoral($n);
+                $tipo = match ($obj) {
+                    'intencion_voto', 'simpatia_partido', 'participacion_electoral' => 'voto',
+                    'imagen_candidato', 'evaluacion_candidato'                       => 'imagen',
+                    'conocimiento_candidato'                                         => 'conocimiento',
+                    default => null,
+                };
+                if (!$tipo && (int)$p['es_electoral'] === 1) $tipo = 'voto';
+                if (!$tipo) continue;   // pregunta no electoral: no entra en esta pantalla
+                $persona = null;
+                if ($tipo !== 'voto' && preg_match('/(?:imagen[^?]*?\bde|conoce a|conoces a|opini[oó]n sobre|sobre)\s+(.+?)\s*\??\s*$/iu', $p['pregunta'], $m)) {
+                    $persona = trim($m[1]);
+                }
+                $preguntas[] = ['pregunta_id' => (int)$p['id'], 'pregunta' => $p['pregunta'], 'tipo' => $tipo,
+                                'persona' => $persona, 'datos' => $porPregunta[(int)$p['id']]];
+            }
+        }
+        jsonOut(['ok' => true, 'ficha' => $ficha, 'total' => (int)$tot['total'],
+                 'cobertura' => ['departamentos' => (int)$tot['dptos'], 'municipios' => (int)$tot['munis']],
+                 'corte' => $corte, 'preguntas' => $preguntas]);
+    }
+
     // ── ENCUESTAS_AUTOCLASIFICAR ──────────────────────────────
     // Deduce tipo(s), lista de elección y nivel de cada importación de tipo 'electoral' a partir de sus
     // preguntas y cobertura. Por defecto SOLO SIMULA (GET); con POST aplicar=1 guarda:
