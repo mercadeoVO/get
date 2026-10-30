@@ -1,6 +1,6 @@
-# C98_MEDFUT — Lecciones aprendidas (lado app/MEDFUT)
+# C98_MEDFUT — Lecciones aprendidas (lado app/GET)
 
-> Patrones de error del trabajo sobre `app/` (MEDFUT) durante la sesión del 2026-07-27/28. Para
+> Patrones de error del trabajo sobre `app/` (GET, antes MEDFUT) durante la sesión del 2026-07-27/28. Para
 > las lecciones específicas de la carga geoespacial de `geo/` (C98_GEO), ver
 > [`geo/docs/lecciones_aprendidas.md`](geo/docs/lecciones_aprendidas.md) — no se repiten aquí.
 

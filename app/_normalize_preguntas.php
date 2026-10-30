@@ -1,6 +1,6 @@
 <?php
 /**
- * MEDFUT · Normalizar import_log_leads_preguntas
+ * GET · Normalizar import_log_leads_preguntas
  *
  *  PASO 0 (SQL)  · _ → espacio, trim
  *  PASO 1 (PHP)  · strip prefijo numérico "N. " / "N. N. " al inicio
@@ -134,7 +134,7 @@ h2{color:#6366f1;margin-bottom:4px}.sub{color:#7b84a3;font-size:.82rem;margin-bo
 code{background:#0f1117;padding:1px 5px;border-radius:3px;color:#a5b4fc}
 </style></head>
 <body>
-<h2>📝 MEDFUT · Normalizar Preguntas</h2>
+<h2>📝 GET · Normalizar Preguntas</h2>
 <p class="sub">_ → espacio · trim · strip "N. " · deduplicar</p>
 <div class="log">
 <?php foreach ($log as $line): ?><p><?= $line ?></p><?php endforeach; ?>

@@ -1,6 +1,6 @@
 <?php
 /**
- * MEDFUT · Normalizar import_log_leads_respuestas
+ * GET · Normalizar import_log_leads_respuestas
  *
  *  Aplica sobre la columna `respuesta`:
  *    · Reemplaza _ por espacio
@@ -61,7 +61,7 @@ h2{color:#6366f1;margin-bottom:4px}.sub{color:#7b84a3;font-size:.82rem;margin-bo
 .log p{margin:1px 0;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04)}
 </style></head>
 <body>
-<h2>💬 MEDFUT · Normalizar Respuestas</h2>
+<h2>💬 GET · Normalizar Respuestas</h2>
 <p class="sub">_ → espacio · trim · colapsar espacios</p>
 <div class="log">
 <?php foreach ($log as $line): ?><p><?= $line ?></p><?php endforeach; ?>

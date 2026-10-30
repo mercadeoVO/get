@@ -45,7 +45,7 @@
     }).join('');
     host.className = 'v-nav';
     host.innerHTML =
-      '<a class="v-brand" href="leads_segmentacion.html"><span class="v-dots"><i></i><i></i><i></i></span>MEDFUT</a>' +
+      '<a class="v-brand" href="leads_segmentacion.html"><span class="v-dots"><i></i><i></i><i></i></span>GET</a>' +
       '<nav class="v-links" aria-label="Secciones">'+links+'</nav>' +
       '<div class="v-tools">' +
         (refresh ? '<button type="button" class="v-refresh" id="v-refresh">'+SYNC+'Actualizar</button>' : '') +

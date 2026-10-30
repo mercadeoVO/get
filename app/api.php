@@ -205,7 +205,7 @@ try {
         // ── Default: índice de endpoints ───────────────────
         default:
             json_out([
-                'api'       => 'MEDFUT Electoral API v1.0',
+                'api'       => 'GET Electoral API v1.0',
                 'status'    => 'ok',
                 'endpoints' => [
                     'partidos',

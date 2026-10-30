@@ -1,4 +1,9 @@
-# MEDFUT — Contexto para Claude Code
+# GET — Contexto para Claude Code
+
+> **Renombre de marca (2026-10-30):** el producto antes llamado **MEDFUT** ahora se llama
+> **GET**. El cambio es solo de nombre visible (títulos, encabezados, logo del menú y
+> documentación). La URL `/medfut/`, la carpeta `C98_MEDFUT`, la BD `C98_MEDFUT` y los nombres
+> de archivo siguen igual a propósito, para no romper Apache ni favoritos.
 
 ## Qué es este proyecto
 

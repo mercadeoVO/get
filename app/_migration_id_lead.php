@@ -1,6 +1,6 @@
 <?php
 /**
- * MEDFUT · Migración de IDs + Normalización de Leads
+ * GET · Migración de IDs + Normalización de Leads
  *
  *  RESULTADO FINAL:
  *    import_log_leads         PK = id_lead INT AUTO_INCREMENT  /  id VARCHAR UNIQUE
@@ -383,7 +383,7 @@ code{background:#0f1117;padding:1px 5px;border-radius:3px;color:#a5b4fc}
 </style>
 </head>
 <body>
-<h2>🔑 MEDFUT · Leads · Migración + Normalización</h2>
+<h2>🔑 GET · Leads · Migración + Normalización</h2>
 <p class="sub">Schema (id_lead, FK, leads_ids) → Texto (_ → espacio · trim) · Idempotente</p>
 <div class="log">
 <?php foreach ($log as $line): ?><p><?= $line ?></p><?php endforeach; ?>

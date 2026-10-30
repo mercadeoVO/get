@@ -7,7 +7,7 @@
 
 Carpeta consolidada que une los dos proyectos que antes vivían separados:
 
-- **`app/`** — MEDFUT, la aplicación activa (PHP + MariaDB) de ingesta y análisis de leads de
+- **`app/`** — GET (antes MEDFUT), la aplicación activa (PHP + MariaDB) de ingesta y análisis de leads de
   Meta Ads. Antes vivía en `C:\xampp\htdocs\medfut`. **Ese path sigue existiendo como symlink**
   apuntando aquí (`app/`) — Apache lo sigue sirviendo en `http://localhost/medfut/` sin ningún
   cambio de configuración. No borrar el symlink.
@@ -19,7 +19,7 @@ Ambas bases de datos (`medfut` y `c98_geo`) siguen en la misma instancia MariaDB
 
 ## Documentación por subproyecto (no duplicar aquí)
 
-- `app/CLAUDE.md` — contexto técnico de MEDFUT: esquema de `import_log_leads`, convenciones,
+- `app/CLAUDE.md` — contexto técnico de GET (antes MEDFUT): esquema de `import_log_leads`, convenciones,
   patrones de código.
 - `geo/CLAUDE.md` — briefing original de C98_GEO + estado real (sección 0).
 - `geo/README.md` — punto de entrada rápido de C98_GEO.
@@ -28,7 +28,7 @@ Ambas bases de datos (`medfut` y `c98_geo`) siguen en la misma instancia MariaDB
 - `geo/docs/procesos.md` — división de C98_GEO en procesos con estado.
 - `geo/docs/lecciones_aprendidas.md` — patrones de error específicos de la carga geoespacial
   (padding DIVIPOLA, falsos positivos de encoding, matching aproximado vs. id exacto, etc.).
-- `LECCIONES_APRENDIDAS.md` (este directorio) — lecciones del lado MEDFUT/app, complementa a la
+- `LECCIONES_APRENDIDAS.md` (este directorio) — lecciones del lado GET/app, complementa a la
   de `geo/` sin repetirla.
 
 ## Decisiones ya tomadas — no volver a discutir
@@ -53,6 +53,19 @@ Ambas bases de datos (`medfut` y `c98_geo`) siguen en la misma instancia MariaDB
    (ver `geo/docs/procesos.md`, proceso P9).
 6. **`http://localhost/medfut/`** redirige automáticamente a `leads_analytics.html`
    (`app/index.php`) — es la página de entrada del sitio.
+7. **Marca renombrada MEDFUT → GET (2026-10-30), solo en lo visible.** Cambiaron los `<title>`,
+   encabezados/logos/footers de los HTML de `app/`, el texto de `api.php` y la documentación.
+   **Quedaron sin cambio a propósito:** la URL `/medfut/` (y la junction `C:\xampp\htdocs\medfut`),
+   la carpeta `C98_MEDFUT`, la BD `C98_MEDFUT`, nombres de archivo (ej. `cross_db_medfut.md`),
+   comentarios de código y la skill `c98geo-data-analyst`. Un renombre completo (URL, BD, carpetas)
+   sigue pendiente, pero ya no hay worktrees que lo bloqueen (ver decisión 8).
+8. **Un solo árbol (2026-10-30).** Se cerraron los 3 worktrees (`anuncios-url-datos`,
+   `csv-upload-error`, `unificar-diseno-proyecto`): `master` avanzó por fast-forward a la rama
+   `unificar-diseno-proyecto` (que ya contenía a `csv-upload-error`) y las 3 ramas `claude/*`
+   se eliminaron por estar fusionadas. `C:\xampp\htdocs\medfut` apunta ahora (junction) a
+   `C98_MEDFUT\app` de `master`, ya no a un worktree. Lo que estaba sin commitear quedó respaldado
+   en ramas `respaldo/*-20261030` (estado de `master`, y cambios sueltos de los worktrees `csv` y
+   `anuncios`); no se integró porque eran borradores anteriores a lo que ya tiene `master`.
 
 ## Pendiente real (no repetir reconocimiento — ver `geo/docs/procesos.md` para el detalle)
 

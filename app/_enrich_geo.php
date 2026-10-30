@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>MEDFUT · Enriquecimiento Geográfico</title>
+<title>GET · Enriquecimiento Geográfico</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0f1117;color:#e8eaf0;font-family:'Segoe UI',monospace,sans-serif;font-size:13px;padding:24px}
@@ -23,7 +23,7 @@ h2{font-size:16px;font-weight:700;margin-bottom:4px;color:#fff}
 </style>
 </head>
 <body>
-<h2>🔧 MEDFUT · Enriquecimiento Geográfico</h2>
+<h2>🔧 GET · Enriquecimiento Geográfico</h2>
 <div class="sub">Corrige <code>geo_departamento</code> desde subregión · Mueve municipios mal clasificados en subregión · Enriquece desde c98_geo</div>
 
 <?php

@@ -1,4 +1,4 @@
-# Taxonomía de Temas y Subtemas — Preguntas y Respuestas MEDFUT
+# Taxonomía de Temas y Subtemas — Preguntas y Respuestas GET
 
 **Fase 0 — Propuesta de análisis y segmentación.** Documento vivo: se ajustará en la fase
 de diseño según feedback de negocio. No implica cambios de esquema ni de código.
