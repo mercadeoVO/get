@@ -152,6 +152,71 @@ function analizarElectoral(PDO $db, string $pregLower): ?array {
     ];
 }
 
+/** Columnas de clasificación de encuestas electorales en import_log (idempotente; tipo_encuesta admite varios, separados por coma). */
+function ensureEncuestaCols(PDO $db): void {
+    static $hecho = false;
+    if ($hecho) return;
+    $cols = $db->query("SELECT COLUMN_NAME, CHARACTER_MAXIMUM_LENGTH FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'import_log'
+                          AND COLUMN_NAME IN ('tipo_encuesta','lista_eleccion','nivel_eleccion')")->fetchAll(PDO::FETCH_KEY_PAIR);
+    if (!isset($cols['tipo_encuesta']))      $db->exec("ALTER TABLE import_log ADD COLUMN tipo_encuesta VARCHAR(120) DEFAULT NULL");
+    elseif ((int)$cols['tipo_encuesta'] < 120) $db->exec("ALTER TABLE import_log MODIFY tipo_encuesta VARCHAR(120) DEFAULT NULL");
+    if (!isset($cols['lista_eleccion']))     $db->exec("ALTER TABLE import_log ADD COLUMN lista_eleccion VARCHAR(30) DEFAULT NULL");
+    if (!isset($cols['nivel_eleccion']))     $db->exec("ALTER TABLE import_log ADD COLUMN nivel_eleccion VARCHAR(20) DEFAULT NULL");
+    $hecho = true;
+}
+
+/**
+ * Deduce la clasificación de una importación a partir de sus preguntas y su cobertura geográfica:
+ *  - es_electoral: tiene al menos una pregunta electoral (confianza alta).
+ *  - tipo_encuesta (varios): según el objetivo de cada pregunta (voto, imagen, conocimiento, evaluación).
+ *  - lista_eleccion: por el cargo que citan las preguntas (alcalde → TERRITORIAL, presidente → PRESIDENCIAL…); null si no hay pista.
+ *  - nivel_eleccion: por la cobertura de los leads (1 municipio → municipal, 1 departamento → departamental, más → nacional).
+ */
+function deducirMetaEncuesta(PDO $db, int $importId): array {
+    $st = $db->prepare("SELECT DISTINCT p.id, p.pregunta, p.es_electoral
+                        FROM import_log_leads l
+                        JOIN import_log_leads_respuestas r ON r.lead_id = l.id_lead
+                        JOIN import_log_leads_preguntas p ON p.id = r.pregunta_id
+                        WHERE l.import_id = ?");
+    $st->execute([$importId]);
+    $mapTipo = ['intencion_voto' => 'intencion_voto', 'simpatia_partido' => 'intencion_voto',
+                'conocimiento_candidato' => 'conocimiento', 'imagen_candidato' => 'imagen',
+                'evaluacion_candidato' => 'evaluacion'];
+    $electorales = 0; $total = 0; $objetivos = []; $cargos = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $total++;
+        $low = mb_strtolower($row['pregunta'], 'UTF-8');
+        $n   = normBasico($low);
+        $an  = analizarElectoral($db, $low);
+        if ((int)$row['es_electoral'] === 1 || ($an && $an['confianza'] === 'alta')) $electorales++;
+        $obj = $an['objetivo'] ?? objetivoElectoral($n);
+        if ($obj && isset($mapTipo[$obj])) $objetivos[$mapTipo[$obj]] = true;
+        foreach (['/\balcald/' => 'TERRITORIAL', '/\bgobernad/' => 'TERRITORIAL', '/\bconcej/' => 'TERRITORIAL',
+                  '/\bpresiden/' => 'PRESIDENCIAL', '/\bsenad/' => 'SENADO', '/\b(camara|representante)/' => 'CAMARA'] as $re => $lista) {
+            if (preg_match($re, $n)) $cargos[$lista] = ($cargos[$lista] ?? 0) + 1;
+        }
+    }
+    $g = $db->prepare("SELECT COUNT(DISTINCT LEFT(id_geo,2)) AS dptos, COUNT(DISTINCT LEFT(id_geo,5)) AS munis
+                       FROM import_log_leads WHERE import_id = ? AND id_geo IS NOT NULL");
+    $g->execute([$importId]);
+    $cob = $g->fetch(PDO::FETCH_ASSOC) ?: ['dptos' => 0, 'munis' => 0];
+    $nivel = null;
+    if ((int)$cob['munis'] > 0) $nivel = (int)$cob['munis'] === 1 ? 'municipal' : ((int)$cob['dptos'] === 1 ? 'departamental' : 'nacional');
+    arsort($cargos);
+    $esElec = $electorales > 0;
+    return [
+        'import_id'      => $importId,
+        'es_electoral'   => $esElec,
+        'preguntas'      => $total,
+        'electorales'    => $electorales,
+        'tipo_encuesta'  => ($esElec && $objetivos) ? implode(',', array_keys($objetivos)) : null,
+        'lista_eleccion' => ($esElec && $cargos) ? array_key_first($cargos) : null,
+        'nivel_eleccion' => $esElec ? $nivel : null,
+        'cobertura'      => ['departamentos' => (int)$cob['dptos'], 'municipios' => (int)$cob['munis']],
+    ];
+}
+
 /** @return int[] ids de dim_tema cuyo keyword matchea el texto de la pregunta */
 function clasificarTemaAuto(string $pregLower, array $temaKeywords): array {
     $matches = [];
@@ -1849,7 +1914,7 @@ try {
             "ALTER TABLE import_log ADD COLUMN etapa           VARCHAR(50)  DEFAULT 'importado'",
             "ALTER TABLE import_log ADD COLUMN tipo            VARCHAR(20)  DEFAULT 'leads'",
             // Clasificación de las encuestas electorales (la usa la pantalla Electoral para filtrar)
-            "ALTER TABLE import_log ADD COLUMN tipo_encuesta   VARCHAR(30)  DEFAULT NULL",
+            "ALTER TABLE import_log ADD COLUMN tipo_encuesta   VARCHAR(120) DEFAULT NULL",
             "ALTER TABLE import_log ADD COLUMN lista_eleccion  VARCHAR(30)  DEFAULT NULL",
             "ALTER TABLE import_log ADD COLUMN nivel_eleccion  VARCHAR(20)  DEFAULT NULL",
             "ALTER TABLE import_log_leads      ADD COLUMN nivel_educativo  VARCHAR(100) DEFAULT NULL",
@@ -2578,14 +2643,13 @@ try {
     // la pantalla Electoral. Filtros opcionales: tipo_encuesta, lista_eleccion, nivel_eleccion ('' = todas).
     if ($action === 'encuestas_electorales') {
         $db = getDB();
-        foreach (["tipo_encuesta VARCHAR(30)", "lista_eleccion VARCHAR(30)", "nivel_eleccion VARCHAR(20)"] as $col) {
-            try { $db->exec("ALTER TABLE import_log ADD COLUMN $col DEFAULT NULL"); } catch (\Exception $e) { /* ya existe */ }
-        }
+        ensureEncuestaCols($db);
         $where = "WHERE tipo = 'electoral'"; $params = [];
         foreach (['tipo_encuesta', 'lista_eleccion', 'nivel_eleccion'] as $f) {
             $v = trim((string)($_GET[$f] ?? ''));
-            if ($v === '__sin__')      { $where .= " AND $f IS NULL"; }
-            elseif ($v !== '')         { $where .= " AND $f = ?"; $params[] = $v; }
+            if ($v === '__sin__')                { $where .= " AND $f IS NULL"; }
+            elseif ($v !== '' && $f === 'tipo_encuesta') { $where .= " AND FIND_IN_SET(?, tipo_encuesta) > 0"; $params[] = $v; }
+            elseif ($v !== '')                   { $where .= " AND $f = ?"; $params[] = $v; }
         }
         $st = $db->prepare("SELECT id, archivo, hoja, importado_en, filas_ins, tipo_encuesta, lista_eleccion, nivel_eleccion
                             FROM import_log $where ORDER BY id DESC");
@@ -2607,6 +2671,36 @@ try {
                 ],
             ],
         ]);
+    }
+
+    // ── ENCUESTAS_AUTOCLASIFICAR ──────────────────────────────
+    // Deduce tipo(s), lista de elección y nivel de cada importación de tipo 'electoral' a partir de sus
+    // preguntas y cobertura. Por defecto SOLO SIMULA (GET); con POST aplicar=1 guarda:
+    //  - lo que no es electoral (ninguna pregunta electoral) pasa a tipo 'leads';
+    //  - en las electorales solo se rellenan campos vacíos (nunca pisa una clasificación manual).
+    if ($action === 'encuestas_autoclasificar') {
+        $db = getDB();
+        ensureEncuestaCols($db);
+        $aplicar = ($_SERVER['REQUEST_METHOD'] === 'POST') && (($_POST['aplicar'] ?? '0') === '1');
+        $filas = $db->query("SELECT id, archivo, tipo_encuesta, lista_eleccion, nivel_eleccion FROM import_log
+                             WHERE tipo = 'electoral' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+        $out = [];
+        foreach ($filas as $f) {
+            $d = deducirMetaEncuesta($db, (int)$f['id']);
+            $accion = $d['es_electoral'] ? 'clasificar' : 'pasar_a_leads';
+            if ($aplicar) {
+                if (!$d['es_electoral']) {
+                    $db->prepare("UPDATE import_log SET tipo = 'leads' WHERE id = ?")->execute([$f['id']]);
+                } else {
+                    $db->prepare("UPDATE import_log SET tipo_encuesta = COALESCE(tipo_encuesta, ?),
+                                  lista_eleccion = COALESCE(lista_eleccion, ?), nivel_eleccion = COALESCE(nivel_eleccion, ?)
+                                  WHERE id = ?")->execute([$d['tipo_encuesta'], $d['lista_eleccion'], $d['nivel_eleccion'], $f['id']]);
+                }
+            }
+            $out[] = ['archivo' => $f['archivo'], 'accion' => $accion, 'actual' => [
+                'tipo_encuesta' => $f['tipo_encuesta'], 'lista_eleccion' => $f['lista_eleccion'], 'nivel_eleccion' => $f['nivel_eleccion']]] + $d;
+        }
+        jsonOut(['ok' => true, 'aplicado' => $aplicar, 'encuestas' => $out]);
     }
 
     // ── ENCUESTA_META_SET ─────────────────────────────────────
