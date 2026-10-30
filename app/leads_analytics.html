@@ -142,7 +142,7 @@ tbody tr:hover{background:rgba(99,102,241,.05)}
 
 footer{text-align:center;padding:18px;color:var(--muted);font-size:.67rem}
 </style>
-<link rel="stylesheet" href="visor.css?v=21">
+<link rel="stylesheet" href="visor.css?v=22">
 <script src="visor.js?v=10"></script>
 </head>
 <body>
@@ -808,6 +808,16 @@ function applyTemaFilter() {
 
 function renderTemas(nivel, parentFilter) {
   const chartWrap = $('tema-chart-wrap'), preguntasWrap = $('tema-preguntas-wrap');
+  // Sin respuestas de encuesta en la selección (p. ej. una importación de solo formulario): mensaje en vez de panel en blanco
+  let emp = $('tema-empty');
+  if (!emp) { emp = document.createElement('div'); emp.id = 'tema-empty'; emp.className = 'mini'; emp.style.cssText = 'padding:18px 4px;color:var(--text-dim)'; chartWrap.parentNode.insertBefore(emp, chartWrap); }
+  const hayTemas = (TEMA_DATA?.tema?.length || 0) + (TEMA_DATA?.subtema?.length || 0) + (TEMA_DATA?.preguntas?.length || 0) > 0;
+  emp.style.display = hayTemas ? 'none' : 'block';
+  if (!hayTemas) {
+    emp.textContent = $('f-import').value ? 'Esta importación no tiene respuestas de encuesta clasificadas por tema.' : 'No hay respuestas de encuesta clasificadas por tema.';
+    chartWrap.style.display = 'none'; preguntasWrap.style.display = 'none'; destroyChart('ch-tema');
+    return;
+  }
   if (nivel === 'pregunta') {
     chartWrap.style.display = 'none';
     preguntasWrap.style.display = 'block';

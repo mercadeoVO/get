@@ -1,0 +1,7 @@
+# MEDFUT: el navegador debe revalidar páginas y recursos en cada carga (evita ver versiones viejas en caché).
+# Con ETag/Last-Modified, si el archivo no cambió el servidor responde 304 y no se vuelve a descargar.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css|json)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>

@@ -213,7 +213,7 @@ select[multiple]{min-height:78px}
 @keyframes spin{to{transform:rotate(360deg)}}
 footer{text-align:center;padding:16px;color:var(--text-faint);font-size:.66rem}
 </style>
-<link rel="stylesheet" href="visor.css?v=21">
+<link rel="stylesheet" href="visor.css?v=22">
 <script src="visor.js?v=10"></script>
 </head>
 <body>
@@ -367,12 +367,15 @@ function card(id,ico,title,body,collapsed){
     <div class="card-b">${body}</div>
   </div>`;
 }
+const SIN_DATO='__NULL__';   // valor centinela del filtro "Sin dato" (NULL o vacío en la columna)
 function tiles(key,items,valGetter,lblGetter,cls){
   return `<div class="tiles ${cls||''}" data-key="${key}">`+items.map(it=>{
     const v=valGetter(it), lbl=lblGetter?lblGetter(it):v;
     return `<button class="tile" data-key="${key}" data-v="${h(v)}" onclick="toggleTile(this)">
       <span class="lbl">${h(lbl)}</span>${it.cnt!=null?`<span class="cnt">${fmtN(it.cnt)}</span>`:''}</button>`;
-  }).join('')+`</div>`;
+  }).join('')+
+  `<button class="tile" data-key="${key}" data-v="${SIN_DATO}" onclick="toggleTile(this)">
+      <span class="lbl">Sin dato</span><span class="cnt">0</span></button></div>`;
 }
 function buildPanel(){
   const demo=`
@@ -389,12 +392,15 @@ function buildPanel(){
   const eav=`<div id="eav-list"></div>
     <button class="btn-add" onclick="openEavModal()">Añadir condición pregunta + respuesta</button>`;
 
+  // Todos los desplegables arrancan recogidos; al reconstruir se conserva lo que el usuario dejó abierto.
+  const prevOpen=new Set([...document.querySelectorAll('.card:not(.collapsed)')].map(c=>c.id));
+  const col=id=>!prevOpen.has('card-'+id);
   $('panel').innerHTML =
-    card('demo','','Demografía',demo) +
-    card('pol','','Política',pol) +
-    card('temas','','Temas y percepción',temas) +
-    card('eav','','Encuesta · pregunta/respuesta',eav);
-  $('geo-slot').innerHTML = card('geo','','Geografía',geo);
+    card('demo','','Demografía',demo,col('demo')) +
+    card('temas','','Temas y percepción',temas,col('temas')) +
+    card('eav','','Encuesta · pregunta/respuesta',eav,col('eav')) +
+    card('pol','','Política',pol,col('pol'));
+  $('geo-slot').innerHTML = card('geo','','Geografía',geo,col('geo'));
 
   renderGeo();
   renderTemas();
@@ -455,14 +461,18 @@ function renderGeo(){
     $('geo-note').textContent=''; refreshBadges(); return;
   }
   const rows=[...(LAST.geo_map||[])].filter(g=>g.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+  const sinNivel=Math.max(0,(LAST.total||0)-rows.reduce((x,g)=>x+g.cnt,0));
   $('geo-tiles').innerHTML = `<div class="tiles">`+rows.slice(0,400).map(g=>{
     const id=String(g.geo_id), on=GEO.sel.has(id);
     return `<button class="tile${on?' on':''}" data-gid="${h(id)}" data-nom="${h(g.nombre).replace(/"/g,'&quot;')}" onclick="${canDrill?`geoDrill('${h(id)}',this.dataset.nom)`:'toggleGeo(this)'}" title="${canDrill?'Ver '+nextLbl:''}">
       <span class="lbl">${h(g.nombre)}</span><span class="cnt">${fmtN(g.cnt)}</span>
     </button>`;
-  }).join('')+`</div>`;
+  }).join('')+
+    // Leads del segmento ubicados solo hasta un nivel superior: no suman en ninguna área de este nivel
+    (sinNivel>0?`<div class="tile" style="cursor:default;opacity:.75" title="Leads del segmento cuya ubicación llega solo hasta el nivel anterior; no se pueden filtrar por ${h(GEO_LABEL[lvl].toLowerCase())}">
+      <span class="lbl">Sin ${h(GEO_LABEL[lvl].toLowerCase())}</span><span class="cnt">${fmtN(sinNivel)}</span></div>`:'')+`</div>`;
   $('geo-note').textContent = rows.length
-    ? `${rows.length} ${rows.length===1?'área':'áreas'} con registros en el segmento`
+    ? `${rows.length} ${rows.length===1?'área':'áreas'} con registros en el segmento`+(sinNivel>0?` · ${fmtN(sinNivel)} de ${fmtN(LAST.total)} leads sin ${GEO_LABEL[lvl].toLowerCase()} (ubicados solo a un nivel superior)`:'')
     : `Sin ${GEO_LABEL[lvl].toLowerCase()} con leads en este segmento`;
   refreshBadges();
 }
@@ -584,7 +594,7 @@ function buildFiltros(){
   return f;
 }
 function updateSummary(){
-  const parts=[]; const add=(k,set,fmt)=>{ if(set.size) parts.push(`<span class="k">${k}</span>`+[...set].map(v=>`<span class="chip">${h(fmt?fmt(v):v)}</span>`).join('')); };
+  const parts=[]; const add=(k,set,fmt)=>{ if(set.size) parts.push(`<span class="k">${k}</span>`+[...set].map(v=>`<span class="chip">${h(v===SIN_DATO?'Sin dato':fmt?fmt(v):v)}</span>`).join('')); };
   add('Sexo',F.sexo); add('Edad',F.rango_edad); add('Estrato',F.estrato,v=>'E'+v);
   add('Nivel educ.',F.nivel_educativo); add('Afiliación',F.afiliacion_politica);
   if(F.temas.size){ const names=[...F.temas].map(id=>{ const t=(DIMS.temas||[]).find(x=>String(x.id)===id); return t?t.subtema:id; }); parts.push('<span class="k">Tema</span>'+names.slice(0,4).map(n=>`<span class="chip">${h(n)}</span>`).join('')+(names.length>4?` +${names.length-4}`:'')); }
@@ -619,9 +629,10 @@ function syncTileCounts(d){
     nivel_educativo:d.dist.nivel_educativo,afiliacion_politica:d.dist.afiliacion_politica};
   for(const [key,rows] of Object.entries(byField)){
     const byVal={}; (rows||[]).forEach(r=>{ byVal[String(r.val)]=r.cnt; });
+    const sinDato=Math.max(0,(d.total||0)-(rows||[]).reduce((a,r)=>a+r.cnt,0));
     document.querySelectorAll(`.tile[data-key="${key}"]`).forEach(el=>{
       const cntEl=el.querySelector('.cnt');
-      if(cntEl) cntEl.textContent=fmtN(byVal[el.dataset.v]||0);
+      if(cntEl) cntEl.textContent=fmtN(el.dataset.v===SIN_DATO?sinDato:(byVal[el.dataset.v]||0));
     });
   }
   const temasCnt=d.temas_cnt||{};
@@ -771,9 +782,21 @@ async function renderMap(){
   let feats;
   try{ const j=await fetch(url).then(r=>r.json()); if(!j.ok) throw new Error(j.error); feats=j.data.features; }
   catch(e){ msg.textContent='No se pudo cargar la geometría: '+e.message; msg.classList.add('show'); return; }
-  if(!feats.length){ msg.textContent='Sin geometría en este nivel (zona/comuna/barrio solo existen para 5 ciudades).'; msg.classList.add('show'); return; }
+  let fallback=null;   // nivel superior cuya geometría se muestra cuando el actual no tiene
+  if(!feats.length){
+    // Sin geometría en este nivel: muestra la del último nivel del drill que sí la tiene
+    const up=GEO.path.length?GEO.path[GEO.path.length-1]:null;
+    if(up){
+      try{
+        const j=await fetch(`${MAP_API}?tipo=${up.level}&resolution=${GEO_RES[up.level]}&ids=${encodeURIComponent(up.id)}`).then(r=>r.json());
+        if(j.ok&&j.data.features.length){ feats=j.data.features; fallback=up; }
+      }catch(e){}
+    }
+    if(!fallback){ msg.textContent='Sin geometría en este nivel (zona/comuna/barrio solo existen para 5 ciudades).'; msg.classList.add('show'); return; }
+  }
 
   const cnt={}; (LAST&&LAST.nivel_mapa===lvl?(LAST.geo_map||[]):[]).forEach(g=>cnt[String(g.geo_id)]=g.cnt);
+  if(fallback&&LAST) cnt[String(fallback.id)]=LAST.total||0;
   const max=Math.max(1,...Object.values(cnt));
 
   // Ambos modos usan la misma escala de "temperatura" (verde→rojo por densidad de leads);
@@ -812,10 +835,13 @@ async function renderMap(){
     [[.9,'≥ '+Math.round(max*.8)],[.7,''+Math.round(max*.6)],[.5,''+Math.round(max*.4)],[.3,''+Math.round(max*.2)],[.1,'1']]
     .map(([t,txt])=>`<div class="row"><span class="sw" style="background:${choroColor(max*t,max)}"></span>${txt}</div>`).join('')+
     (LAST&&LAST.sin_geo?`<div class="row" style="margin-top:4px">${fmtN(LAST.sin_geo)} sin ubicación</div>`:'');
-  $('map-note').textContent=LAST?`${fmtN(LAST.mapeados)} de ${fmtN(LAST.total)} leads ubicados`:'';
+  $('map-note').textContent=fallback&&LAST
+    ?`${fmtN(LAST.total)} leads en ${fallback.nombre} · sin geometría de ${GEO_LABEL[lvl].toLowerCase()}; se muestra ${GEO_LABEL[fallback.level].toLowerCase()}`
+    :(LAST?`${fmtN(LAST.mapeados)} de ${fmtN(LAST.total)} leads ubicados`:'');
 }
 function fit(){ try{ map.invalidateSize(); const b=layer.getBounds(); if(b.isValid()) map.fitBounds(b,{padding:[14,14],animate:false}); }catch(e){} }
 async function onMapClick(props){
+  if(GEO.path.length&&String(props.id)===GEO.path[GEO.path.length-1].id) return;   // geometría de respaldo: ya estás en ella
   const canDrill=GEO_CHAIN.indexOf(GEO.level)<GEO_CHAIN.length-1;
   if(canDrill) geoDrill(props.id,props.nombre);
   else { // último nivel → togglear como filtro
@@ -827,5 +853,6 @@ async function onMapClick(props){
 
 boot();
 </script>
+<script src="nl_search.js"></script>
 </body>
 </html>

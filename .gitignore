@@ -18,3 +18,6 @@ geo/data_dane/
 # ── Sistema ──────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+
+# Clave de la API de Anthropic para el buscador inteligente (local, no versionar)
+app/anthropic.local.php

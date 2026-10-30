@@ -483,6 +483,27 @@ function lookupComunaByName(string $nomComuna, ?string $nomMpio, \PDO $db): ?arr
     return $st->fetch(\PDO::FETCH_ASSOC) ?: null;
 }
 
+/**
+ * ¿El nombre de barrio ($tipo='b') o comuna ($tipo='c') pertenece a un único municipio en c98_geo?
+ * Misma coincidencia (LIKE normalizado) que lookupBarrioByName / lookupComunaByName.
+ */
+function geoNameIsUnique(string $tipo, string $name, \PDO $db): bool {
+    if (mb_strlen(trim($name)) < 3) return false;
+    $norm = '%' . normalizeGeoStr($name) . '%';
+    $sql = $tipo === 'b'
+        ? "SELECT COUNT(DISTINCT m.id) FROM c98_geo.dim_barrio b
+             JOIN c98_geo.dim_comuna c ON c.id = b.id_comuna
+             JOIN c98_geo.dim_zona z ON z.id = c.id_zona
+             JOIN c98_geo.dim_municipio m ON m.id = z.id_municipio
+           WHERE " . _nsql('b.nombre') . " LIKE ?"
+        : "SELECT COUNT(DISTINCT m.id) FROM c98_geo.dim_comuna c
+             JOIN c98_geo.dim_zona z ON z.id = c.id_zona
+             JOIN c98_geo.dim_municipio m ON m.id = z.id_municipio
+           WHERE " . _nsql('c.nombre') . " LIKE ?";
+    $st = $db->prepare($sql); $st->execute([$norm]);
+    return (int)$st->fetchColumn() === 1;
+}
+
 function lookupBarrioByNameScoped(string $nomBarrio, string $nomMpio, \PDO $db): ?array {
     if (mb_strlen(trim($nomBarrio)) < 3) return null;
     $normB = '%' . normalizeGeoStr($nomBarrio) . '%';
@@ -593,9 +614,17 @@ function buildSegmentWhere(array $f, array &$params): string {
         if (empty($f[$col]) || !is_array($f[$col])) continue;
         $vals = array_values(array_filter($f[$col], fn($v) => $v !== null && $v !== ''));
         if (!$vals) continue;
-        $ph = implode(',', array_fill(0, count($vals), '?'));
-        $w .= " AND l.`$col` IN ($ph)";
-        foreach ($vals as $v) $params[] = $v;
+        // '__NULL__' = "Sin dato": la columna es NULL o está vacía
+        $sinDato = in_array('__NULL__', $vals, true);
+        $vals = array_values(array_filter($vals, fn($v) => $v !== '__NULL__'));
+        $cond = [];
+        if ($vals) {
+            $ph = implode(',', array_fill(0, count($vals), '?'));
+            $cond[] = "l.`$col` IN ($ph)";
+            foreach ($vals as $v) $params[] = $v;
+        }
+        if ($sinDato) $cond[] = "(l.`$col` IS NULL OR CAST(l.`$col` AS CHAR) = '')";
+        $w .= ' AND (' . implode(' OR ', $cond) . ')';
     }
 
     // is_organic
@@ -983,8 +1012,10 @@ function reconcileLeadGeo(array &$lead, \PDO $db): bool {
     }
 
     // 1. Reverse lookup barrio → cadena geo completa
+    // Solo si el nombre del barrio pertenece a UN único municipio: nombres como "El Porvenir" o
+    // "San Antonio" existen en muchas ciudades y tomar la primera coincidencia ubica el lead en otra ciudad.
     if (!empty($lead['barrio']) && empty($lead['municipio'])) {
-        $geoB = lookupBarrioByName($lead['barrio'], $db);
+        $geoB = geoNameIsUnique('b', $lead['barrio'], $db) ? lookupBarrioByName($lead['barrio'], $db) : null;
         if ($geoB) {
             $lead['municipio']        = $lead['municipio']        ?: $geoB['nom_mpio'];
             $lead['subregion']        = $lead['subregion']        ?: $geoB['nom_subregion'];
@@ -997,7 +1028,7 @@ function reconcileLeadGeo(array &$lead, \PDO $db): bool {
 
     // 2. Reverse lookup comuna_localidad → municipio si está vacío
     if (!empty($lead['comuna_localidad']) && empty($lead['municipio'])) {
-        $geoC = lookupComunaByName($lead['comuna_localidad'], null, $db);
+        $geoC = geoNameIsUnique('c', $lead['comuna_localidad'], $db) ? lookupComunaByName($lead['comuna_localidad'], null, $db) : null;
         if ($geoC) {
             $lead['municipio']        = $lead['municipio']        ?: $geoC['nom_mpio'];
             $lead['subregion']        = $lead['subregion']        ?: $geoC['nom_subregion'];
@@ -1310,6 +1341,7 @@ try {
                 SELECT DATE(importado_en) AS fecha, SUM(filas_ins) AS nuevos,
                        SUM(filas_dup) AS duplicados, COUNT(*) AS importaciones
                 FROM import_log
+                " . ($importId ? "WHERE id = $importId" : "") . "
                 GROUP BY DATE(importado_en)
                 ORDER BY fecha DESC
                 LIMIT 30
@@ -1321,6 +1353,7 @@ try {
                        il.filas_ins AS nuevos, il.filas_dup AS dup,
                        COALESCE(il.tipo,'leads') AS tipo, il.etapa
                 FROM import_log il
+                " . ($importId ? "WHERE il.id = $importId" : "") . "
                 ORDER BY il.id DESC LIMIT 20
             ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -1359,6 +1392,7 @@ try {
                 JOIN import_log_leads_preguntas p ON p.id = pt.pregunta_id
                 LEFT JOIN import_log_leads_respuestas r ON r.pregunta_id = p.id $leadFilterSub
                 GROUP BY p.id, dt.id
+                " . ($importId ? "HAVING n_respuestas > 0" : "") . "
                 ORDER BY dt.codigo, n_respuestas DESC
             ")->fetchAll(PDO::FETCH_ASSOC);
             foreach ($temas['preguntas'] as &$pr) { $pr['n_respuestas'] = (int)$pr['n_respuestas']; $pr['pregunta_id'] = (int)$pr['pregunta_id']; }
