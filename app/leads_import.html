@@ -256,6 +256,22 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
     </div>
     <div id="log-container" hidden><div class="spinner" style="margin:8px 0;"></div></div>
   </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button type="button" id="pend-toggle" aria-expanded="false" aria-controls="pend-container" onclick="togglePendientes()"
+        style="display:flex;align-items:center;gap:8px;background:none;border:0;padding:0;font:inherit;cursor:pointer;color:inherit;">
+        <span id="pend-chev" style="display:inline-block;transition:transform .15s;">▸</span>
+        <span class="card-title" style="margin:0;">Encuestas pendientes de importar</span>
+        <span id="pend-badge" style="display:none;background:var(--accent);color:#fff;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;"></span>
+      </button>
+      <span id="pend-actions" style="margin-left:auto;display:none;align-items:center;gap:10px;">
+        <span id="pend-rev" style="color:var(--muted);font-size:12px;"></span>
+        <button class="btn btn-outline btn-sm" id="pend-btn" onclick="revisarRepositorio()">↻ Revisar repositorio</button>
+      </span>
+    </div>
+    <div id="pend-container" hidden style="margin-top:12px;"><div class="spinner" style="margin:8px 0;"></div></div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ STEP 2 -->
@@ -2284,6 +2300,66 @@ async function loadLogs(){
   }catch{
     el.innerHTML='<p style="color:var(--muted);font-size:13px;">No se pudo cargar el historial.</p>';
   }
+}
+
+// Encuestas pendientes: contraste repositorio ↔ import_log. La lista guardada se muestra al abrir;
+// recorrer el repositorio (lento) solo ocurre al pulsar «Revisar repositorio».
+let pendCargado=false;
+function togglePendientes(){
+  const c=document.getElementById('pend-container'), abrir=c.hidden;
+  c.hidden=!abrir;
+  document.getElementById('pend-actions').style.display=abrir?'flex':'none';
+  document.getElementById('pend-chev').style.transform=abrir?'rotate(90deg)':'';
+  document.getElementById('pend-toggle').setAttribute('aria-expanded',String(abrir));
+  if(abrir&&!pendCargado) loadPendientes();
+}
+async function loadPendientes(){
+  pendCargado=true;
+  try{ renderPendientes(await fetch(API+'?action=fuente_pendientes').then(r=>r.json())); }
+  catch{ document.getElementById('pend-container').innerHTML='<p style="color:var(--muted);font-size:13px;">No se pudo cargar la lista.</p>'; }
+}
+async function revisarRepositorio(){
+  const btn=document.getElementById('pend-btn'), c=document.getElementById('pend-container');
+  btn.disabled=true; btn.textContent='Revisando…';
+  c.innerHTML='<div class="spinner" style="margin:8px 0;"></div><p style="color:var(--muted);font-size:12px;">Leyendo el repositorio; la primera vez puede tardar varios minutos.</p>';
+  try{
+    const d=await fetch(API+'?action=fuente_revisar',{method:'POST'}).then(r=>r.json());
+    if(d.ok===false) throw new Error(d.error||'Error');
+    pendCargado=true; renderPendientes(d);
+  }catch(e){
+    c.innerHTML=`<p style="color:var(--red);font-size:13px;">No se pudo revisar: ${h(e.message)}</p>`;
+  }finally{ btn.disabled=false; btn.textContent='↻ Revisar repositorio'; }
+}
+function renderPendientes(d){
+  const c=document.getElementById('pend-container'), badge=document.getElementById('pend-badge');
+  document.getElementById('pend-rev').textContent=d.revisado_en?'Última revisión: '+d.revisado_en.substring(0,16):'';
+  if(!d.resumen){
+    badge.style.display='none';
+    c.innerHTML='<p style="color:var(--muted);font-size:13px;">Aún no se ha revisado el repositorio. Pulsa «Revisar repositorio».</p>'; return;
+  }
+  const r=d.resumen;
+  badge.textContent=r.pendientes; badge.style.display=r.pendientes?'inline-block':'none';
+  const fecha=ts=>new Date(ts*1000).toISOString().substring(0,10);
+  const resumen=`<p style="color:var(--muted);font-size:12px;margin:0 0 10px;">
+    ${r.hojas_encuesta} hojas con estructura de encuesta · <b style="color:var(--green)">${r.importadas} importadas</b> ·
+    <b>${r.pendientes} pendientes</b> en ${r.archivos_pendientes} archivo(s)
+    ${r.vacias?` · ${r.vacias} vacías`:''}${r.ilegibles?` · <span style="color:var(--red)">${r.ilegibles} ilegible(s)</span>`:''}</p>`;
+  const filas=d.pendientes.map(p=>`<tr>
+      <td style="font-family:monospace;font-size:12px;" title="${h(p.ruta)}">${h(p.archivo)}${p.copias>1?` <span style="color:var(--muted);font-family:inherit;" title="El mismo archivo existe en ${p.copias} carpetas">×${p.copias}</span>`:''}</td>
+      <td style="font-size:12px;">${h(p.hoja)}</td>
+      <td style="font-weight:700">${p.filas.toLocaleString('es-CO')}</td>
+      <td style="font-size:12px;color:var(--muted)">${fecha(p.modificado)}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${h(p.ruta)}">${h(p.ruta.replace(/[^/]*$/,''))}</td>
+    </tr>`).join('');
+  const tabla=d.pendientes.length
+    ?`<div style="overflow:auto;max-height:420px;"><table class="log-table" style="white-space:nowrap;">
+        <thead><tr><th>Archivo</th><th>Hoja</th><th>Filas</th><th>Modificado</th><th>Carpeta</th></tr></thead>
+        <tbody>${filas}</tbody></table></div>`
+    :'<p style="color:var(--green);font-size:13px;">Todas las hojas de encuesta del repositorio ya están importadas.</p>';
+  const errs=d.errores.length
+    ?`<details style="margin-top:10px;font-size:12px;color:var(--muted);"><summary>${d.errores.length} archivo(s) no se pudieron leer</summary>
+        ${d.errores.map(e=>`<div>${h(e.ruta)} — ${h(e.error)}</div>`).join('')}</details>`:'';
+  c.innerHTML=resumen+tabla+errs;
 }
 
 async function enrichImport(importId, btn){
