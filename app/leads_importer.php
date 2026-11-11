@@ -2129,7 +2129,10 @@ try {
             "INSERT IGNORE INTO pregunta_tema (pregunta_id, tema_id, origen, pendiente_revision) VALUES (?, ?, 'auto', 1)"
         );
         $stmtEav = $db->prepare(
-            "INSERT INTO import_log_leads_respuestas (lead_id, pregunta_id, respuesta) VALUES (?, ?, ?)"
+            // Clave única (lead_id, pregunta_id): al reimportar un lead existente no se duplican sus respuestas;
+            // si la respuesta cambió, gana la del archivo más reciente.
+            "INSERT INTO import_log_leads_respuestas (lead_id, pregunta_id, respuesta) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE respuesta = VALUES(respuesta)"
         );
         // Para leads duplicados que ya existen en BD: recuperar su id_lead
         $stmtGetLeadNumId = $db->prepare(

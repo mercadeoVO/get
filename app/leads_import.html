@@ -244,11 +244,17 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
 
   <div class="card">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-      <div class="card-title" style="margin:0;">Historial de importaciones</div>
-      <button class="btn btn-outline btn-sm" onclick="loadLogs()" style="margin-left:auto;">↻ Actualizar</button>
-      <button class="btn btn-outline btn-sm" onclick="confirmResetDB()" style="color:var(--red);border-color:var(--red);">Limpiar BD</button>
+      <button type="button" id="log-toggle" aria-expanded="false" aria-controls="log-container" onclick="toggleLogs()"
+        style="display:flex;align-items:center;gap:8px;background:none;border:0;padding:0;font:inherit;cursor:pointer;color:inherit;">
+        <span id="log-chev" style="display:inline-block;transition:transform .15s;">▸</span>
+        <span class="card-title" style="margin:0;">Historial de importaciones</span>
+      </button>
+      <span id="log-actions" style="margin-left:auto;display:none;gap:10px;">
+        <button class="btn btn-outline btn-sm" onclick="loadLogs()">↻ Actualizar</button>
+        <button class="btn btn-outline btn-sm" onclick="confirmResetDB()" style="color:var(--red);border-color:var(--red);">Limpiar BD</button>
+      </span>
     </div>
-    <div id="log-container"><div class="spinner" style="margin:8px 0;"></div></div>
+    <div id="log-container" hidden><div class="spinner" style="margin:8px 0;"></div></div>
   </div>
 </div>
 
@@ -2225,7 +2231,18 @@ async function promptUrl(logId, tipo){
   loadLogs(); // refresca para mostrar los íconos activos
 }
 
+// Historial de importaciones: recogido por defecto; la tabla se pide al abrirlo por primera vez
+let logsCargados=false;
+function toggleLogs(){
+  const c=document.getElementById('log-container'), abrir=c.hidden;
+  c.hidden=!abrir;
+  document.getElementById('log-actions').style.display=abrir?'flex':'none';
+  document.getElementById('log-chev').style.transform=abrir?'rotate(90deg)':'';
+  document.getElementById('log-toggle').setAttribute('aria-expanded',String(abrir));
+  if(abrir&&!logsCargados) loadLogs();
+}
 async function loadLogs(){
+  logsCargados=true;
   const el=document.getElementById('log-container');
   try{
     const d=await fetch(API+'?action=logs').then(r=>r.json());
