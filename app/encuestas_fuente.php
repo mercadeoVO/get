@@ -57,22 +57,86 @@ final class FuenteLocal implements FuenteEncuestas
 
     public function leerHojas(array $archivo): array
     {
-        $reader = new PhpXlsxReader($archivo['ref']);
-        try {
-            $res = [];
-            foreach ($reader->getSheets() as $s) {
-                $filas = $reader->readRows($s['name'], 1);
-                $res[] = [
-                    'hoja'       => (string)$s['name'],
-                    'filas'      => (int)($s['rows'] ?? 0),
-                    'cols'       => (int)($s['cols'] ?? 0),
-                    'encabezado' => array_map('strval', $filas[0] ?? []),
-                ];
-            }
-            return $res;
-        } finally {
-            $reader->close();
+        return fuenteLeerHojasDeArchivo($archivo['ref']);
+    }
+}
+
+/**
+ * Google Drive (Excel, CSV y Google Sheets) usando el analizador de Drive (drive_lib.php): cuenta de
+ * servicio y carpeta raíz salen de drive_config.php, así que ENCUESTAS_RAIZ no se usa en este modo.
+ * Al listar, también sincroniza el inventario `drive_archivos`, que alimenta la pantalla «Archivos de
+ * Drive» y la acción «Importar →» (drive_scan.php?action=traer) de esta lista. Un Google Sheet se
+ * llama como en import_log: «nombre.xlsx» (así lo registra el importador al traerlo de Drive).
+ */
+final class FuenteGoogleDrive implements FuenteEncuestas
+{
+    public function __construct(private array $extensiones) {}
+
+    public function listarArchivos(): array
+    {
+        require_once __DIR__ . '/drive_lib.php';
+        $cfg = driveConfig();
+        if (!$cfg) {
+            throw new RuntimeException('Drive no está configurado: crea app/drive_config.php y el JSON de la cuenta de servicio (ver drive_config.example.php).');
         }
+        $arbol = driveListarArbol($cfg['root_folder']);
+        driveSincronizar(getDB(), $arbol);   // inventario completo, sin el filtro de ENCUESTAS_EXT
+        $out = [];
+        foreach ($arbol as $a) {
+            if (!in_array($a['ext'], $this->extensiones, true)) continue;
+            $out[] = [
+                'ref'        => $a['id'],
+                'ruta'       => ($a['ruta'] === '' ? '' : $a['ruta'] . '/') . $a['nombre'],
+                'archivo'    => $a['ext'] === 'gsheet' ? $a['nombre'] . '.xlsx' : $a['nombre'],
+                'modificado' => (int)strtotime($a['modificado'] . ' UTC'),
+                'tamano'     => (int)$a['tamano'],
+                'es_sheet'   => $a['ext'] === 'gsheet',
+            ];
+        }
+        usort($out, fn($a, $b) => strcmp($a['ruta'], $b['ruta']));
+        return $out;
+    }
+
+    public function leerHojas(array $archivo): array
+    {
+        require_once __DIR__ . '/drive_lib.php';
+        if ($archivo['tamano'] > DRIVE_MAX_BYTES) {
+            throw new RuntimeException('Pesa más de ' . (DRIVE_MAX_BYTES / 1048576) . ' MB; no se descarga para revisarlo.');
+        }
+        $esSheet = !empty($archivo['es_sheet']);   // Google Sheet: se exporta a .xlsx para leerlo
+        $ext = $esSheet ? 'xlsx' : strtolower(pathinfo($archivo['archivo'], PATHINFO_EXTENSION));
+        $dir = __DIR__ . '/tmp/';
+        if (!is_dir($dir)) mkdir($dir, 0750, true);
+        $tmp = $dir . 'drvpend_' . bin2hex(random_bytes(6)) . '.' . $ext;   // solo se borra este archivo propio
+        try {
+            driveDescargar($archivo['ref'], $esSheet, $tmp);
+            return fuenteLeerHojasDeArchivo($tmp);
+        } finally {
+            @unlink($tmp);
+        }
+    }
+}
+
+/** Hojas (nombre, filas, columnas, encabezado) de un archivo local; elige el lector por extensión. */
+function fuenteLeerHojasDeArchivo(string $path): array
+{
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $reader = in_array($ext, ['xlsx', 'xlsm'], true) ? new PhpXlsxReader($path)
+            : ($ext === 'csv' ? new PhpCsvReader($path) : new PhpSpreadsheetReader($path));
+    try {
+        $res = [];
+        foreach ($reader->getSheets() as $s) {
+            $filas = $reader->readRows($s['name'], 1);
+            $res[] = [
+                'hoja'       => (string)$s['name'],
+                'filas'      => (int)($s['rows'] ?? 0),
+                'cols'       => (int)($s['cols'] ?? 0),
+                'encabezado' => array_map('strval', $filas[0] ?? []),
+            ];
+        }
+        return $res;
+    } finally {
+        $reader->close();
     }
 }
 
@@ -82,7 +146,8 @@ function fuenteEncuestas(): FuenteEncuestas
     switch (ENCUESTAS_FUENTE) {
         case 'local':
             return new FuenteLocal(ENCUESTAS_RAIZ, $ext);
-        // case 'gdrive': return new FuenteGoogleDrive(ENCUESTAS_RAIZ /* ID de carpeta */, ...);  // futuro
+        case 'gdrive':
+            return new FuenteGoogleDrive($ext);
         default:
             throw new RuntimeException('Fuente de encuestas no soportada: ' . ENCUESTAS_FUENTE);
     }
@@ -117,21 +182,29 @@ function fuenteAsegurarTabla(PDO $db): void
         modificado  INT NOT NULL DEFAULT 0,
         tamano      BIGINT NOT NULL DEFAULT 0,
         error       VARCHAR(500) DEFAULT NULL,
+        fuente      VARCHAR(20) NOT NULL DEFAULT 'local',   -- local | gdrive: de qué fuente salió la fila
         revisado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         KEY k_ref (ref(190)),
         KEY k_arch_hoja (archivo(150), hoja(100))
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // Tabla creada antes de existir la columna `fuente` (todo lo anterior vino de la fuente local)
+    $tiene = $db->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'import_fuente_hojas' AND COLUMN_NAME = 'fuente'")->fetchColumn();
+    if (!$tiene) $db->exec("ALTER TABLE import_fuente_hojas ADD COLUMN fuente VARCHAR(20) NOT NULL DEFAULT 'local' AFTER error");
 }
 
 /** Revisa la fuente y refresca la caché. Los archivos sin cambios (misma fecha y tamaño) no se
  *  vuelven a abrir, así que las revisiones siguientes son rápidas. */
-function fuenteEscanear(PDO $db): array
+function fuenteEscanear(PDO $db, ?FuenteEncuestas $fuente = null): array
 {
     @set_time_limit(0);
     ignore_user_abort(true);   // si el navegador/Apache corta la espera, la caché se termina de llenar igual
     fuenteAsegurarTabla($db);
-    $fuente = fuenteEncuestas();
+    $fuente ??= fuenteEncuestas();
     $archivos = $fuente->listarArchivos();
+
+    // Filas de otra fuente (se cambió ENCUESTAS_FUENTE): sus refs no sirven con la fuente actual
+    $db->prepare("DELETE FROM import_fuente_hojas WHERE fuente <> ?")->execute([ENCUESTAS_FUENTE]);
 
     $previos = [];
     foreach ($db->query("SELECT ref, modificado, tamano, MAX(error IS NOT NULL) AS con_error
@@ -141,8 +214,8 @@ function fuenteEscanear(PDO $db): array
 
     $del = $db->prepare("DELETE FROM import_fuente_hojas WHERE ref = ?");
     $ins = $db->prepare("INSERT INTO import_fuente_hojas
-        (ref, ruta, archivo, hoja, filas, cols, es_encuesta, modificado, tamano, error)
-        VALUES (?,?,?,?,?,?,?,?,?,?)");
+        (ref, ruta, archivo, hoja, filas, cols, es_encuesta, modificado, tamano, error, fuente)
+        VALUES (?,?,?,?,?,?,?,?,?,?,'" . ENCUESTAS_FUENTE . "')");
     $vistos = [];
     $res = ['archivos' => count($archivos), 'leidos' => 0, 'sin_cambios' => 0, 'con_error' => 0];
 
@@ -179,15 +252,19 @@ function fuenteEscanear(PDO $db): array
 function fuentePendientes(PDO $db): array
 {
     fuenteAsegurarTabla($db);
-    $rev = $db->query("SELECT MAX(revisado_en) FROM import_fuente_hojas")->fetchColumn();
-    if (!$rev) return ['ok' => true, 'revisado_en' => null, 'resumen' => null, 'pendientes' => [], 'errores' => []];
+    $q = $db->prepare("SELECT MAX(revisado_en) FROM import_fuente_hojas WHERE fuente = ?");
+    $q->execute([ENCUESTAS_FUENTE]);
+    $rev = $q->fetchColumn();
+    $base = ['ok' => true, 'fuente' => ENCUESTAS_FUENTE, 'importable' => ENCUESTAS_FUENTE === 'gdrive'];
+    if (!$rev) return $base + ['revisado_en' => null, 'resumen' => null, 'pendientes' => [], 'errores' => []];
 
-    $hojas = $db->query("SELECT f.ruta, f.archivo, f.hoja, f.filas, f.modificado,
+    $fuenteSql = $db->quote(ENCUESTAS_FUENTE);
+    $hojas = $db->query("SELECT f.ref, f.ruta, f.archivo, f.hoja, f.filas, f.modificado,
             EXISTS(SELECT 1 FROM import_log il
                    WHERE il.archivo COLLATE utf8mb4_general_ci = f.archivo COLLATE utf8mb4_general_ci
                      AND il.hoja    COLLATE utf8mb4_general_ci = f.hoja    COLLATE utf8mb4_general_ci) AS importada
         FROM import_fuente_hojas f
-        WHERE f.es_encuesta = 1
+        WHERE f.es_encuesta = 1 AND f.fuente = $fuenteSql
         ORDER BY f.modificado DESC, f.archivo, f.hoja")->fetchAll();
 
     // import_log identifica la carga por (archivo, hoja): copias del mismo archivo en otras carpetas
@@ -206,18 +283,17 @@ function fuentePendientes(PDO $db): array
         if ((int)$h['importada']) { $imp++; continue; }
         if ((int)$h['filas'] <= 1) { $vacias++; continue; }   // solo encabezado: nada que importar
         $pend[] = [
-            'archivo' => $h['archivo'], 'ruta' => $h['ruta'], 'hoja' => $h['hoja'],
+            'ref' => $h['ref'], 'archivo' => $h['archivo'], 'ruta' => $h['ruta'], 'hoja' => $h['hoja'],
             'filas' => (int)$h['filas'] - 1, 'modificado' => (int)$h['modificado'], 'copias' => $h['copias'],
         ];
     }
-    $errores = $db->query("SELECT ruta, archivo, error FROM import_fuente_hojas WHERE error IS NOT NULL ORDER BY ruta")->fetchAll();
+    $errores = $db->query("SELECT ruta, archivo, error FROM import_fuente_hojas
+                           WHERE error IS NOT NULL AND fuente = $fuenteSql ORDER BY ruta")->fetchAll();
     $archivosPend = count(array_unique(array_column($pend, 'ruta')));
 
-    return [
-        'ok' => true,
+    return $base + [
         'revisado_en' => $rev,
-        'fuente' => ENCUESTAS_FUENTE,
-        'raiz' => ENCUESTAS_RAIZ,
+        'raiz' => ENCUESTAS_FUENTE === 'gdrive' ? null : ENCUESTAS_RAIZ,
         'resumen' => [
             'hojas_encuesta' => count($hojas), 'importadas' => $imp, 'pendientes' => count($pend),
             'archivos_pendientes' => $archivosPend, 'vacias' => $vacias, 'ilegibles' => count($errores),
