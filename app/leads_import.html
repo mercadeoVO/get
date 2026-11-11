@@ -172,7 +172,7 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
 .elect-icon{font-size:13px;vertical-align:middle;}
 </style>
 <link rel="stylesheet" href="visor.css?v=33">
-<script src="visor.js?v=10"></script>
+<script src="visor.js?v=11"></script>
 <script>const ic = V.icon;</script>
 </head>
 <body>
@@ -2334,6 +2334,22 @@ function resetAll(){
   document.getElementById('upload-progress').style.width='0%';
   goStep(1); loadLogs(); loadStats(); loadTemasPendientesCount();
 }
+
+// Llegada desde "Drive" (drive_scan.html?drive=<file_id>): trae el archivo y salta al paso de hojas
+(async function cargarDesdeDrive(){
+  const id=new URLSearchParams(location.search).get('drive'); if(!id) return;
+  const err=document.getElementById('s1-err');
+  err.innerHTML='<div class="alert alert-info">Trayendo el archivo desde Drive…</div>';
+  try{
+    const d=await fetch('drive_scan.php?action=traer',{method:'POST',body:new URLSearchParams({file_id:id})}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'No se pudo traer el archivo');
+    state.file={name:d.archivo,size:d.size};
+    state.tempId=d.temp_id; state.sheets=d.sheets; state.importedSheets={};
+    (d.imported_sheets||[]).forEach(r=>{ state.importedSheets[r.hoja]=r; });
+    state.selectedSheets=[]; state.extractions=[];
+    err.innerHTML=''; renderSheetSelector(); goStep(2);
+  }catch(e){ err.innerHTML=`<div class="alert alert-err">${ic('x')} ${h(e.message)}</div>`; }
+})();
 
 checkDeps();
 loadStats();

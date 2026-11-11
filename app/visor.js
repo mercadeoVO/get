@@ -6,6 +6,7 @@
     ['analitica',    'Analítica',    'leads_analytics.html'],
     ['electoral',    'Electoral',    'dashboard_local.html'],
     ['importar',     'Importar',     'leads_import.html'],
+    ['drive',        'Drive',        'drive_scan.html'],
     ['temas',        'Temas pendientes', 'leads_temas_pendientes.html'],
     ['geografia',    'Geografía',    'c98geo_dashboard.html']
   ];

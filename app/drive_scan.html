@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GET · Archivos de Drive</title>
+<link rel="stylesheet" href="visor.css?v=34">
+<script src="visor.js?v=11"></script>
+<style>
+.ds-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.ds-bar .grow{flex:1}
+.ds-bar input[type=search]{font:inherit;background:var(--surface);color:var(--text);border:0;border-radius:var(--r-pill);padding:9px 16px;min-height:40px;min-width:240px}
+.ds-chips{display:inline-flex;flex-wrap:wrap;background:var(--surface);border-radius:var(--r-pill);padding:4px;gap:2px}
+.ds-chips button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:.82rem;font-weight:600;padding:7px 14px;border-radius:var(--r-pill);cursor:pointer;min-height:34px}
+.ds-chips button.on{background:var(--accent);color:var(--accent-ink)}
+.ds-chips b{font-weight:700;margin-left:4px;opacity:.8}
+.ds-prog{height:6px;background:var(--surface);border-radius:var(--r-pill);overflow:hidden;margin-top:14px}
+.ds-prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.ds-msg{color:var(--muted);font-size:.85rem;margin-top:10px;min-height:1.2em}
+.ds-tabla{overflow-x:auto;margin-top:6px}
+.ds-tabla table{width:100%;border-collapse:collapse;font-size:.85rem}
+.ds-tabla th{text-align:left;color:var(--muted);font-weight:600;font-size:.78rem;padding:8px 10px;white-space:nowrap}
+.ds-tabla td{padding:10px;vertical-align:top;border-top:1px solid var(--border)}
+.ds-tabla td small{display:block;color:var(--muted);margin-top:2px;word-break:break-word}
+.ds-tabla a{color:var(--text);font-weight:600;text-decoration:none}
+.ds-tabla a:hover{text-decoration:underline}
+.ds-num{text-align:right;white-space:nowrap}
+.ds-acc{white-space:nowrap;text-align:right}
+.ds-acc .btn{margin-left:6px}
+.ds-setup{background:var(--surface);border-radius:var(--r-md);padding:16px 20px;font-size:.9rem;line-height:1.6}
+.ds-setup code{background:var(--card);padding:2px 6px;border-radius:6px}
+.ds-vacio{color:var(--muted);text-align:center;padding:32px 0}
+.badge{display:inline-block;padding:3px 10px;font-size:.75rem}
+</style>
+</head>
+<body>
+<div id="v-nav" data-page="drive" data-refresh="cargar()"></div>
+<div class="page-hd"><h1 class="page-title">Archivos de Drive</h1>
+  <p class="page-sub">Busca en la carpeta de Drive los Excel, CSV y Google Sheets que traen las columnas de un export de leads (<span id="cols-req"></span>) y te deja llevarlos al importador.</p></div>
+
+<section class="enc-panel" id="ds-setup-wrap" hidden>
+  <h2 class="enc-titulo">Falta conectar Drive</h2>
+  <div class="ds-setup">
+    1. En Google Cloud habilita la <b>Google Drive API</b> y crea una <b>cuenta de servicio</b> con una clave JSON.<br>
+    2. Guarda el JSON como <code>app/drive_service_account.json</code> y copia <code>app/drive_config.example.php</code> a <code>app/drive_config.php</code>.<br>
+    3. En Drive, comparte la carpeta con el correo de la cuenta de servicio como <b>Lector</b>.<br>
+    Los dos archivos están en <code>.gitignore</code>. Luego recarga esta página.
+  </div>
+</section>
+
+<section class="enc-panel" aria-label="Escaneo">
+  <div class="ds-bar">
+    <button class="btn btn-primary" id="b-escanear" onclick="escanear()">Escanear carpeta</button>
+    <button class="btn btn-outline" id="b-analizar" onclick="analizarPendientes()">Analizar pendientes</button>
+    <button class="btn btn-outline" onclick="exportarCsv()">Exportar CSV</button>
+    <span class="grow"></span>
+    <span class="ds-msg" id="ultimo"></span>
+  </div>
+  <div class="ds-prog" id="prog" hidden><i id="prog-i"></i></div>
+  <div class="ds-msg" id="msg"></div>
+</section>
+
+<section class="enc-panel" aria-label="Inventario">
+  <div class="ds-bar" style="margin-bottom:14px">
+    <div class="ds-chips" id="f-estado"></div>
+    <div class="ds-chips" id="f-import"></div>
+    <input type="search" id="f-q" placeholder="Buscar por nombre o carpeta…" oninput="render()">
+  </div>
+  <div class="ds-tabla"><table>
+    <thead><tr><th>Archivo</th><th>Tipo</th><th class="ds-num">Tamaño</th><th>Modificado</th><th>Columnas</th><th>En la BD</th><th></th></tr></thead>
+    <tbody id="filas"><tr><td colspan="7" class="ds-vacio">Cargando…</td></tr></tbody>
+  </table></div>
+</section>
+
+<script>
+const API='drive_scan.php';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ESTADOS=[['','Todos'],['completo','12 de 12'],['parcial','Parciales'],['sin_columnas','Sin columnas'],['pendiente','Sin analizar'],['error','Con error']];
+const IMPORT=[['','Todos'],['no','No importados'],['si','Ya importados']];
+let DATA=[], COLS=[], F={estado:'completo',imp:''}, OCUPADO=false;
+
+const tam=b=>b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
+const grupo=e=>e==='omitido'?'error':e;     // "omitido" se cuenta junto a los errores
+const mejorHoja=a=>(a.hojas||[]).reduce((m,h)=>!m||h.presentes.length>m.presentes.length?h:m,null);
+
+async function api(accion,datos){
+  const o=datos?{method:'POST',body:new URLSearchParams(datos)}:{};
+  const d=await fetch(API+'?action='+accion,o).then(r=>r.json());
+  if(!d.ok) throw new Error(d.error||'Error');
+  return d;
+}
+function msg(t){ $('msg').textContent=t||''; }
+function progreso(p){ $('prog').hidden=p==null; if(p!=null) $('prog-i').style.width=(p*100)+'%'; }
+
+async function cargar(){
+  try{
+    const e=await api('estado');
+    $('cols-req').textContent=e.columnas.join(', ');
+    $('ds-setup-wrap').hidden=e.configurado;
+    $('b-escanear').disabled=!e.configurado;
+    $('ultimo').textContent=e.ultimo_escaneo?'Último escaneo: '+e.ultimo_escaneo.slice(0,16):'';
+    const d=await api('listar'); DATA=d.archivos; COLS=d.columnas;
+    render();
+  }catch(err){ $('filas').innerHTML=`<tr><td colspan="7" class="ds-vacio">${esc(err.message)}</td></tr>`; }
+}
+
+function filtrados(sinEstado){
+  const q=$('f-q').value.trim().toLowerCase();
+  return DATA.filter(a=>(sinEstado||!F.estado||grupo(a.estado)===F.estado)
+    &&(!F.imp||(F.imp==='si')===(a.importaciones>0))
+    &&(!q||(a.nombre+' '+a.ruta).toLowerCase().includes(q)));
+}
+function chips(el,lista,clave,contar){
+  $(el).innerHTML=lista.map(([v,l])=>`<button class="${F[clave]===v?'on':''}" onclick="F.${clave}='${v}';render()">${l}<b>${contar(v)}</b></button>`).join('');
+}
+function render(){
+  chips('f-estado',ESTADOS,'estado',v=>filtrados(true).filter(a=>!v||grupo(a.estado)===v).length);
+  chips('f-import',IMPORT,'imp',v=>DATA.filter(a=>!v||(v==='si')===(a.importaciones>0)).length);
+  const l=filtrados();
+  $('filas').innerHTML=l.length?l.map(fila).join(''):'<tr><td colspan="7" class="ds-vacio">No hay archivos con estos filtros. Escanea la carpeta o cambia los filtros.</td></tr>';
+}
+function colBadge(a){
+  if(a.estado==='pendiente') return '<span class="badge badge-gray">Sin analizar</span>';
+  if(a.estado==='error'||a.estado==='omitido') return `<span class="badge badge-yellow" title="${esc(a.error)}">${a.estado==='omitido'?'Omitido':'Error'}</span>`;
+  const h=mejorHoja(a); if(!h) return '<span class="badge badge-gray">—</span>';
+  const n=h.presentes.length, tip=(a.hojas||[]).map(x=>x.hoja+': '+(x.faltantes.length?'faltan '+x.faltantes.join(', '):'completa')).join('\n');
+  return `<span class="badge ${a.estado==='completo'?'badge-green':a.estado==='parcial'?'badge-yellow':'badge-gray'}" title="${esc(tip)}">${n} de ${COLS.length}</span>`
+    +(a.hojas.length>1?`<small>${a.hojas.length} hojas · mejor: ${esc(h.hoja)}</small>`:'');
+}
+function fila(a){
+  const imp=a.importaciones>0?`<span class="badge badge-blue" title="Última: ${esc(a.ultima_importacion)}">${a.importaciones} vez${a.importaciones>1?'ces':''}</span>`:'<span class="badge badge-gray">No</span>';
+  const puede=a.estado==='completo'||a.estado==='parcial';
+  return `<tr>
+    <td><a href="${esc(a.enlace)}" target="_blank" rel="noopener">${esc(a.nombre)}</a><small>${esc(a.ruta||'(raíz)')}</small></td>
+    <td>${a.ext==='gsheet'?'Sheets':esc(a.ext)}</td><td class="ds-num">${tam(a.tamano)}</td><td>${esc((a.modificado||'').slice(0,10))}</td>
+    <td>${colBadge(a)}</td><td>${imp}</td>
+    <td class="ds-acc"><button class="btn btn-outline btn-sm" onclick="analizarUno('${a.file_id}',this)">${a.estado==='pendiente'?'Analizar':'Revisar de nuevo'}</button>
+      ${puede?`<a class="btn btn-primary btn-sm" href="leads_import.html?drive=${encodeURIComponent(a.file_id)}">Importar →</a>`:''}</td></tr>`;
+}
+
+async function escanear(){
+  if(OCUPADO) return; OCUPADO=true; $('b-escanear').disabled=true; msg('Recorriendo la carpeta de Drive…');
+  try{
+    const r=await api('escanear',{});
+    msg(`${r.total} archivos de datos · ${r.nuevos} nuevos · ${r.modificados} modificados · ${r.eliminados} quitados. Los nuevos y modificados quedan "Sin analizar".`);
+    await cargar();
+  }catch(e){ msg('No se pudo escanear: '+e.message); }
+  OCUPADO=false; $('b-escanear').disabled=false;
+}
+async function analizarUno(id,btn){
+  if(OCUPADO) return; btn.disabled=true; btn.textContent='Analizando…';
+  try{ await api('analizar',{file_id:id}); await cargar(); }catch(e){ msg(e.message); btn.disabled=false; btn.textContent='Reintentar'; }
+}
+async function analizarPendientes(){
+  if(OCUPADO) return;
+  const lista=DATA.filter(a=>a.estado==='pendiente'); if(!lista.length){ msg('No hay archivos pendientes.'); return; }
+  OCUPADO=true; $('b-analizar').disabled=true; let ok=0,mal=0;
+  for(let i=0;i<lista.length;i++){
+    msg(`Analizando ${i+1} de ${lista.length}: ${lista[i].nombre}`); progreso(i/lista.length);
+    try{ const r=await api('analizar',{file_id:lista[i].file_id}); (r.archivo.estado==='error'?mal++:ok++); }catch(e){ mal++; }
+  }
+  progreso(1); setTimeout(()=>progreso(null),600);
+  msg(`Listo: ${ok} revisados, ${mal} con error u omitidos.`);
+  OCUPADO=false; $('b-analizar').disabled=false; await cargar();
+}
+function exportarCsv(){
+  const filas=[['archivo','carpeta','tipo','tamano_bytes','modificado','estado','columnas_presentes','columnas_faltantes','importaciones','enlace']];
+  filtrados().forEach(a=>{ const h=mejorHoja(a);
+    filas.push([a.nombre,a.ruta,a.ext,a.tamano,a.modificado,a.estado,h?h.presentes.length:'',h?h.faltantes.join(' '):'',a.importaciones,a.enlace]); });
+  const csv='﻿'+filas.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='archivos_drive_'+new Date().toISOString().slice(0,10)+'.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+cargar();
+</script>
+</body>
+</html>

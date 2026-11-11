@@ -21,3 +21,7 @@ Thumbs.db
 
 # Clave de la API de Anthropic para el buscador inteligente (local, no versionar)
 app/anthropic.local.php
+
+# Analizador de Drive: credenciales locales (no versionar)
+app/drive_config.php
+app/drive_service_account.json
