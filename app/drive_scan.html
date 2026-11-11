@@ -51,7 +51,7 @@
 <section class="enc-panel" aria-label="Escaneo">
   <div class="ds-bar">
     <button class="btn btn-primary" id="b-escanear" onclick="escanear()">Escanear carpeta</button>
-    <button class="btn btn-outline" id="b-analizar" onclick="analizarPendientes()">Analizar pendientes</button>
+    <button class="btn btn-outline" id="b-analizar" onclick="analizarPendientes()">Analizar pendientes y desactualizados</button>
     <button class="btn btn-outline" onclick="exportarCsv()">Exportar CSV</button>
     <span class="grow"></span>
     <span class="ds-msg" id="ultimo"></span>
@@ -76,7 +76,7 @@
 const API='drive_scan.php';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ESTADOS=[['','Todos'],['completo','12 de 12'],['parcial','Parciales'],['sin_columnas','Sin columnas'],['pendiente','Sin analizar'],['error','Con error']];
+const ESTADOS=[['','Todos'],['completo','12 de 12'],['parcial','Parciales'],['sin_columnas','Sin columnas'],['desactualizado','Desactualizados'],['pendiente','Sin analizar'],['error','Con error']];
 const IMPORT=[['','Todos'],['no','No importados'],['si','Ya importados']];
 let DATA=[], COLS=[], F={estado:'completo',imp:''}, OCUPADO=false;
 
@@ -122,6 +122,11 @@ function render(){
 }
 function colBadge(a){
   if(a.estado==='pendiente') return '<span class="badge badge-gray">Sin analizar</span>';
+  if(a.estado==='desactualizado'){
+    const mejor=mejorHoja(a), prev=a.analizado_tam!=null?` Pesaba ${tam(a.analizado_tam)} al revisarse y ahora ${tam(a.tamano)}.`:'';
+    return `<span class="badge badge-yellow" title="El archivo cambió en Drive.${esc(prev)} Revísalo de nuevo.">Desactualizado</span>`
+      +(mejor?`<small>antes: ${mejor.presentes.length} de ${COLS.length}</small>`:'');
+  }
   if(a.estado==='error'||a.estado==='omitido') return `<span class="badge badge-yellow" title="${esc(a.error)}">${a.estado==='omitido'?'Omitido':'Error'}</span>`;
   const h=mejorHoja(a); if(!h) return '<span class="badge badge-gray">—</span>';
   const n=h.presentes.length, tip=(a.hojas||[]).map(x=>x.hoja+': '+(x.faltantes.length?'faltan '+x.faltantes.join(', '):'completa')).join('\n');
@@ -129,13 +134,14 @@ function colBadge(a){
     +(a.hojas.length>1?`<small>${a.hojas.length} hojas · mejor: ${esc(h.hoja)}</small>`:'');
 }
 function fila(a){
-  const imp=a.importaciones>0?`<span class="badge badge-blue" title="Última: ${esc(a.ultima_importacion)}">${a.importaciones} vez${a.importaciones>1?'ces':''}</span>`:'<span class="badge badge-gray">No</span>';
-  const puede=a.estado==='completo'||a.estado==='parcial';
+  const imp=(a.importaciones>0?`<span class="badge badge-blue" title="Última: ${esc(a.ultima_importacion)}">${a.importaciones} vez${a.importaciones>1?'ces':''}</span>`:'<span class="badge badge-gray">No</span>')
+    +(a.cambio_tras_traer?`<small><span class="badge badge-yellow" title="Se trajo con ${esc(tam(a.traido_tam))} y ahora pesa ${esc(tam(a.tamano))}">Cambió desde que se trajo</span></small>`:'');
+  const puede=['completo','parcial','desactualizado'].includes(a.estado)&&(a.hojas||[]).length>0;
   return `<tr>
     <td><a href="${esc(a.enlace)}" target="_blank" rel="noopener">${esc(a.nombre)}</a><small>${esc(a.ruta||'(raíz)')}</small></td>
     <td>${a.ext==='gsheet'?'Sheets':esc(a.ext)}</td><td class="ds-num">${tam(a.tamano)}</td><td>${esc((a.modificado||'').slice(0,10))}</td>
     <td>${colBadge(a)}</td><td>${imp}</td>
-    <td class="ds-acc"><button class="btn btn-outline btn-sm" onclick="analizarUno('${a.file_id}',this)">${a.estado==='pendiente'?'Analizar':'Revisar de nuevo'}</button>
+    <td class="ds-acc"><button class="btn ${a.estado==='desactualizado'?'btn-primary':'btn-outline'} btn-sm" onclick="analizarUno('${a.file_id}',this)">${a.estado==='pendiente'?'Analizar':'Revisar de nuevo'}</button>
       ${puede?`<a class="btn btn-primary btn-sm" href="leads_import.html?drive=${encodeURIComponent(a.file_id)}">Importar →</a>`:''}</td></tr>`;
 }
 
@@ -143,7 +149,7 @@ async function escanear(){
   if(OCUPADO) return; OCUPADO=true; $('b-escanear').disabled=true; msg('Recorriendo la carpeta de Drive…');
   try{
     const r=await api('escanear',{});
-    msg(`${r.total} archivos de datos · ${r.nuevos} nuevos · ${r.modificados} modificados · ${r.eliminados} quitados. Los nuevos y modificados quedan "Sin analizar".`);
+    msg(`${r.total} archivos de datos · ${r.nuevos} nuevos · ${r.desactualizados} desactualizados (cambió el peso o la fecha) · ${r.eliminados} quitados.`);
     await cargar();
   }catch(e){ msg('No se pudo escanear: '+e.message); }
   OCUPADO=false; $('b-escanear').disabled=false;
@@ -154,7 +160,7 @@ async function analizarUno(id,btn){
 }
 async function analizarPendientes(){
   if(OCUPADO) return;
-  const lista=DATA.filter(a=>a.estado==='pendiente'); if(!lista.length){ msg('No hay archivos pendientes.'); return; }
+  const lista=DATA.filter(a=>a.estado==='pendiente'||a.estado==='desactualizado'); if(!lista.length){ msg('No hay archivos pendientes ni desactualizados.'); return; }
   OCUPADO=true; $('b-analizar').disabled=true; let ok=0,mal=0;
   for(let i=0;i<lista.length;i++){
     msg(`Analizando ${i+1} de ${lista.length}: ${lista[i].nombre}`); progreso(i/lista.length);

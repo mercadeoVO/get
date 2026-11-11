@@ -191,39 +191,54 @@ function driveEnsureTabla(PDO $db): void {
         tamano         BIGINT       NOT NULL DEFAULT 0,
         modificado     DATETIME     NULL,
         enlace         VARCHAR(400) NULL,
-        estado         VARCHAR(20)  NOT NULL DEFAULT 'pendiente',   -- pendiente|completo|parcial|sin_columnas|omitido|error
+        estado         VARCHAR(20)  NOT NULL DEFAULT 'pendiente',   -- pendiente|desactualizado|completo|parcial|sin_columnas|omitido|error
         hojas          LONGTEXT     NULL,                           -- JSON de analizarArchivoLocal()['hojas']
         error          VARCHAR(400) NULL,
         analizado_mod  DATETIME     NULL,                           -- 'modificado' que tenía al analizarse
+        analizado_tam  BIGINT       NULL,                           -- peso que tenía al analizarse
+        traido_mod     DATETIME     NULL,                           -- 'modificado' al traerlo al importador
+        traido_tam     BIGINT       NULL,                           -- peso al traerlo al importador
         analizado_en   DATETIME     NULL,
         visto_en       DATETIME     NOT NULL,
         INDEX idx_estado (estado)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Tablas creadas antes de que se controlara el peso
+    $tiene = $db->query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'drive_archivos'")->fetchAll(PDO::FETCH_COLUMN);
+    foreach (['analizado_tam' => 'BIGINT NULL', 'traido_mod' => 'DATETIME NULL', 'traido_tam' => 'BIGINT NULL'] as $c => $def) {
+        if (!in_array($c, $tiene, true)) $db->exec("ALTER TABLE drive_archivos ADD COLUMN $c $def");
+    }
 }
 
 /**
- * Sincroniza el listado de Drive con la tabla: los archivos nuevos o modificados vuelven a 'pendiente'
- * (hay que re-analizarlos); los que ya no están en Drive se borran del inventario.
- * @return array{total:int,nuevos:int,modificados:int,eliminados:int}
+ * Sincroniza el listado de Drive con la tabla. Un archivo nuevo queda 'pendiente'; uno ya analizado cuyo
+ * PESO o fecha de modificación cambió pasa a 'desactualizado' (hay que revisarlo de nuevo); los que ya no
+ * están en Drive se borran del inventario.
+ * @return array{total:int,nuevos:int,desactualizados:int,eliminados:int}
  */
 function driveSincronizar(PDO $db, array $archivos): array {
     driveEnsureTabla($db);
-    $actual = $db->query("SELECT file_id, modificado, analizado_mod, estado FROM drive_archivos")->fetchAll(PDO::FETCH_UNIQUE);
+    $actual = $db->query("SELECT file_id, modificado, analizado_mod, analizado_tam, estado FROM drive_archivos")->fetchAll(PDO::FETCH_UNIQUE);
     $nuevos = $mod = 0; $ahora = date('Y-m-d H:i:s'); $vistos = [];
     $ins = $db->prepare("INSERT INTO drive_archivos (file_id,nombre,ruta,ext,tamano,modificado,enlace,estado,visto_en)
                          VALUES (?,?,?,?,?,?,?, 'pendiente', ?)
                          ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), ruta=VALUES(ruta), ext=VALUES(ext), tamano=VALUES(tamano),
                               modificado=VALUES(modificado), enlace=VALUES(enlace), visto_en=VALUES(visto_en),
-                              estado = IF(analizado_mod IS NULL OR analizado_mod <> VALUES(modificado), 'pendiente', estado)");
+                              estado = IF(analizado_mod IS NULL, 'pendiente',
+                                         IF(analizado_mod <> VALUES(modificado) OR (analizado_tam IS NOT NULL AND analizado_tam <> VALUES(tamano)),
+                                            'desactualizado', estado))");
     foreach ($archivos as $a) {
         $vistos[] = $a['id'];
         if (!isset($actual[$a['id']])) $nuevos++;
-        elseif ($actual[$a['id']]['analizado_mod'] !== null && $actual[$a['id']]['analizado_mod'] !== $a['modificado']) $mod++;
+        else {
+            $x = $actual[$a['id']];
+            if ($x['analizado_mod'] !== null && ($x['analizado_mod'] !== $a['modificado']
+                || ($x['analizado_tam'] !== null && (int)$x['analizado_tam'] !== (int)$a['tamano']))) $mod++;
+        }
         $ins->execute([$a['id'], $a['nombre'], $a['ruta'], $a['ext'], $a['tamano'], $a['modificado'] ?: null, $a['enlace'], $ahora]);
     }
     $eliminados = 0;
     foreach (array_diff(array_keys($actual), $vistos) as $id) { $db->prepare("DELETE FROM drive_archivos WHERE file_id = ?")->execute([$id]); $eliminados++; }
-    return ['total' => count($archivos), 'nuevos' => $nuevos, 'modificados' => $mod, 'eliminados' => $eliminados];
+    return ['total' => count($archivos), 'nuevos' => $nuevos, 'desactualizados' => $mod, 'eliminados' => $eliminados];
 }
 
 /** Descarga, analiza y guarda el resultado de UN archivo del inventario. Devuelve la fila actualizada. */
@@ -233,9 +248,9 @@ function driveAnalizarUno(PDO $db, string $fileId): array {
     $f = $st->fetch(PDO::FETCH_ASSOC);
     if (!$f) throw new RuntimeException('El archivo no está en el inventario; escanea la carpeta primero.');
 
-    $upd = $db->prepare("UPDATE drive_archivos SET estado=?, hojas=?, error=?, analizado_mod=?, analizado_en=NOW() WHERE file_id=?");
+    $upd = $db->prepare("UPDATE drive_archivos SET estado=?, hojas=?, error=?, analizado_mod=?, analizado_tam=?, analizado_en=NOW() WHERE file_id=?");
     if ((int)$f['tamano'] > DRIVE_MAX_BYTES) {
-        $upd->execute(['omitido', null, 'Pesa más de ' . (DRIVE_MAX_BYTES / 1048576) . ' MB', $f['modificado'], $fileId]);
+        $upd->execute(['omitido', null, 'Pesa más de ' . (DRIVE_MAX_BYTES / 1048576) . ' MB', $f['modificado'], $f['tamano'], $fileId]);
     } else {
         $dir = __DIR__ . '/tmp/'; if (!is_dir($dir)) mkdir($dir, 0750, true);
         $esSheet = $f['ext'] === 'gsheet';
@@ -243,9 +258,9 @@ function driveAnalizarUno(PDO $db, string $fileId): array {
         try {
             driveDescargar($fileId, $esSheet, $tmp);
             $r = analizarArchivoLocal($tmp);
-            $upd->execute([$r['estado'], json_encode($r['hojas'], JSON_UNESCAPED_UNICODE), null, $f['modificado'], $fileId]);
+            $upd->execute([$r['estado'], json_encode($r['hojas'], JSON_UNESCAPED_UNICODE), null, $f['modificado'], $f['tamano'], $fileId]);
         } catch (\Throwable $e) {
-            $upd->execute(['error', null, mb_substr($e->getMessage(), 0, 390), $f['modificado'], $fileId]);
+            $upd->execute(['error', null, mb_substr($e->getMessage(), 0, 390), $f['modificado'], $f['tamano'], $fileId]);
         } finally { @unlink($tmp); }
     }
     $st->execute([$fileId]);

@@ -46,20 +46,23 @@ try {
 
     if ($action === 'listar') {
         $rows = $db->query("SELECT d.file_id, d.nombre, d.ruta, d.ext, d.tamano, d.modificado, d.enlace, d.estado, d.hojas, d.error,
-                                   d.analizado_en,
+                                   d.analizado_en, d.analizado_tam, d.traido_tam, d.traido_mod,
                                    (SELECT COUNT(*) FROM import_log il WHERE il.archivo = d.nombre
                                        OR (d.ext = 'gsheet' AND il.archivo = CONCAT(d.nombre, '.xlsx'))) AS importaciones,
                                    (SELECT MAX(il.importado_en) FROM import_log il WHERE il.archivo = d.nombre
                                        OR (d.ext = 'gsheet' AND il.archivo = CONCAT(d.nombre, '.xlsx'))) AS ultima_importacion
                             FROM drive_archivos d ORDER BY d.modificado DESC")->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as &$r) { $r['hojas'] = $r['hojas'] ? json_decode($r['hojas'], true) : []; $r['tamano'] = (int)$r['tamano']; $r['importaciones'] = (int)$r['importaciones']; }
+        foreach ($rows as &$r) { $r['hojas'] = $r['hojas'] ? json_decode($r['hojas'], true) : []; $r['tamano'] = (int)$r['tamano']; $r['importaciones'] = (int)$r['importaciones'];
+            $r['analizado_tam'] = $r['analizado_tam'] === null ? null : (int)$r['analizado_tam'];
+            // ¿Cambió en Drive (peso o fecha) desde que se trajo al importador?
+            $r['cambio_tras_traer'] = $r['traido_tam'] !== null && ((int)$r['traido_tam'] !== $r['tamano'] || $r['traido_mod'] !== $r['modificado']); }
         out(['ok' => true, 'columnas' => driveColumnasRequeridas(), 'archivos' => $rows]);
     }
 
     if ($action === 'traer') {
         if (!$post) out(['ok' => false, 'error' => 'Usa POST.'], 405);
         $id = trim((string)($_POST['file_id'] ?? ''));
-        $st = $db->prepare("SELECT nombre, ext, tamano FROM drive_archivos WHERE file_id = ?"); $st->execute([$id]);
+        $st = $db->prepare("SELECT nombre, ext, tamano, modificado FROM drive_archivos WHERE file_id = ?"); $st->execute([$id]);
         $f = $st->fetch(PDO::FETCH_ASSOC);
         if (!$f) out(['ok' => false, 'error' => 'El archivo no está en el inventario.'], 404);
         $esSheet = $f['ext'] === 'gsheet';
@@ -70,6 +73,8 @@ try {
         $reader = in_array($ext, ['xlsx', 'xlsm'], true) ? new PhpXlsxReader($dir . $tmpName)
                 : ($ext === 'csv' ? new PhpCsvReader($dir . $tmpName) : new PhpSpreadsheetReader($dir . $tmpName));
         $sheets = $reader->getSheets(); $reader->close();
+        // Queda registrado con qué peso/fecha se trajo, para avisar si Drive cambia después
+        $db->prepare("UPDATE drive_archivos SET traido_tam = ?, traido_mod = ? WHERE file_id = ?")->execute([$f['tamano'], $f['modificado'], $id]);
         $archivo = $esSheet ? $f['nombre'] . '.xlsx' : $f['nombre'];
         $st = $db->prepare("SELECT hoja, MAX(importado_en) AS ultima_carga, SUM(filas_ins) AS leads_ins,
                                    MAX(url_archivo) AS url_archivo, MAX(url_carpeta) AS url_carpeta
