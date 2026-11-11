@@ -25,3 +25,6 @@ app/anthropic.local.php
 # Analizador de Drive: credenciales locales (no versionar)
 app/drive_config.php
 app/drive_service_account.json
+
+# Configuración local por equipo (ENCUESTAS_FUENTE, etc.)
+app/config_local.php
