@@ -9,6 +9,8 @@
 //    ?action=preview      — Cabeceras detectadas + muestra
 //    ?action=import       — Importa todos los registros
 //    ?action=logs         — Historial de importaciones
+//    ?action=fuente_pendientes — Hojas de encuesta del repositorio aún sin importar (última revisión)
+//    ?action=fuente_revisar    — POST: recorre el repositorio y refresca esa lista (ver encuestas_fuente.php)
 //    ?action=temas_pendientes   — Cola de revisión tema/subtema (dim_tema)
 //    ?action=temas_guardar      — Confirma/corrige el tema de una pregunta
 //    ?action=respuestas_muestra — Distribución de respuestas de una pregunta
@@ -1795,6 +1797,22 @@ try {
         } catch (\Throwable $e) {
             errOut('Error eliminando importación: ' . $e->getMessage());
         }
+    }
+
+    // ── REPOSITORIO DE ENCUESTAS: pendientes de importar ─────
+    if ($action === 'fuente_pendientes') {
+        require_once __DIR__ . '/encuestas_fuente.php';
+        jsonOut(fuentePendientes(getDB()));
+    }
+    if ($action === 'fuente_revisar') {   // a solicitud del usuario (botón); recorre la fuente y refresca la caché
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') errOut('Usar POST.', 405);
+        require_once __DIR__ . '/encuestas_fuente.php';
+        try {
+            $scan = fuenteEscanear(getDB());
+        } catch (\Throwable $e) {
+            errOut($e->getMessage(), 500);
+        }
+        jsonOut(['scan' => $scan] + fuentePendientes(getDB()));
     }
 
     // ── LOGS ─────────────────────────────────────────────────
