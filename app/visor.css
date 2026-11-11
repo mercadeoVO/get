@@ -360,6 +360,9 @@ main:has(>.panel){width:100%!important;max-width:none!important;margin:0!importa
 .elec-tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:.85rem;font-weight:600;padding:8px 16px;border-radius:var(--r-pill);cursor:pointer;min-height:36px;transition:background-color .15s,color .15s}
 .elec-tabs button:hover:not(.on){color:var(--text)}
 .elec-tabs button.on{background:var(--accent);color:var(--accent-ink)}
+.elec-periodo{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin-bottom:14px;color:var(--muted);font-size:.85rem;font-weight:600}
+.elec-periodo label{display:inline-flex;align-items:center;gap:8px}
+.elec-periodo input[type=date]{font:inherit;font-weight:500;color:var(--text);background:var(--surface);border:0;border-radius:var(--r-sm);padding:7px 10px;min-height:36px}
 .elec-valid{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;font-weight:500;color:var(--text);margin-left:auto}
 .elec-valid input{accent-color:var(--accent);width:16px;height:16px}
 .elec-body{display:flex;flex-direction:column;gap:28px}

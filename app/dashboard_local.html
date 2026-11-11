@@ -38,6 +38,12 @@
 <main class="elec">
   <section id="elec-kpis" class="elec-kpis" aria-label="Resumen de la encuesta"></section>
   <section class="enc-panel elec-viz" aria-label="Resultados">
+    <div class="elec-periodo" id="elec-periodo" hidden>
+      <span class="elec-plabel">Periodo</span>
+      <div class="elec-tabs" id="elec-pchips"></div>
+      <label>Desde <input type="date" id="elec-desde" onchange="window.elecRango()"></label>
+      <label>Hasta <input type="date" id="elec-hasta" onchange="window.elecRango()"></label>
+    </div>
     <div class="elec-tools" id="elec-tools" hidden>
       <div class="elec-tabs" id="elec-tabs" role="tablist"></div>
       <div class="elec-cortar"><span>Cortar por</span><div class="elec-tabs" id="elec-cortes"></div></div>
@@ -157,7 +163,7 @@ async function loadGeoFiltros(){
 }
 document.addEventListener('DOMContentLoaded',loadGeoFiltros);
 </script>
-<script src="electoral.js?v=5"></script>
+<script src="electoral.js?v=6"></script>
 <script>V.onTheme(function(){ location.reload(); });</script>
 </body>
 </html>

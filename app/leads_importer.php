@@ -152,6 +152,41 @@ function analizarElectoral(PDO $db, string $pregLower): ?array {
     ];
 }
 
+/**
+ * Marca de tiempo de referencia de cada lead (`import_log_leads.fecha_ref`, DATE): el periodo (oleada)
+ * al que pertenece la respuesta. Un mismo archivo puede traer varios periodos. Se deduce, en orden, de:
+ *  1) el prefijo YYMMDD de campaign_name (p. ej. "260903_TOC_ES_…" → 2026-09-03);
+ *  2) la mayor created_time válida entre los leads con el mismo campaign_name;
+ *  3) la created_time del propio lead, si es válida.
+ * Idempotente: solo rellena las filas que aún están en NULL (de un import si se da $importId, o de todos).
+ */
+function ensureFechaRef(PDO $db, ?int $importId = null): void {
+    static $col = false;
+    if (!$col) {
+        $existe = (int)$db->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+                                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'import_log_leads' AND COLUMN_NAME = 'fecha_ref'")->fetchColumn();
+        if (!$existe) {
+            $db->exec("ALTER TABLE import_log_leads ADD COLUMN fecha_ref DATE NULL, ADD INDEX idx_leads_fecha_ref (import_id, fecha_ref)");
+        }
+        $col = true;
+    }
+    $ambito  = $importId ? ' AND l.import_id = ' . (int)$importId : '';
+    $ambito0 = $importId ? ' AND import_id = '   . (int)$importId : '';
+    $validaCT = "l.created_time IS NOT NULL AND l.created_time >= '2000-01-01'";
+    try {
+        $db->exec("UPDATE import_log_leads l SET l.fecha_ref = STR_TO_DATE(LEFT(l.campaign_name, 6), '%y%m%d')
+                   WHERE l.fecha_ref IS NULL AND l.campaign_name REGEXP '^[0-9]{6}'$ambito");
+        $db->exec("UPDATE import_log_leads SET fecha_ref = NULL WHERE fecha_ref < '2020-01-01' OR fecha_ref > '2099-12-31'");
+        $db->exec("UPDATE import_log_leads l
+                   JOIN (SELECT campaign_name, DATE(MAX(created_time)) AS f FROM import_log_leads
+                         WHERE created_time >= '2000-01-01' AND campaign_name IS NOT NULL AND campaign_name <> ''
+                         GROUP BY campaign_name) m ON m.campaign_name = l.campaign_name
+                   SET l.fecha_ref = m.f WHERE l.fecha_ref IS NULL$ambito");
+        $db->exec("UPDATE import_log_leads l SET l.fecha_ref = DATE(l.created_time)
+                   WHERE l.fecha_ref IS NULL AND $validaCT$ambito");
+    } catch (\Throwable $e) { /* no bloquear la pantalla por la deducción de fechas */ }
+}
+
 /** Columnas de clasificación de encuestas electorales en import_log (idempotente; tipo_encuesta admite varios, separados por coma). */
 function ensureEncuestaCols(PDO $db): void {
     static $hecho = false;
@@ -760,6 +795,7 @@ const SEGMENT_GEO_NIVELES = ['region', 'departamento', 'subregion', 'municipio',
  *   is_organic        : 0 | 1
  *   created_desde     : 'YYYY-MM-DD'
  *   created_hasta     : 'YYYY-MM-DD'  (inclusivo — se suma 1 día)
+ *   periodo_desde/_hasta : 'YYYY-MM-DD' sobre fecha_ref (periodo de la encuesta; ver ensureFechaRef)
  *   import_ids        : array de int
  *   geo               : { nivel: <SEGMENT_GEO_NIVELES>, ids: [ ... ] }
  *   preguntas         : [ { pregunta_id: int, valores: [str], op: 'in'|'not_in'|'answered' }, ... ]
@@ -801,6 +837,14 @@ function buildSegmentWhere(array $f, array &$params): string {
     if (!empty($f['created_hasta'])) {
         $w .= ' AND l.created_time < (? + INTERVAL 1 DAY)';
         $params[] = $f['created_hasta'] . ' 00:00:00';
+    }
+
+    // Periodo (fecha de referencia del lead: oleada de la encuesta), inclusivo en ambos extremos
+    foreach (['periodo_desde' => '>=', 'periodo_hasta' => '<='] as $k => $op) {
+        if (!empty($f[$k]) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$f[$k])) {
+            $w .= " AND l.fecha_ref $op ?";
+            $params[] = $f[$k];
+        }
     }
 
     // Importaciones
@@ -2450,6 +2494,9 @@ try {
 
                 $db->commit();
 
+                // Periodo de cada lead (campaign_name / created_time) para los filtros por fecha
+                ensureFechaRef($db, $importId);
+
                 // ── Actualizar leads_ids en catálogo de preguntas ─────────────────
                 // JSON array con todos los id_lead que respondieron cada pregunta
                 // (recalcula solo las preguntas afectadas por este import)
@@ -2691,7 +2738,8 @@ try {
         if ($importId <= 0) errOut('import_id requerido.');
         $filtros = json_decode($_POST['filtros'] ?? '{}', true) ?: [];
         $filtros['import_ids'] = [$importId];
-        $corte = in_array(($_POST['corte'] ?? ''), ['sexo', 'rango_edad', 'estrato'], true) ? $_POST['corte'] : null;
+        $corte = in_array(($_POST['corte'] ?? ''), ['sexo', 'rango_edad', 'estrato', 'periodo'], true) ? $_POST['corte'] : null;
+        ensureFechaRef($db, $importId);
 
         $info = $db->prepare("SELECT id, archivo, hoja, importado_en, filas_ins, tipo_encuesta, lista_eleccion, nivel_eleccion
                               FROM import_log WHERE id = ?");
@@ -2706,7 +2754,15 @@ try {
         $st->execute($params);
         $tot = $st->fetch(PDO::FETCH_ASSOC);
 
-        $grp = $corte ? "COALESCE(NULLIF(l.`$corte`, ''), 'Sin dato')" : "''";
+        // Periodo: periodos (oleadas) disponibles de la encuesta con los demás filtros, pero SIN el rango de periodo
+        $fPer = $filtros; unset($fPer['periodo_desde'], $fPer['periodo_hasta']);
+        $pPer = []; $wPer = buildSegmentWhere($fPer, $pPer);
+        $st = $db->prepare("SELECT l.fecha_ref AS fecha, COUNT(*) AS n FROM import_log_leads l $wPer GROUP BY l.fecha_ref ORDER BY l.fecha_ref");
+        $st->execute($pPer);
+        $periodos = array_map(fn($r) => ['fecha' => $r['fecha'], 'n' => (int)$r['n']], $st->fetchAll(PDO::FETCH_ASSOC));
+
+        $grp = $corte === 'periodo' ? "COALESCE(DATE_FORMAT(l.fecha_ref, '%Y-%m-%d'), 'Sin dato')"
+             : ($corte ? "COALESCE(NULLIF(l.`$corte`, ''), 'Sin dato')" : "''");
         $st = $db->prepare("SELECT r.pregunta_id, $grp AS grupo, r.respuesta, COUNT(*) AS n
                             FROM import_log_leads l
                             JOIN import_log_leads_respuestas r ON r.lead_id = l.id_lead
@@ -2744,7 +2800,7 @@ try {
         }
         jsonOut(['ok' => true, 'ficha' => $ficha, 'total' => (int)$tot['total'],
                  'cobertura' => ['departamentos' => (int)$tot['dptos'], 'municipios' => (int)$tot['munis']],
-                 'corte' => $corte, 'preguntas' => $preguntas]);
+                 'corte' => $corte, 'periodos' => $periodos, 'preguntas' => $preguntas]);
     }
 
     // ── ENCUESTAS_AUTOCLASIFICAR ──────────────────────────────

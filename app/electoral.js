@@ -1,9 +1,9 @@
 // GET · Pantalla Electoral: resumen de UNA encuesta electoral (leads_importer.php?action=electoral_resumen).
 // Usa globales de dashboard_local.html: $e, escH, ENC (encuesta elegida) y window.ELECTORAL_GEO (ubicación).
 (function(){
-  const ELEC={tab:null,corte:'',datos:null,validos:false,seq:0};
+  const ELEC={tab:null,corte:'',datos:null,validos:false,seq:0,imp:null,desde:'',hasta:''};
   const TIPOS={voto:'Intención de voto',imagen:'Imagen',conocimiento:'Conocimiento'};
-  const CORTES=[['','Total'],['sexo','Sexo'],['rango_edad','Edad'],['estrato','Estrato']];
+  const CORTES=[['','Total'],['sexo','Sexo'],['rango_edad','Edad'],['estrato','Estrato'],['periodo','Periodo']];
 
   // ── Formato ────────────────────────────────────────────────────────────
   const fmtN=n=>Number(n).toLocaleString('es-CO');
@@ -11,6 +11,9 @@
   const pct=(a,b,d=1)=>b>0?dec(100*a/b,d)+' %':'—';
   const pts=x=>(x>0?'+':x<0?'−':'')+dec(Math.abs(x),1)+' pts';
   const cap=s=>String(s||'').replace(/(^|[\s(-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/(?<=\S) (De|Del|La|Las|Los|Y|Van|Von)(?= |$)/g,(m,w)=>' '+w.toLowerCase());
+  const MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const fmtF=iso=>{const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);return m?`${+m[3]} ${MESES[+m[2]-1]} ${m[1]}`:iso;};
+  const etiqGrupo=g=>ELEC.corte==='periodo'?fmtF(g):g;
   const capPrimera=s=>{s=String(s||'').trim();return s.charAt(0).toUpperCase()+s.slice(1);};
   const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
   const claseImagen=r=>{const n=norm(r);return n.startsWith('posit')?'pos':n.startsWith('negat')?'neg':'nolo';};
@@ -35,6 +38,7 @@
     const grupos=Object.keys(por).sort((a,b)=>a==='Sin dato'?1:b==='Sin dato'?-1:a.localeCompare(b,'es',{numeric:true}));
     return {grupos,por,tot,total};
   }
+  const unionGrupos=filas=>[...new Set(filas.flatMap(f=>f.a.grupos))].sort((a,b)=>a==='Sin dato'?1:b==='Sin dato'?-1:a.localeCompare(b,'es',{numeric:true}));
   const suma=(por,fn)=>Object.entries(por).reduce((a,[r,n])=>a+(fn(r)?n:0),0);
 
   // ── Carga ──────────────────────────────────────────────────────────────
@@ -43,7 +47,9 @@
     if(!id){ renderListado(); return; }
     $e('elec-body').innerHTML='<div class="elec-vacio">Calculando…</div>';
     const fd=new FormData(); fd.append('import_id',id); fd.append('corte',ELEC.corte);
-    const f={}; const g=geoFiltro(); if(g) f.geo=g; fd.append('filtros',JSON.stringify(f));
+    if(ELEC.imp!==id){ ELEC.imp=id; ELEC.desde=ELEC.hasta=''; }
+    const f={}; const g=geoFiltro(); if(g) f.geo=g;
+    if(ELEC.desde) f.periodo_desde=ELEC.desde; if(ELEC.hasta) f.periodo_hasta=ELEC.hasta; fd.append('filtros',JSON.stringify(f));
     try{
       const d=await fetch('leads_importer.php?action=electoral_resumen',{method:'POST',body:fd}).then(r=>r.json());
       if(seq!==ELEC.seq) return;
@@ -58,7 +64,7 @@
 
   // ── Listado cuando no hay encuesta elegida ─────────────────────────────
   function renderListado(){
-    $e('elec-kpis').innerHTML=''; $e('elec-tools').hidden=true; $e('elec-nota').textContent='';
+    $e('elec-periodo').hidden=true; $e('elec-kpis').innerHTML=''; $e('elec-tools').hidden=true; $e('elec-nota').textContent='';
     const l=ENC.lista||[];
     $e('elec-body').innerHTML=l.length
       ? `<div class="elec-lista">${l.map(e=>`<button class="elec-card" onclick="window.elegirEncuesta(${e.id})">
@@ -73,7 +79,7 @@
   // ── Render principal ───────────────────────────────────────────────────
   function render(){
     const d=ELEC.datos; if(!d) return;
-    renderKpis(d);
+    renderKpis(d); renderPeriodo(d);
     $e('elec-tools').hidden=false;
     const tipos=tiposDisponibles();
     $e('elec-tabs').innerHTML=tipos.map(t=>`<button class="${t===ELEC.tab?'on':''}" onclick="window.elecTab('${t}')">${TIPOS[t]}</button>`).join('');
@@ -87,12 +93,30 @@
   }
   window.elecTab=t=>{ ELEC.tab=t; render(); };
   window.elecCorte=c=>{ if(c===ELEC.corte) return; ELEC.corte=c; cargar(); };
+  // ── Periodo (marca de tiempo de la respuesta: un archivo puede traer varias oleadas) ──
+  function renderPeriodo(d){
+    const ps=(d.periodos||[]).filter(p=>p.fecha), sin=(d.periodos||[]).filter(p=>!p.fecha).reduce((a,p)=>a+p.n,0);
+    $e('elec-periodo').hidden=!ps.length;
+    if(!ps.length) return;
+    const todos=!ELEC.desde&&!ELEC.hasta;
+    $e('elec-pchips').innerHTML=`<button class="${todos?'on':''}" onclick="window.elecPeriodo('')">Todos</button>`+
+      ps.map(p=>`<button class="${ELEC.desde===p.fecha&&ELEC.hasta===p.fecha?'on':''}" title="${fmtN(p.n)} respuestas" onclick="window.elecPeriodo('${p.fecha}')">${escH(fmtF(p.fecha))}</button>`).join('');
+    const i=$e('elec-desde'), j=$e('elec-hasta');
+    i.min=j.min=ps[0].fecha; i.max=j.max=ps[ps.length-1].fecha;
+    i.value=ELEC.desde; j.value=ELEC.hasta;
+    $e('elec-periodo').title=sin?fmtN(sin)+' respuestas sin fecha quedan fuera si filtras por periodo':'';
+  }
+  window.elecPeriodo=f=>{ ELEC.desde=ELEC.hasta=f; cargar(); };
+  window.elecRango=()=>{ ELEC.desde=$e('elec-desde').value; ELEC.hasta=$e('elec-hasta').value; cargar(); };
   window.elecValidos=v=>{ ELEC.validos=v; render(); };
 
   // ── Tarjetas resumen ───────────────────────────────────────────────────
   function renderKpis(d){
     const k=[];
     k.push(['Respuestas',fmtN(d.total),'leads de la encuesta'+(geoFiltro()?' en la ubicación elegida':'')]);
+    const per=(d.periodos||[]).filter(p=>p.fecha);
+    if(per.length){ const a=per[0].fecha,b=per[per.length-1].fecha;
+      k.push(['Periodo',a===b?fmtF(a):(a.slice(0,4)===b.slice(0,4)?fmtF(a).replace(/ \d{4}$/,''):fmtF(a))+' – '+fmtF(b),per.length+(per.length===1?' periodo':' periodos')+' en la encuesta'+(ELEC.desde||ELEC.hasta?' · filtrado':'')]); }
     if(d.total>0) k.push(['Margen de error','± '+dec(196*Math.sqrt(0.25/d.total),1)+' %','95 % de confianza · referencial']);
     k.push(['Cobertura',fmtN(d.cobertura.municipios),d.cobertura.municipios===1?'municipio':'municipios en '+d.cobertura.departamentos+(d.cobertura.departamentos===1?' departamento':' departamentos')]);
     const v=d.preguntas.find(p=>p.tipo==='voto');
@@ -127,7 +151,7 @@
   // ── Vistas ─────────────────────────────────────────────────────────────
   // Tabla con color por celda (mapa de calor): filas × grupos del corte
   function tablaCalor(filas,grupos,celda){
-    return `<div class="elec-tabla"><table><thead><tr><th></th><th>Total</th>${grupos.map(g=>`<th>${escH(g)}</th>`).join('')}</tr></thead><tbody>${
+    return `<div class="elec-tabla"><table><thead><tr><th></th><th>Total</th>${grupos.map(g=>`<th>${escH(etiqGrupo(g))}</th>`).join('')}</tr></thead><tbody>${
       filas.map(f=>`<tr><th>${escH(f.nombre)}</th>${[f.total,...f.grupos].map((c,i)=>`<td style="${c.estilo||''}">${escH(c.texto)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
   const tinte=(intensidad,color)=>`background:color-mix(in srgb,${color} ${Math.round(Math.max(0,Math.min(1,intensidad))*70)}%,var(--card))`;
@@ -156,12 +180,12 @@
 
   function vistaImagen(ps){
     const filas=imagenes({preguntas:ps}).sort((x,y)=>y.net-x.net);
-    const grupos=filas[0]?.a.grupos||[];
+    const grupos=unionGrupos(filas);
     const titulo='<h3 class="elec-q">Imagen de cada persona<small>saldo = % positiva − % negativa · gris: no la conoce</small></h3>';
     if(grupos.length>1){
-      const netG=(f,g)=>{const c={pos:0,neg:0,nolo:0};Object.entries(f.a.por[g]).forEach(([r,n])=>c[claseImagen(r)]+=n);const b=c.pos+c.neg+c.nolo;return b?(c.pos-c.neg)/b:0;};
+      const netG=(f,g)=>{const c={pos:0,neg:0,nolo:0};Object.entries(f.a.por[g]||{}).forEach(([r,n])=>c[claseImagen(r)]+=n);const b=c.pos+c.neg+c.nolo;return b?(c.pos-c.neg)/b:null;};
       const t=filas.map(f=>({nombre:cap(f.nombre),total:{texto:pts(f.net*100),estilo:tinte(Math.abs(f.net)*1.4,f.net>=0?'var(--accent)':'var(--coral)')},
-        grupos:grupos.map(g=>{const n=netG(f,g);return {texto:pts(n*100),estilo:tinte(Math.abs(n)*1.4,n>=0?'var(--accent)':'var(--coral)')};})}));
+        grupos:grupos.map(g=>{const n=netG(f,g);return n===null?{texto:'—'}:{texto:pts(n*100),estilo:tinte(Math.abs(n)*1.4,n>=0?'var(--accent)':'var(--coral)')};})}));
       return titulo+tablaCalor(t,grupos,null);
     }
     const ext=Math.max(...filas.map(f=>Math.max(f.c.pos,f.c.neg)/(f.base||1)),0.01);
@@ -174,13 +198,13 @@
 
   function vistaConocimiento(ps){
     const filas=conocimientos({preguntas:ps}).sort((x,y)=>y.pc-x.pc);
-    const grupos=filas[0]?.a.grupos||[];
+    const grupos=unionGrupos(filas);
     const titulo='<h3 class="elec-q">Conocimiento de cada persona<small>% que la conoce · entre quienes la conocen, opinión positiva o negativa</small></h3>';
     if(grupos.length>1){
-      const pcG=(f,g)=>{let s=0,t=0;Object.entries(f.a.por[g]).forEach(([r,n])=>{t+=n;if(conoce(r))s+=n;});return t?s/t:0;};
-      const maxv=Math.max(...filas.flatMap(f=>[f.pc,...grupos.map(g=>pcG(f,g))]),0.01);
+      const pcG=(f,g)=>{let s=0,t=0;Object.entries(f.a.por[g]||{}).forEach(([r,n])=>{t+=n;if(conoce(r))s+=n;});return t?s/t:null;};
+      const maxv=Math.max(...filas.flatMap(f=>[f.pc,...grupos.map(g=>pcG(f,g)||0)]),0.01);
       const t=filas.map(f=>({nombre:cap(f.nombre),total:{texto:dec(f.pc*100,1)+' %',estilo:tinte(f.pc/maxv,'var(--accent)')},
-        grupos:grupos.map(g=>{const v=pcG(f,g);return {texto:dec(v*100,1)+' %',estilo:tinte(v/maxv,'var(--accent)')};})}));
+        grupos:grupos.map(g=>{const v=pcG(f,g);return v===null?{texto:'—'}:{texto:dec(v*100,1)+' %',estilo:tinte(v/maxv,'var(--accent)')};})}));
       return titulo+tablaCalor(t,grupos,null);
     }
     return titulo+`<div class="barras">${filas.map(f=>{
