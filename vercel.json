@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install",
+  "buildCommand": "node scripts/build-web.mjs",
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/", "destination": "/leads_analytics.html" },
+    { "source": "/leads_importer.php", "destination": "/api/leads_importer" },
+    { "source": "/c98geo_api.php", "destination": "/api/c98geo_api" },
+    { "source": "/c98geo_map_api.php", "destination": "/api/c98geo_map_api" },
+    { "source": "/nl_search.php", "destination": "/api/nl_search" }
+  ],
+  "functions": {
+    "api/*.js": { "maxDuration": 60 }
+  },
+  "headers": [
+    {
+      "source": "/(.*)\\.(html|js|css)",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    }
+  ]
+}

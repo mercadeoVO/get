@@ -32,3 +32,9 @@ app/config_local.php
 # ── Credenciales de Supabase (nunca versionar) ────────────────
 .env.supabase
 __pycache__/
+
+# Vercel / web
+public/
+node_modules/
+.vercel/
+.env.web
