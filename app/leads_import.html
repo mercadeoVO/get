@@ -358,7 +358,7 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
     </div>
     <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
       Parsea el nombre de campaña / adset / anuncio para rellenar campos opcionales.
-      Ej.: <code>adset_name</code> = <em>"Medellín_18-35_Estratos2-3"</em> → separador <code>_</code>, posición <code>0</code> → <code>municipio_zona</code>
+      Ej.: <code>adset_name</code> = <em>"Medellín_18-35_Estratos2-3"</em> → separador <code>_</code>, posición <code>0</code> → campo <code>Municipio</code> (la posición empieza en 0)
     </p>
     <div id="extractions-list"></div>
   </div>
@@ -1160,15 +1160,35 @@ function renderAutoGeoUI(){
 }
 
 // ─── Extraction rules ────────────────────────────────────────────────────────
+// Destinos que el servidor sabe llenar con una regla (los electorales de OPT_FIELDS no aplican aquí)
+const EXT_TARGET_KEYS=new Set(['nombre','email','telefono','sexo','rango_edad','estrato','afiliacion_politica',
+  'nivel_educativo','geo_departamento','subregion','municipio','zona','comuna_localidad','barrio']);
+const EXT_TARGETS=OPT_FIELDS.filter(([v])=>EXT_TARGET_KEYS.has(v));
+
 function addExtraction(){
-  state.extractions.push({from:'adset_name',delimiter:'_',position:0,target:OPT_FIELDS[0][0]});
+  state.extractions.push({from:'adset_name',delimiter:'_',position:0,target:'municipio'});
   renderExtractions();
   renderLocCard();
 }
+// Qué sacaría la regla con la primera fila de muestra de la hoja activa (o por qué no puede)
+function ejemploExtraccion(ex){
+  const col=(state.columns||[]).find(c=>c.type===ex.from);
+  const lbl=(EXT_SOURCES.find(([v])=>v===ex.from)||[,ex.from])[1];
+  if(!col) return `<span style="color:var(--yellow)">⚠ Esta hoja no tiene una columna mapeada como «${h(lbl)}»: la regla no hará nada.</span>`;
+  const fila=(state.previewData||[]).find(r=>String(r[col.index]??'').trim()!=='');
+  if(!fila) return `<span style="color:var(--muted)">Sin datos de muestra en «${h(lbl)}».</span>`;
+  const origen=String(fila[col.index]).trim();
+  const val=(ex.delimiter===''?[origen]:origen.split(ex.delimiter)).map(s=>s.trim())[ex.position];
+  return val
+    ? `<span style="color:var(--muted)">Ejemplo: «${h(origen)}» → <b style="color:var(--green)">${h(val)}</b></span>`
+    : `<span style="color:var(--yellow)">⚠ En «${h(origen)}» no hay nada en la posición ${ex.position} (empieza en 0).</span>`;
+}
+function refrescarEjemplo(i){ const el=document.getElementById('ext-ej-'+i); if(el) el.innerHTML=ejemploExtraccion(state.extractions[i]); }
 function removeExtraction(i){ state.extractions.splice(i,1); renderExtractions(); renderLocCard(); }
 function updExt(i,f,v){
   state.extractions[i][f]=f==='position'?parseInt(v)||0:v;
   if(f==='target') renderLocCard();   // una regla con destino Municipio cuenta como fuente
+  refrescarEjemplo(i);
 }
 
 function renderExtractions(){
@@ -1190,9 +1210,10 @@ function renderExtractions(){
       <span class="ext-arrow">→</span>
       <span class="ext-lbl">Campo</span>
       <select onchange="updExt(${i},'target',this.value)">
-        ${OPT_FIELDS.map(([v,l])=>`<option value="${v}" ${v===ex.target?'selected':''}>${l}</option>`).join('')}
+        ${EXT_TARGETS.map(([v,l])=>`<option value="${v}" ${v===ex.target?'selected':''}>${l}</option>`).join('')}
       </select>
       <button class="btn btn-outline btn-sm" style="margin-left:auto;color:var(--red);border-color:var(--red);" onclick="removeExtraction(${i})">✕</button>
+      <div id="ext-ej-${i}" style="flex-basis:100%;font-size:12px;margin-top:2px;">${ejemploExtraccion(ex)}</div>
     </div>`).join('');
 }
 

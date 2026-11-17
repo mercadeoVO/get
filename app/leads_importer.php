@@ -2301,7 +2301,17 @@ try {
                         if (empty($srcVal) || !empty($lead[$target])) continue; // no sobreescribir
                         $parts  = array_map('trim', explode($delim, $srcVal));
                         $extracted = $parts[$pos] ?? '';
-                        if ($extracted !== '') $lead[$target] = $extracted;
+                        if ($extracted === '') continue;
+                        // Mismo tratamiento que al mapear una columna: el texto extraído se normaliza según el campo
+                        switch ($target) {
+                            case 'estrato':      // «Estrato 3» → 3; un rango como «2-3» es ambiguo y se omite
+                                if (preg_match('/^\D*(\d)\D*$/', $extracted, $m)) $lead['estrato'] = (int)$m[1];
+                                break;
+                            case 'rango_edad': $lead[$target] = normalizeRangoEdad($extracted); break;
+                            case 'telefono':   $lead[$target] = normalizePhone($extracted); break;
+                            case 'sexo':       $lead[$target] = normalizeSexo($extracted) ?? $extracted; break;
+                            default:           $lead[$target] = $extracted;
+                        }
                     }
 
                     // ── Municipio por defecto de la hoja (elegido en el wizard) ──
