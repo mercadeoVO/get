@@ -381,12 +381,13 @@ function renderSinTema(sinTema){
       <div class="crear-tema-form" id="crear-tema-${s.id}">
         <label>Dominio</label>
         <div class="dominio-help" id="ct-domhelp-${s.id}">Social: preguntas de opinión dirigidas al público/leads (condición social, marca, seguridad, obra pública, etc.) — la inmensa mayoría de los casos.</div>
-        <select id="ct-dominio-${s.id}" onchange="document.getElementById('ct-domhelp-${s.id}').textContent = this.value==='Interno' ? 'Interno: preguntas dirigidas a colaboradores/empleados de un programa (ej. clima laboral) — NO son respuestas de leads/ciudadanía.' : 'Social: preguntas de opinión dirigidas al público/leads (condición social, marca, seguridad, obra pública, etc.) — la inmensa mayoría de los casos.';">
+        <select id="ct-dominio-${s.id}" onchange="cambiarDominio(${s.id})">
           <option value="Social" selected>Social — opinión pública / leads</option>
           <option value="Interno">Interno — colaboradores de un programa</option>
         </select>
-        <label>Tema (nuevo o existente)</label>
-        <input type="text" id="ct-tema-${s.id}" placeholder="Ej. Sostenibilidad energética">
+        <label>Tema</label>
+        <select id="ct-tema-sel-${s.id}" onchange="cambiarTemaSel(${s.id})">${opcionesTemaHtml('Social')}</select>
+        <input type="text" id="ct-tema-${s.id}" placeholder="Nombre del tema nuevo. Ej. Sostenibilidad energética" style="display:none;">
         <label>Subtema</label>
         <input type="text" id="ct-subtema-${s.id}" placeholder="Ej. Racionamiento y límites de consumo">
         <label>Keywords (separadas por coma, opcional)</label>
@@ -406,16 +407,48 @@ function toggleCrearTema(preguntaId){
   document.getElementById('crear-tema-'+preguntaId).classList.toggle('open');
 }
 
-async function guardarNuevoTema(preguntaId){
+// Temas existentes del dominio (sin repetir) como <option>; el último permite crear uno nuevo.
+// Elegir de la lista evita las erratas que antes creaban un tema duplicado («relacción»).
+const DOMINIO_AYUDA = {
+  Social: 'Social: preguntas de opinión dirigidas al público/leads (condición social, marca, seguridad, obra pública, etc.) — la inmensa mayoría de los casos.',
+  Interno: 'Interno: preguntas dirigidas a colaboradores/empleados de un programa (ej. clima laboral) — NO son respuestas de leads/ciudadanía.'
+};
+function opcionesTemaHtml(dominio){
+  const temas = [...new Set(CATALOGO.filter(t => t.dominio === dominio).map(t => t.tema))].sort((a,b) => a.localeCompare(b, 'es'));
+  return '<option value="">Elige un tema existente…</option>'
+    + temas.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('')
+    + '<option value="__nuevo__">＋ Crear un tema nuevo…</option>';
+}
+function cambiarDominio(preguntaId){
+  const dom = document.getElementById('ct-dominio-'+preguntaId).value;
+  document.getElementById('ct-domhelp-'+preguntaId).textContent = DOMINIO_AYUDA[dom];
+  document.getElementById('ct-tema-sel-'+preguntaId).innerHTML = opcionesTemaHtml(dom);
+  cambiarTemaSel(preguntaId);
+}
+function cambiarTemaSel(preguntaId){
+  const nuevo = document.getElementById('ct-tema-sel-'+preguntaId).value === '__nuevo__';
+  const inp = document.getElementById('ct-tema-'+preguntaId);
+  inp.style.display = nuevo ? '' : 'none';
+  if (nuevo) inp.focus(); else inp.value = '';
+}
+
+async function guardarNuevoTema(preguntaId, temaForzado = null, confirmarNuevo = false){
   const dominio = document.getElementById('ct-dominio-'+preguntaId).value;
-  const tema = document.getElementById('ct-tema-'+preguntaId).value.trim();
+  const sel = document.getElementById('ct-tema-sel-'+preguntaId).value;
+  const tema = temaForzado ?? (sel === '__nuevo__' ? document.getElementById('ct-tema-'+preguntaId).value.trim() : sel);
   const subtema = document.getElementById('ct-subtema-'+preguntaId).value.trim();
   const keywords = document.getElementById('ct-keywords-'+preguntaId).value.trim();
-  if (!tema || !subtema) { toast('Tema y subtema son requeridos.', false); return; }
+  if (!tema) { toast(sel === '__nuevo__' ? 'Escribe el nombre del tema nuevo.' : 'Elige un tema de la lista.', false); return; }
+  if (!subtema) { toast('El subtema es requerido.', false); return; }
   const fd = new FormData();
   fd.append('dominio', dominio); fd.append('tema', tema); fd.append('subtema', subtema); fd.append('keywords', keywords);
+  if (confirmarNuevo) fd.append('confirmar_nuevo', '1');
   try {
     const d = await fetch(API+'?action=crear_tema', {method:'POST', body:fd}).then(r=>r.json());
+    if (d.similar) {   // el servidor encontró un tema casi idéntico: probable errata
+      const usar = confirm(`Ya existe el tema «${d.similar}», muy parecido a «${tema}».\n\nAceptar: usar «${d.similar}».\nCancelar: crear «${tema}» como tema nuevo.`);
+      return guardarNuevoTema(preguntaId, usar ? d.similar : tema, !usar);
+    }
     if (!d.ok) throw new Error(d.error || 'Error desconocido');
     toast(`Tema creado: ${d.codigo} ${d.subtema}. Asignando…`);
     const fd2 = new FormData();

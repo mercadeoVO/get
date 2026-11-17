@@ -3016,6 +3016,25 @@ try {
         $keywords = array_values(array_filter(array_map('trim', explode(',', $keywordsRaw))));
         if (!$keywords) $keywords = [mb_strtolower($subtema, 'UTF-8')];
 
+        // Anti-erratas: un tema escrito a mano que difiere de uno existente solo en mayúsculas, tildes o
+        // espacios ES ese tema (se reutiliza su nombre exacto); si es casi idéntico (p. ej. «relacción»),
+        // se avisa en vez de crear un tema duplicado, salvo que el usuario confirme que es nuevo.
+        $existentes = $db->query("SELECT tema, MIN(dominio) AS dominio, COUNT(DISTINCT dominio) AS n_dom FROM dim_tema GROUP BY tema")->fetchAll(PDO::FETCH_ASSOC);
+        $nTema = normBasico($tema);
+        $similar = null;
+        foreach ($existentes as $e) {
+            $nE = normBasico($e['tema']);
+            if ($nE === $nTema) { $tema = $e['tema']; $similar = null; break; }
+            if ($similar === null && mb_strlen($nTema) >= 6 && levenshtein($nE, $nTema) <= 2) $similar = $e['tema'];
+        }
+        $existente = array_values(array_filter($existentes, fn($e) => $e['tema'] === $tema))[0] ?? null;
+        if ($existente && $existente['n_dom'] == 1 && $existente['dominio'] !== $dominio) {
+            errOut("El tema «{$tema}» ya existe en el dominio {$existente['dominio']}; elige ese dominio o un nombre distinto.");
+        }
+        if (!$existente && $similar !== null && ($_POST['confirmar_nuevo'] ?? '') !== '1') {
+            jsonOut(['ok' => false, 'similar' => $similar, 'error' => "Ya existe un tema muy parecido: «{$similar}»."]);
+        }
+
         // Código jerárquico: reutiliza el prefijo del tema si ya existe, si no crea uno nuevo
         $prefijoStmt = $db->prepare("SELECT codigo FROM dim_tema WHERE tema = ? ORDER BY codigo DESC LIMIT 1");
         $prefijoStmt->execute([$tema]);
