@@ -28,3 +28,7 @@ app/drive_service_account.json
 
 # Configuración local por equipo (ENCUESTAS_FUENTE, etc.)
 app/config_local.php
+
+# ── Credenciales de Supabase (nunca versionar) ────────────────
+.env.supabase
+__pycache__/
