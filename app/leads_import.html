@@ -1168,6 +1168,18 @@ const EXT_TARGET_KEYS=new Set(['nombre','email','telefono','sexo','rango_edad','
   'nivel_educativo','geo_departamento','subregion','municipio','zona','comuna_localidad','barrio']);
 const EXT_TARGETS=OPT_FIELDS.filter(([v])=>EXT_TARGET_KEYS.has(v));
 
+// Campos con un formato reconocible: la regla puede buscarlos en cualquier posición y se valida su valor
+const EXT_ANYPOS=new Set(['sexo','rango_edad']);
+const RE_SEXO=/^(h|m|f|w|hombre|hombres|mujer|mujeres|masculino|femenino|masc|fem|male|female)$/i;
+const RE_EDAD=/(?<!\d)\d{2,3}\s*(?:a|-)\s*\d{2,3}\+?(?!\d)|(?<!\d)\d{2,3}\s*\+/i;
+function valorValidoParaCampo(target,v){
+  if(target==='sexo') return RE_SEXO.test(v);
+  if(target==='rango_edad') return RE_EDAD.test(v);
+  if(target==='estrato') return /^\D*\d\D*$/.test(v);
+  return true;
+}
+const ETQ_CAMPO={sexo:'un sexo (H/M)',rango_edad:'una edad (ej. 18a24)',estrato:'un estrato (1 a 6)'};
+
 function addExtraction(){
   state.extractions.push({from:'adset_name',delimiter:'_',position:0,target:'municipio'});
   renderExtractions();
@@ -1181,7 +1193,14 @@ function ejemploExtraccion(ex){
   const fila=(state.previewData||[]).find(r=>String(r[col.index]??'').trim()!=='');
   if(!fila) return `<span style="color:var(--muted)">Sin datos de muestra en «${h(lbl)}».</span>`;
   const origen=String(fila[col.index]).trim();
-  const val=(ex.delimiter===''?[origen]:origen.split(ex.delimiter)).map(s=>s.trim())[ex.position];
+  const trozos=(ex.delimiter===''?[origen]:origen.split(ex.delimiter)).map(s=>s.trim());
+  const val=ex.position<0 ? trozos.find(t=>valorValidoParaCampo(ex.target,t)) : trozos[ex.position];
+  if(ex.position<0&&!val) return `<span style="color:var(--yellow)">⚠ En «${h(origen)}» no se encontró ${ETQ_CAMPO[ex.target]||'el dato'} en ninguna posición.</span>`;
+  if(val&&ex.position>=0&&!valorValidoParaCampo(ex.target,val)){
+    const otro=trozos.find(t=>valorValidoParaCampo(ex.target,t));
+    return `<span style="color:var(--yellow)">⚠ «${h(val)}» no es ${ETQ_CAMPO[ex.target]}: esas filas quedarían vacías.`
+      +(otro?` En este nombre sí aparece «${h(otro)}» en otra posición; usa «en cualquier posición».`:'')+`</span>`;
+  }
   // Las reglas solo rellenan lo vacío: si la hoja ya trae una columna de ese campo, esa manda
   const sm=state.sheetMappings&&state.sheetMappings[state.activeMapSheet];
   const yaTrae=sm&&sheetMappedFields(sm).includes(ex.target);
@@ -1193,8 +1212,14 @@ function ejemploExtraccion(ex){
 function refrescarEjemplo(i){ const el=document.getElementById('ext-ej-'+i); if(el) el.innerHTML=ejemploExtraccion(state.extractions[i]); }
 function removeExtraction(i){ state.extractions.splice(i,1); renderExtractions(); renderLocCard(); }
 function updExt(i,f,v){
-  state.extractions[i][f]=f==='position'?parseInt(v)||0:v;
-  if(f==='target') renderLocCard();   // una regla con destino Municipio cuenta como fuente
+  state.extractions[i][f]=f==='position'?(parseInt(v,10)||(parseInt(v,10)===-1?-1:0)):v;
+  if(f==='target'){
+    // «Cualquier posición» solo existe para sexo y edad; con otro destino vuelve a posición fija
+    if(!EXT_ANYPOS.has(v) && state.extractions[i].position<0) state.extractions[i].position=0;
+    renderExtractions();
+    renderLocCard();   // una regla con destino Municipio cuenta como fuente
+    return;
+  }
   refrescarEjemplo(i);
 }
 
@@ -1213,7 +1238,8 @@ function renderExtractions(){
       <span class="ext-lbl">Separador</span>
       <input type="text" value="${h(ex.delimiter)}" maxlength="5" oninput="updExt(${i},'delimiter',this.value)">
       <span class="ext-lbl">Posición</span>
-      <input type="number" value="${ex.position}" min="0" max="20" oninput="updExt(${i},'position',this.value)">
+      <input type="number" value="${ex.position<0?'':ex.position}" min="0" max="20" ${ex.position<0?'disabled':''} oninput="updExt(${i},'position',this.value)">
+      ${EXT_ANYPOS.has(ex.target)?`<label class="ext-lbl" style="display:flex;align-items:center;gap:4px;cursor:pointer;" title="Busca el dato en todo el texto, sin importar su posición. Útil si los nombres mezclan formatos (C1_18a24_H_13 y 60_SC_45a65+_M_15)."><input type="checkbox" ${ex.position<0?'checked':''} onchange="updExt(${i},'position',this.checked?-1:0);renderExtractions()"> en cualquier posición</label>`:''}
       <span class="ext-arrow">→</span>
       <span class="ext-lbl">Campo</span>
       <select onchange="updExt(${i},'target',this.value)">

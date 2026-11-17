@@ -534,6 +534,11 @@ function normalizeSexo(?string $val): ?string {
     return null;
 }
 
+/** ¿El texto parece un rango de edad («18a24», «25-34», «45+»)? Evita tomar un número suelto como edad. */
+function esTextoRangoEdad(string $s): bool {
+    return (bool)preg_match('/(?<!\d)\d{2,3}\s*(?:a|\-)\s*\d{2,3}\+?(?!\d)|(?<!\d)\d{2,3}\s*\+/i', $s);
+}
+
 function normalizeRangoEdad(?string $val): ?string {
     if (!$val) return null;
     $s = strtolower(trim($val));
@@ -2309,16 +2314,32 @@ try {
                         $srcVal = $lead[$src] ?? '';
                         if (empty($srcVal) || !empty($lead[$target])) continue; // no sobreescribir
                         $parts  = array_map('trim', explode($delim, $srcVal));
-                        $extracted = $parts[$pos] ?? '';
+                        // posición -1 = «en cualquier posición» (solo sexo y rango_edad): sirve cuando los nombres
+                        // mezclan formatos («C1_18a24_H_13» y «60_SC_45a65+_M_15») y el dato cambia de lugar.
+                        if ($pos < 0) {
+                            $extracted = '';
+                            if (in_array($target, ['sexo', 'rango_edad'], true)) {
+                                foreach ($parts as $part) {
+                                    if ($target === 'sexo' ? normalizeSexo($part) !== null : esTextoRangoEdad($part)) { $extracted = $part; break; }
+                                }
+                            }
+                        } else {
+                            $extracted = $parts[$pos] ?? '';
+                        }
                         if ($extracted === '') continue;
-                        // Mismo tratamiento que al mapear una columna: el texto extraído se normaliza según el campo
+                        // Mismo tratamiento que al mapear una columna: el texto extraído se normaliza según el campo.
+                        // Un valor que no se reconoce (p. ej. «13» como sexo) se descarta: nunca se guarda basura.
                         switch ($target) {
                             case 'estrato':      // «Estrato 3» → 3; un rango como «2-3» es ambiguo y se omite
                                 if (preg_match('/^\D*(\d)\D*$/', $extracted, $m)) $lead['estrato'] = (int)$m[1];
                                 break;
-                            case 'rango_edad': $lead[$target] = normalizeRangoEdad($extracted); break;
+                            case 'rango_edad':
+                                if (esTextoRangoEdad($extracted) && ($ra = normalizeRangoEdad($extracted)) !== null) $lead[$target] = $ra;
+                                break;
                             case 'telefono':   $lead[$target] = normalizePhone($extracted); break;
-                            case 'sexo':       $lead[$target] = normalizeSexo($extracted) ?? $extracted; break;
+                            case 'sexo':
+                                if (($sx = normalizeSexo($extracted)) !== null) $lead[$target] = $sx;
+                                break;
                             default:           $lead[$target] = $extracted;
                         }
                     }
