@@ -534,6 +534,70 @@ function normalizeSexo(?string $val): ?string {
     return null;
 }
 
+// ── Sexo del lead: archivo → regla → adset → (ya existente: no se toca) → inferencia por nombre ──────────
+
+/** Sexo que dice el nombre del adset («C1_18a24_H_13» → Hombre). Solo si hay uno y es inequívoco. */
+function sexoDesdeAdset(?string $adset): ?string {
+    if ($adset === null || trim($adset) === '') return null;
+    $hallados = [];
+    foreach (preg_split('/[_\-\/\s()]+/', $adset, -1, PREG_SPLIT_NO_EMPTY) as $parte) {
+        if (mb_strlen($parte) > 9) continue;
+        $sx = normalizeSexo($parte);
+        if ($sx !== null) $hallados[$sx] = true;
+    }
+    return count($hallados) === 1 ? array_key_first($hallados) : null;
+}
+
+/** Letras sin tildes en mayúsculas, p. ej. «José» → «JOSE» (clave del diccionario de nombres). */
+function claveNombrePila(string $s): string {
+    return preg_replace('/[^A-Z]/', '', normalizeGeoStr($s));
+}
+
+/**
+ * Inferencia de último recurso: el sexo más probable de un nombre de pila, aprendido de los propios leads
+ * que ya tienen nombre y sexo (sin servicios externos). Solo responde si el nombre se ha visto 3+ veces y
+ * al menos el 90 % coincide; si no, devuelve null en vez de adivinar.
+ */
+function sexoPorNombre(?string $nombre, \PDO $db): ?string {
+    static $dic = null;
+    if ($nombre === null || trim($nombre) === '') return null;
+    if ($dic === null) {
+        $cuenta = [];
+        $rs = $db->query("SELECT SUBSTRING_INDEX(TRIM(nombre), ' ', 1) AS pn, LOWER(sexo) AS sx, COUNT(*) AS n
+                          FROM import_log_leads
+                          WHERE nombre IS NOT NULL AND nombre <> '' AND sexo IN ('Hombre','Mujer')
+                          GROUP BY pn, sx");
+        foreach ($rs as $r) {
+            $k = claveNombrePila($r['pn']);
+            if (strlen($k) < 2) continue;
+            $cuenta[$k][$r['sx']] = ($cuenta[$k][$r['sx']] ?? 0) + (int)$r['n'];
+        }
+        $dic = [];
+        foreach ($cuenta as $k => $c) {
+            $h = $c['hombre'] ?? 0; $m = $c['mujer'] ?? 0; $t = $h + $m;
+            if ($t >= 3 && max($h, $m) / $t >= 0.9) $dic[$k] = $h > $m ? 'Hombre' : 'Mujer';
+        }
+    }
+    $saltar = ['DE', 'DEL', 'LA', 'LAS', 'LOS', 'Y', 'SAN', 'SANTA'];
+    $n = 0;
+    foreach (preg_split('/\s+/', trim($nombre)) as $tok) {
+        $k = claveNombrePila($tok);
+        if (strlen($k) < 2 || in_array($k, $saltar, true)) continue;
+        if (isset($dic[$k])) return $dic[$k];
+        if (++$n >= 2) break;   // primer y segundo nombre
+    }
+    return null;
+}
+
+/** Completa el sexo de un lead que no lo trae: primero el adset y, si tampoco, la inferencia por nombre. */
+function completarSexoLead(array &$lead, \PDO $db): void {
+    if (!empty($lead['sexo'])) return;
+    $sx = sexoDesdeAdset($lead['adset_name'] ?? null);
+    if ($sx !== null) { $lead['sexo'] = $sx; $lead['_sexo_origen'] = 'adset'; return; }
+    $sx = sexoPorNombre($lead['nombre'] ?? null, $db);
+    if ($sx !== null) { $lead['sexo'] = $sx; $lead['_sexo_origen'] = 'inferido'; }
+}
+
 /** ¿El texto parece un rango de edad («18a24», «25-34», «45+»)? Evita tomar un número suelto como edad. */
 function esTextoRangoEdad(string $s): bool {
     return (bool)preg_match('/(?<!\d)\d{2,3}\s*(?:a|\-)\s*\d{2,3}\+?(?!\d)|(?<!\d)\d{2,3}\s*\+/i', $s);
@@ -2007,6 +2071,8 @@ try {
             "ALTER TABLE import_log_leads      ADD COLUMN municipio        VARCHAR(100) DEFAULT NULL",
             "ALTER TABLE import_log_leads      ADD COLUMN zona             VARCHAR(100) DEFAULT NULL",
             "ALTER TABLE import_log_leads      ADD COLUMN comuna_localidad VARCHAR(100) DEFAULT NULL",
+            // De dónde salió el sexo: archivo | regla | adset | inferido (NULL = cargas anteriores)
+            "ALTER TABLE import_log_leads      ADD COLUMN sexo_origen      VARCHAR(12)  DEFAULT NULL",
             // Catálogo de preguntas: array denormalizado de import_ids donde aparece cada pregunta
             "ALTER TABLE import_log_leads_preguntas ADD COLUMN import_ids JSON NULL COMMENT 'Array de import_ids que usan esta pregunta'",
         ] as $ddl) {
@@ -2137,15 +2203,19 @@ try {
                 (id, created_time, ad_id, ad_name, adset_id, adset_name,
                  campaign_id, campaign_name, form_id, form_name,
                  is_organic, platform, nombre, email, telefono,
-                 sexo, rango_edad, estrato, afiliacion_politica,
+                 sexo, sexo_origen, rango_edad, estrato, afiliacion_politica,
                  nivel_educativo, id_geo, import_id)
             VALUES
                 (:id, :created_time, :ad_id, :ad_name, :adset_id, :adset_name,
                  :campaign_id, :campaign_name, :form_id, :form_name,
                  :is_organic, :platform, :nombre, :email, :telefono,
-                 :sexo, :rango_edad, :estrato, :afiliacion_politica,
+                 :sexo, :sexo_origen, :rango_edad, :estrato, :afiliacion_politica,
                  :nivel_educativo, :id_geo, :import_id)
         ");
+        // Lead que ya existía: solo se le completa el sexo si no lo tenía; si lo tiene, no se modifica
+        $stmtSexoExistente = $db->prepare(
+            "UPDATE import_log_leads SET sexo = ?, sexo_origen = ? WHERE id = ? AND (sexo IS NULL OR sexo = '')"
+        );
         // EAV: usar pregunta_id (FK al catálogo) + import_id directo
         // es_electoral se detecta con analizarElectoral() (palabras clave + candidatos del catálogo)
         $stmtInsPreg = $db->prepare(
@@ -2238,6 +2308,7 @@ try {
                 }
 
                 $proc = 0; $ins = 0; $dup = 0; $dup_file = 0; $dup_db = 0; $err = 0; $enriched = 0; $null_meta = 0;
+                $sexoCnt = ['archivo' => 0, 'regla' => 0, 'adset' => 0, 'inferido' => 0, 'completados' => 0];
                 $dimGeoReady = true; // geo se resuelve via c98_geo siempre
                 $seenIds    = []; // IDs vistos en ESTA importación (col 0)
                 $seenEmails = []; // Emails vistos en filas donde col 0 estaba vacía
@@ -2304,6 +2375,16 @@ try {
                         }
                     }
 
+                    // Sexo — 1.º lo que trae el archivo (prevalece). Se unifica «H»/«mujer»/«F» al valor estándar;
+                    // un texto que no se reconoce se conserva tal cual: es lo que dijo el archivo.
+                    $lead['_sexo_origen'] = null;
+                    if (trim((string)($lead['sexo'] ?? '')) !== '') {
+                        $lead['sexo'] = normalizeSexo((string)$lead['sexo']) ?? trim((string)$lead['sexo']);
+                        $lead['_sexo_origen'] = 'archivo';
+                    } else {
+                        $lead['sexo'] = null;
+                    }
+
                     // Aplicar reglas de extracción (desde campaign/adset/ad names)
                     foreach ($extractions as $rule) {
                         $src    = $rule['from']      ?? '';
@@ -2343,6 +2424,10 @@ try {
                             default:           $lead[$target] = $extracted;
                         }
                     }
+                    // 2.º regla manual; 3.º el nombre del adset; 4.º (último recurso) inferencia por nombre de pila
+                    if (!empty($lead['sexo']) && $lead['_sexo_origen'] === null) $lead['_sexo_origen'] = 'regla';
+                    completarSexoLead($lead, $db);
+                    if (!empty($lead['_sexo_origen'])) $sexoCnt[$lead['_sexo_origen']]++;
 
                     // ── Municipio por defecto de la hoja (elegido en el wizard) ──
                     // Solo rellena filas sin municipio propio: si el Excel trae la columna, esa manda.
@@ -2421,6 +2506,7 @@ try {
                         ':is_organic' => $lead['is_organic'], ':platform' => $lead['platform'],
                         ':nombre' => $lead['nombre'], ':email' => $lead['email'],
                         ':telefono' => $lead['telefono'], ':sexo' => $lead['sexo'],
+                        ':sexo_origen' => $lead['sexo'] !== null ? $lead['_sexo_origen'] : null,
                         ':rango_edad' => $lead['rango_edad'], ':estrato' => $lead['estrato'],
                         ':afiliacion_politica' => $lead['afiliacion_politica'],
                         ':nivel_educativo' => $lead['nivel_educativo'],
@@ -2431,6 +2517,11 @@ try {
                     if ((int)$stmtLead->rowCount() === 0) {
                         // ID único en el archivo pero ya existía en BD (importación anterior)
                         $dup++; $dup_db++;
+                        // El lead ya existe: si tiene sexo no se toca; si no lo tenía, se completa con el de este archivo
+                        if (!empty($lead['sexo'])) {
+                            $stmtSexoExistente->execute([$lead['sexo'], $lead['_sexo_origen'], $lead['id']]);
+                            $sexoCnt['completados'] += $stmtSexoExistente->rowCount();
+                        }
                         // Recuperar id_lead del lead existente para insertar sus respuestas EAV
                         $stmtGetLeadNumId->execute([$lead['id']]);
                         $leadNumericId = (int)($stmtGetLeadNumId->fetchColumn() ?: 0);
@@ -2597,6 +2688,7 @@ try {
                     'err'         => $err,
                     'enriched'    => $enriched,
                     'null_meta'   => $null_meta,
+                    'sexo'        => $sexoCnt,    // de dónde salió el sexo de las filas procesadas
                 ];
             } catch (\Throwable $e) {
                 if ($db->inTransaction()) $db->rollBack();
