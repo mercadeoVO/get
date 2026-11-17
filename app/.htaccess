@@ -5,3 +5,10 @@
     Header set Cache-Control "no-cache, must-revalidate"
   </FilesMatch>
 </IfModule>
+
+# Subida de Excel grandes (p. ej. exports de ~60 MB): el tope por defecto de PHP es 40 MB.
+# Solo aplica con mod_php de Apache; no requiere reiniciar ni editar php.ini.
+<IfModule php_module>
+  php_value upload_max_filesize 256M
+  php_value post_max_size 256M
+</IfModule>

@@ -1875,6 +1875,7 @@ try {
 
     // ── GET_SHEETS ────────────────────────────────────────────
     if ($action === 'get_sheets') {
+        set_time_limit(600);   // contar las filas de un Excel de ~60 MB con muchas hojas tarda ~100 s
         $tmpPath = handleUpload();
         $sheets  = xlsxGetSheets($tmpPath); // lanza RuntimeException si falla
         $result  = ['ok' => true, 'sheets' => $sheets];

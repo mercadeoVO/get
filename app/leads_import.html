@@ -664,7 +664,13 @@ document.getElementById('btn-upload').addEventListener('click',async()=>{
   document.getElementById('upload-progress').style.width='40%';
   const fd=new FormData(); fd.append('file',state.file);
   try{
-    const d=await fetch(API+'?action=get_sheets',{method:'POST',body:fd}).then(r=>r.json());
+    const resp=await fetch(API+'?action=get_sheets',{method:'POST',body:fd});
+    const txt=await resp.text();
+    let d; try{ d=JSON.parse(txt); }catch{
+      // PHP devolvió HTML (p. ej. el archivo excede upload_max_filesize/post_max_size) en vez de JSON
+      throw new Error(`El servidor no pudo procesar el archivo (${(state.file.size/1048576).toFixed(0)} MB). `+
+        'Si es muy grande, revisa el límite de subida de PHP (app/.htaccess) o impórtalo desde la pantalla Drive.');
+    }
     if(!d.ok)throw new Error(d.error||'Error desconocido');
     document.getElementById('upload-progress').style.width='100%';
     state.tempId=d.temp_id;
