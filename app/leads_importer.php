@@ -3035,6 +3035,23 @@ try {
             jsonOut(['ok' => false, 'similar' => $similar, 'error' => "Ya existe un tema muy parecido: «{$similar}»."]);
         }
 
+        // Subtemas parecidos (misma idea con otra redacción, errata o sinónimo): se muestran para que el
+        // usuario use uno existente; solo se crea si confirma que es distinto (confirmar_subtema=1).
+        require_once __DIR__ . '/temas_similares.php';
+        $todos = $db->query("SELECT id, dominio, tema, subtema, codigo FROM dim_tema")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($todos as $t) {
+            if ($t['tema'] === $tema && tsNormalizar($t['subtema']) === tsNormalizar($subtema)) {
+                errOut("Ya existe ese subtema en «{$tema}»: {$t['codigo']} {$t['subtema']}. Úsalo desde el catálogo.");
+            }
+        }
+        if (($_POST['confirmar_subtema'] ?? '') !== '1') {
+            $parecidos = temasBuscarSubtemasParecidos($todos, $dominio, $subtema);
+            if ($parecidos) {
+                jsonOut(['ok' => false, 'parecidos' => $parecidos,
+                         'error' => 'Hay subtemas parecidos; revisa si alguno ya sirve.']);
+            }
+        }
+
         // Código jerárquico: reutiliza el prefijo del tema si ya existe, si no crea uno nuevo
         $prefijoStmt = $db->prepare("SELECT codigo FROM dim_tema WHERE tema = ? ORDER BY codigo DESC LIMIT 1");
         $prefijoStmt->execute([$tema]);

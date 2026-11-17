@@ -392,6 +392,7 @@ function renderSinTema(sinTema){
         <input type="text" id="ct-subtema-${s.id}" placeholder="Ej. Racionamiento y límites de consumo">
         <label>Keywords (separadas por coma, opcional)</label>
         <input type="text" id="ct-keywords-${s.id}" placeholder="límite de consumo, racionamiento">
+        <div id="ct-parecidos-${s.id}"></div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-success btn-sm" onclick="guardarNuevoTema(${s.id})">Crear y asignar</button>
           <button class="btn btn-outline btn-sm" onclick="toggleCrearTema(${s.id})">Cancelar</button>
@@ -432,7 +433,39 @@ function cambiarTemaSel(preguntaId){
   if (nuevo) inp.focus(); else inp.value = '';
 }
 
-async function guardarNuevoTema(preguntaId, temaForzado = null, confirmarNuevo = false){
+// Subtemas parecidos que devuelve el servidor (errata, sinónimo, misma idea): el usuario decide si
+// usa uno existente o confirma que el suyo es distinto. Guarda el contexto para reintentar.
+const MOTIVO_TXT = {igual:'es el mismo', errata:'parece una errata', sinonimo:'palabras equivalentes', parecido:'comparte palabras'};
+const PARECIDOS_CTX = {};
+function mostrarParecidos(preguntaId, tema, confirmarNuevo, parecidos){
+  PARECIDOS_CTX[preguntaId] = {tema, confirmarNuevo};
+  document.getElementById('ct-parecidos-'+preguntaId).innerHTML = `
+    <div class="parecidos-box" style="margin:10px 0;padding:10px 12px;border:1px solid #f59e0b66;border-radius:8px;background:rgba(245,158,11,.07);">
+      <div style="font-size:12px;font-weight:700;color:#f59e0b;margin-bottom:6px;">Ya existen subtemas parecidos — ¿alguno sirve?</div>
+      ${parecidos.map(p => `<div class="subtema-row">
+        <span class="cod">${escapeHtml(p.codigo)}</span>
+        <span class="subtema-txt">${escapeHtml(p.tema)} → ${escapeHtml(p.subtema)} <span style="color:var(--muted);font-size:11px;">(${MOTIVO_TXT[p.motivo] || p.motivo})</span></span>
+        <button class="use-btn" onclick="usarExistente(${preguntaId}, ${p.id})">Usar este</button>
+      </div>`).join('')}
+      <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="crearDeTodosModos(${preguntaId})">Es distinto, crear de todos modos</button>
+    </div>`;
+}
+function crearDeTodosModos(preguntaId){
+  const c = PARECIDOS_CTX[preguntaId]; if (!c) return;
+  guardarNuevoTema(preguntaId, c.tema, c.confirmarNuevo, true);
+}
+async function usarExistente(preguntaId, temaId){
+  try {
+    const fd = new FormData(); fd.append('pregunta_id', preguntaId); fd.append('tema_ids', temaId);
+    const d = await fetch(API+'?action=temas_guardar', {method:'POST', body:fd}).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error desconocido');
+    toast('Pregunta '+preguntaId+' clasificada con el subtema existente.');
+    cargar();
+  } catch(e) { toast('Error: '+e.message, false); }
+}
+
+async function guardarNuevoTema(preguntaId, temaForzado = null, confirmarNuevo = false, confirmarSubtema = false){
+  document.getElementById('ct-parecidos-'+preguntaId).innerHTML = '';
   const dominio = document.getElementById('ct-dominio-'+preguntaId).value;
   const sel = document.getElementById('ct-tema-sel-'+preguntaId).value;
   const tema = temaForzado ?? (sel === '__nuevo__' ? document.getElementById('ct-tema-'+preguntaId).value.trim() : sel);
@@ -443,12 +476,14 @@ async function guardarNuevoTema(preguntaId, temaForzado = null, confirmarNuevo =
   const fd = new FormData();
   fd.append('dominio', dominio); fd.append('tema', tema); fd.append('subtema', subtema); fd.append('keywords', keywords);
   if (confirmarNuevo) fd.append('confirmar_nuevo', '1');
+  if (confirmarSubtema) fd.append('confirmar_subtema', '1');
   try {
     const d = await fetch(API+'?action=crear_tema', {method:'POST', body:fd}).then(r=>r.json());
     if (d.similar) {   // el servidor encontró un tema casi idéntico: probable errata
       const usar = confirm(`Ya existe el tema «${d.similar}», muy parecido a «${tema}».\n\nAceptar: usar «${d.similar}».\nCancelar: crear «${tema}» como tema nuevo.`);
-      return guardarNuevoTema(preguntaId, usar ? d.similar : tema, !usar);
+      return guardarNuevoTema(preguntaId, usar ? d.similar : tema, !usar, confirmarSubtema);
     }
+    if (d.parecidos) { mostrarParecidos(preguntaId, tema, confirmarNuevo, d.parecidos); return; }
     if (!d.ok) throw new Error(d.error || 'Error desconocido');
     toast(`Tema creado: ${d.codigo} ${d.subtema}. Asignando…`);
     const fd2 = new FormData();
