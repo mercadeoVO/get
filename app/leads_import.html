@@ -1856,6 +1856,7 @@ function renderTemaEditor(preguntaId, preseleccion, cancelable){
 // Preguntas ya clasificadas que se están editando (se abre su editor bajo la fila)
 state.temasEdit=state.temasEdit||new Set();
 function editarTema(preguntaId,on){
+  state.temasEdit=state.temasEdit||new Set();
   if(on) state.temasEdit.add(String(preguntaId)); else state.temasEdit.delete(String(preguntaId));
   renderTemasStep();
 }
@@ -1936,7 +1937,7 @@ function renderTemasStep(){
     </div>`;
   });
   confirmadas.forEach(p=>{
-    const editando=state.temasEdit.has(String(p.pregunta_id));
+    const editando=!!state.temasEdit && state.temasEdit.has(String(p.pregunta_id));
     html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="font-size:13px;flex:1;min-width:200px;">${h(p.pregunta)}</span>
@@ -2439,6 +2440,7 @@ function resetAll(){
     extractions:[],
     electoralCtx: null,
     autoGeo: { enabled:false, source:'adset_name', levels:[] },
+    temasEdit: new Set(),   // se inicia al cargar la página; sin esto el paso 4 falla tras «importar otro archivo»
   };
   fileInput.value='';
   document.getElementById('file-info').style.display='none';
