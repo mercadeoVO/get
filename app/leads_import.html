@@ -358,7 +358,8 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
     </div>
     <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
       Parsea el nombre de campaña / adset / anuncio para rellenar campos opcionales.
-      Ej.: <code>adset_name</code> = <em>"Medellín_18-35_Estratos2-3"</em> → separador <code>_</code>, posición <code>0</code> → campo <code>Municipio</code> (la posición empieza en 0)
+      Ej.: <code>adset_name</code> = <em>"Medellín_18-35_Estratos2-3"</em> → separador <code>_</code>, posición <code>0</code> → campo <code>Municipio</code> (la posición empieza en 0).
+      <strong>Solo se rellenan los campos vacíos:</strong> si el archivo ya trae el dato, no se modifica.
     </p>
     <div id="extractions-list"></div>
   </div>
@@ -1181,9 +1182,13 @@ function ejemploExtraccion(ex){
   if(!fila) return `<span style="color:var(--muted)">Sin datos de muestra en «${h(lbl)}».</span>`;
   const origen=String(fila[col.index]).trim();
   const val=(ex.delimiter===''?[origen]:origen.split(ex.delimiter)).map(s=>s.trim())[ex.position];
-  return val
+  // Las reglas solo rellenan lo vacío: si la hoja ya trae una columna de ese campo, esa manda
+  const sm=state.sheetMappings&&state.sheetMappings[state.activeMapSheet];
+  const yaTrae=sm&&sheetMappedFields(sm).includes(ex.target);
+  const nota=yaTrae?`<br><span style="color:var(--muted)">ℹ Esta hoja ya trae una columna de «${h((EXT_TARGETS.find(([v])=>v===ex.target)||[,ex.target])[1])}»: la regla solo rellenará las filas donde esa columna esté vacía.</span>`:'';
+  return (val
     ? `<span style="color:var(--muted)">Ejemplo: «${h(origen)}» → <b style="color:var(--green)">${h(val)}</b></span>`
-    : `<span style="color:var(--yellow)">⚠ En «${h(origen)}» no hay nada en la posición ${ex.position} (empieza en 0).</span>`;
+    : `<span style="color:var(--yellow)">⚠ En «${h(origen)}» no hay nada en la posición ${ex.position} (empieza en 0).</span>`)+nota;
 }
 function refrescarEjemplo(i){ const el=document.getElementById('ext-ej-'+i); if(el) el.innerHTML=ejemploExtraccion(state.extractions[i]); }
 function removeExtraction(i){ state.extractions.splice(i,1); renderExtractions(); renderLocCard(); }
