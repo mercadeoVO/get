@@ -933,7 +933,9 @@ function sheetMappedFields(sm){
     .map(i=>sm.colFields[i]);
 }
 function sheetLowerGeoFields(sm){
-  return [...new Set(sheetMappedFields(sm).filter(f=>GEO_BELOW_MPIO.includes(f)))];
+  // Columnas mapeadas + destinos de las reglas de extracción (p. ej. «C16_…» → Comuna/Localidad)
+  const campos=[...sheetMappedFields(sm), ...state.extractions.map(ex=>ex.target)];
+  return [...new Set(campos.filter(f=>GEO_BELOW_MPIO.includes(f)))];
 }
 // De dónde sale el municipio, si ya está resuelto sin intervención manual (o null)
 function municipioSourceLabel(sm){

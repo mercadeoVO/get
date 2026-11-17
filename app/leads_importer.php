@@ -997,17 +997,26 @@ function resolveGeoId(array $lead, \PDO $db): ?string {
         if ($id !== false) return (string)$id;
     }
 
-    // P2 – Comuna
+    // P2 – Comuna: por nombre («Belén») o por su código local, que es como suelen nombrarla las
+    //      campañas: «C16», «C8», «Comuna 16» o solo «70» (corregimiento Altavista en Medellín).
     if ($comuna !== '' && $hasMpio) {
+        $cNorm = normalizeGeoStr($comuna);
+        $cond  = _nsql('c.nombre') . " = ?";
+        $par   = [$cNorm];
+        if (preg_match('/^(?:C|COMUNA\s*)?\s*0*(\d{1,3})$/', $cNorm, $mc)) {
+            $cond  = "(" . $cond . " OR c.codigo_local = ?)";
+            $par[] = $mc[1];
+        }
         $st = $db->prepare(
             "SELECT c.id FROM c98_geo.dim_comuna c
              JOIN c98_geo.dim_zona      z ON z.id = c.id_zona
              JOIN c98_geo.dim_municipio m ON m.id = z.id_municipio
-             WHERE "._nsql('c.nombre')." = ?
+             WHERE $cond
                AND $mCond
+             ORDER BY (" . _nsql('c.nombre') . " = ?) DESC
              LIMIT 1"
         );
-        $st->execute(array_merge([normalizeGeoStr($comuna)], $mParams));
+        $st->execute(array_merge($par, $mParams, [$cNorm]));
         $id = $st->fetchColumn();
         if ($id !== false) return (string)$id;
     }
