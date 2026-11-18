@@ -182,7 +182,9 @@ $('limpiar').onclick = () => { $('f-acc').reset(); off = 0; cargarAccesos(); };
 $('prev').onclick = () => { off = Math.max(0, off - LIM); cargarAccesos(); };
 $('next').onclick = () => { off += LIM; cargarAccesos(); };
 
-cargarUsuarios();
+const desdeHash = () => tab(location.hash === '#accesos' ? 'accesos' : 'usuarios');
+window.addEventListener('hashchange', desdeHash);
+desdeHash();
 </script>
 </body>
 </html>
