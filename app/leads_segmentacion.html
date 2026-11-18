@@ -746,17 +746,22 @@ function barH(id,data,color){ destroy(id); if(!markEmpty(id,data))return;
     options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:44}},plugins:{datalabels:DL_H(),legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmtN(c.parsed.x)} leads`}}},scales:{x:{ticks:{color:cDim(),font:{size:9}},grid:{color:cGrid()}},y:{ticks:{color:cText(),font:{size:10}},grid:{display:false}}}}});
 }
 function barV(id,data){ destroy(id); if(!markEmpty(id,data))return;
-  charts[id]=new Chart($(id),{type:'bar',data:{labels:data.map(d=>'E'+(d.val??'?')),datasets:[{data:data.map(d=>d.cnt),backgroundColor:COLORS.map(c=>c+'DD'),borderColor:COLORS,borderWidth:1,borderRadius:5,maxBarThickness:56}]},
+  charts[id]=new Chart($(id),{type:'bar',data:{labels:data.map(d=>d.val==='sin dato'?'s/d':'E'+(d.val??'?')),datasets:[{data:data.map(d=>d.cnt),backgroundColor:COLORS.map(c=>c+'DD'),borderColor:COLORS,borderWidth:1,borderRadius:5,maxBarThickness:56}]},
     options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:18}},plugins:{datalabels:DL_V(),legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmtN(c.parsed.y)} leads`}}},scales:{x:{ticks:{color:cText(),font:{size:10}},grid:{display:false}},y:{ticks:{color:cDim(),font:{size:9}},grid:{color:cGrid()}}}}});
+}
+// Añade «sin dato» = leads del segmento que no traen el campo, para que las barras cuadren con el total.
+function conSinDato(rows,total){
+  rows=rows||[]; const falta=(total||0)-rows.reduce((a,r)=>a+r.cnt,0);
+  return falta>0?[...rows,{val:'sin dato',cnt:falta}]:rows;
 }
 function renderDist(d){
   if(d.total===0){ $('dist-charts').style.display='none'; $('dist-empty').style.display='block'; $('dist-empty').textContent='El segmento no tiene leads con estos filtros.'; return; }
   $('dist-empty').style.display='none'; $('dist-charts').style.display='block';
-  donut('ch-sexo',d.dist.sexo);
-  barH('ch-edad',d.dist.rango_edad,V.css('--accent'));
-  barV('ch-estrato',d.dist.estrato);
-  barH('ch-afil',d.dist.afiliacion_politica,V.css('--coral'));
-  barH('ch-edu',d.dist.nivel_educativo,V.css('--sky'));
+  donut('ch-sexo',conSinDato(d.dist.sexo,d.total));
+  barH('ch-edad',conSinDato(d.dist.rango_edad,d.total),V.css('--accent'));
+  barV('ch-estrato',conSinDato(d.dist.estrato,d.total));
+  barH('ch-afil',conSinDato(d.dist.afiliacion_politica,d.total),V.css('--coral'));
+  barH('ch-edu',conSinDato(d.dist.nivel_educativo,d.total),V.css('--sky'));
 }
 
 // ── Mapa ──────────────────────────────────────────────────────
