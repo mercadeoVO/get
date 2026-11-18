@@ -19,7 +19,7 @@ navegador ──► Vercel (public/*.html)            ← app/*.html|js|css copi
 | login / logout / sesión | `api/auth.js` |
 
 **No portado (sigue solo en local):** importar Excel, editar/borrar importaciones, temas, `get_dims`,
-`municipios_lista`, `drive_scan`, buscador en lenguaje natural (`nl_search`). La web responde un error claro.
+`municipios_lista`, `drive_scan`, (el buscador inteligente ya está portado). La web responde un error claro.
 
 ## Variables de entorno en Vercel
 
@@ -29,6 +29,7 @@ navegador ──► Vercel (public/*.html)            ← app/*.html|js|css copi
 | `SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `SUPABASE_ANON_KEY` | clave pública *anon* / *publishable* (Settings → API Keys) |
 | `ALLOWED_EMAILS` | opcional: correos permitidos, separados por comas |
+| `ANTHROPIC_API_KEY` | para el buscador inteligente (`api/nl_search.js`) |
 
 ## Acceso
 
