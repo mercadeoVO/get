@@ -22,7 +22,7 @@ export function getPool() {
       max: 4,
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 10_000,
-      ssl: { rejectUnauthorized: false },
+      ssl: /@(localhost|127\.0\.0\.1)[:/]/.test(url) ? false : { rejectUnauthorized: false },
     });
   }
   return pool;

@@ -37,3 +37,9 @@ Se ejecutan desde la raíz del repo, p. ej. `python tools/supabase/copy_datos.py
 - MariaDB compara texto sin distinguir mayúsculas; Postgres sí. Usa `ILIKE` o `lower()`.
 - La copia es una foto: los datos locales siguen cambiando. Para refrescar, `copy_datos.py --reset` y luego los otros dos scripts.
 - Tamaño al 2026-11-17: ~345 MB de 500 MB del plan Free.
+
+## Migraciones SQL
+
+`migraciones/*.sql` — cambios de esquema posteriores a la copia, **idempotentes** (se aplican con el SQL Editor de Supabase o `psql "$SUPABASE_DB_URL" -f archivo.sql`). Son propias de la web: no existen en MariaDB.
+
+- `001_usuarios_accesos.sql` — `c98_get.usuarios` (rol, activo) y `c98_get.accesos_log`. Ver `docs/usuarios-accesos.md`. `copy_datos.py --reset` solo recrea las tablas copiadas de MariaDB; no toca estas.

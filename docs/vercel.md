@@ -17,6 +17,7 @@ navegador ──► Vercel (public/*.html)            ← app/*.html|js|css copi
 | `c98geo_api.php` (árbol geográfico) | `api/c98geo_api.js` |
 | `c98geo_map_api.php` (GeoJSON, PostGIS) | `api/c98geo_map_api.js` |
 | login / logout / sesión | `api/auth.js` |
+| usuarios, roles y log de accesos | `api/usuarios.js` |
 
 **No portado (sigue solo en local):** importar Excel, editar/borrar importaciones, temas, `get_dims`,
 `municipios_lista`, `drive_scan`, (el buscador inteligente ya está portado). La web responde un error claro.
@@ -28,12 +29,14 @@ navegador ──► Vercel (public/*.html)            ← app/*.html|js|css copi
 | `DATABASE_URL` | Supabase → Connect → **Transaction pooler** (puerto 6543). Es secreta. |
 | `SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `SUPABASE_ANON_KEY` | clave pública *anon* / *publishable* (Settings → API Keys) |
+| `SUPABASE_SERVICE_ROLE_KEY` | clave secreta para administrar usuarios desde `/admin.html` (ver `docs/usuarios-accesos.md`) |
+| `ADMIN_EMAILS` | correos que quedan como administrador al primer login |
 | `ALLOWED_EMAILS` | opcional: correos permitidos, separados por comas |
 | `ANTHROPIC_API_KEY` | para el buscador inteligente (`api/nl_search.js`) |
 
 ## Acceso
 
-- Crea los usuarios en Supabase → Authentication → Users (**Add user**, con contraseña).
+- Los usuarios se administran en `/admin.html` (solo rol admin): crear, editar, rol, desactivar, eliminar y log de accesos. Ver `docs/usuarios-accesos.md`. (También se pueden crear en Supabase → Authentication → Users.)
 - Desactiva el registro libre: Authentication → Sign In / Providers → Email → *Allow new users to sign up* = off.
 - Las páginas HTML no traen datos; los datos solo salen de `/api`, que exige la cookie de sesión.
 
