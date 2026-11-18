@@ -534,6 +534,47 @@ function normalizeSexo(?string $val): ?string {
     return null;
 }
 
+/**
+ * Afiliación política: solo 6 valores válidos (sin_afiliacion, derecha, centro_derecha, centro,
+ * centro_izquierda, izquierda). Se quita el prefijo «de_»; «ninguna» y las posturas "anti-" (que no
+ * dicen de qué lado está la persona) pasan a sin_afiliacion; los nombres propios se reclasifican
+ * (uribista/fiquista → derecha, petrista → izquierda). Lo que no se reconoce devuelve null.
+ * Mantener sincronizado con app/_migrar_afiliacion.sql.
+ */
+function normalizeAfiliacion(?string $val): ?string {
+    if ($val === null || trim($val) === '') return null;
+    $s = strtolower(strtr(trim($val), ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','Á'=>'a','É'=>'e','Í'=>'i','Ó'=>'o','Ú'=>'u']));
+    $s = trim(preg_replace('/[\s\-]+/', '_', $s), '_');
+    $s = preg_replace('/^de_/', '', $s);
+    static $mapa = [
+        'sin_afiliacion' => 'sin_afiliacion', 'ninguna' => 'sin_afiliacion', 'ninguno' => 'sin_afiliacion',
+        'ns_nr' => 'sin_afiliacion', 'no_sabe' => 'sin_afiliacion',
+        'derecha' => 'derecha', 'centro_derecha' => 'centro_derecha', 'centro' => 'centro',
+        'centro_izquierda' => 'centro_izquierda', 'izquierda' => 'izquierda',
+        'uribista' => 'derecha', 'fiquista' => 'derecha', 'petrista' => 'izquierda',
+        'antiuribista' => 'sin_afiliacion', 'antipetrista' => 'sin_afiliacion', 'antifiquista' => 'sin_afiliacion',
+    ];
+    return $mapa[$s] ?? null;
+}
+
+/**
+ * Nivel educativo: solo 4 valores (universitario, tecnico/tecnologia, bachiller, primaria).
+ * posgrado → universitario; secundaria y «no ha terminado la universidad» → bachiller;
+ * «no terminó el colegio» y básica primaria → primaria; «ninguno» y lo no reconocido → null.
+ * Mantener sincronizado con app/_migrar_nivel_educativo.sql.
+ */
+function normalizeNivelEducativo(?string $val): ?string {
+    if ($val === null || trim($val) === '') return null;
+    $s = strtolower(strtr(trim($val), ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','Á'=>'a','É'=>'e','Í'=>'i','Ó'=>'o','Ú'=>'u']));
+    $s = trim(preg_replace('/[\s_\-]+/', ' ', $s), ' .');
+    if (preg_match('/no (ha )?termin/', $s)) return str_contains($s, 'universidad') ? 'bachiller' : 'primaria';
+    if (preg_match('/tecnic|tecnolog/', $s))      return 'tecnico/tecnologia';
+    if (preg_match('/universit|posgrado|postgrado|maestria|doctorad|especializ|profesional/', $s)) return 'universitario';
+    if (preg_match('/bachiller|secundaria|media/', $s)) return 'bachiller';
+    if (preg_match('/primaria|basica/', $s))      return 'primaria';
+    return null;
+}
+
 // ── Sexo del lead: archivo → regla → adset → (ya existente: no se toca) → inferencia por nombre ──────────
 
 /** Sexo que dice el nombre del adset («C1_18a24_H_13» → Hombre). Solo si hay uno y es inequívoco. */
@@ -2359,6 +2400,10 @@ try {
                             $lead['telefono'] = normalizePhone(($val !== null) ? trim((string)$val) : null);
                         } elseif ($type === 'rango_edad') {
                             $lead['rango_edad'] = normalizeRangoEdad(($val !== null) ? trim((string)$val) : null);
+                        } elseif ($type === 'afiliacion_politica') {
+                            if (empty($lead['afiliacion_politica'])) $lead['afiliacion_politica'] = normalizeAfiliacion(($val !== null) ? (string)$val : null);
+                        } elseif ($type === 'nivel_educativo') {
+                            if (empty($lead['nivel_educativo'])) $lead['nivel_educativo'] = normalizeNivelEducativo(($val !== null) ? (string)$val : null);
                         } elseif (array_key_exists($type, $lead)) {
                             // Primera columna no vacía gana — evita que una columna duplicada
                             // (ej. Meta exporta "adset_name" dos veces, la segunda detectada
@@ -2418,6 +2463,12 @@ try {
                                 if (esTextoRangoEdad($extracted) && ($ra = normalizeRangoEdad($extracted)) !== null) $lead[$target] = $ra;
                                 break;
                             case 'telefono':   $lead[$target] = normalizePhone($extracted); break;
+                            case 'nivel_educativo':
+                                if (($ne = normalizeNivelEducativo($extracted)) !== null) $lead[$target] = $ne;
+                                break;
+                            case 'afiliacion_politica':
+                                if (($af = normalizeAfiliacion($extracted)) !== null) $lead[$target] = $af;
+                                break;
                             case 'sexo':
                                 if (($sx = normalizeSexo($extracted)) !== null) $lead[$target] = $sx;
                                 break;
