@@ -22,6 +22,14 @@
         fetch('/api/auth?action=logout', { credentials: 'same-origin' }).then(function () { location.replace('/login.html'); });
       };
       document.body.appendChild(b);
+      if (j.rol === 'admin' && location.pathname !== '/admin.html') {
+        var a = document.createElement('a');
+        a.textContent = 'Administración';
+        a.href = '/admin.html';
+        a.style.cssText = 'position:fixed;right:12px;bottom:46px;z-index:99999;padding:6px 10px;border-radius:8px;' +
+          'border:1px solid #30363d;background:#161b22;color:#8b949e;font:12px system-ui;text-decoration:none;opacity:.85';
+        document.body.appendChild(a);
+      }
     })
     .catch(function () { root.style.visibility = ''; });
 })();

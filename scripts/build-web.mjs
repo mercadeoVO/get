@@ -23,5 +23,6 @@ for (const f of readdirSync(app)) {
   writeFileSync(join(out, f), txt);
 }
 cpSync(join(raiz, 'web', 'login.html'), join(out, 'login.html'));
+cpSync(join(raiz, 'web', 'admin.html'), join(out, 'admin.html'));
 cpSync(join(raiz, 'web', 'auth-guard.js'), join(out, 'auth-guard.js'));
 console.log('public/ listo:', readdirSync(out).join(', '));

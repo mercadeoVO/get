@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GET · Administración</title>
+<script src="/auth-guard.js"></script>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--line:#30363d;--txt:#e6edf3;--mut:#8b949e;--acc:#2f81f7;--ok:#3fb950;--bad:#f85149;--warn:#d29922}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,Segoe UI,sans-serif}
+  header{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid var(--line)}
+  header h1{margin:0;font-size:18px} header a{color:var(--mut);text-decoration:none;font-size:13px} header a:hover{color:var(--txt)}
+  main{max-width:1200px;margin:0 auto;padding:20px 24px}
+  nav{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  nav button{background:none;border:0;border-bottom:2px solid transparent;color:var(--mut);padding:8px 14px;font:600 14px system-ui;cursor:pointer}
+  nav button.on{color:var(--txt);border-color:var(--acc)}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:12px}
+  .bar label{display:block;font-size:11px;color:var(--mut);margin-bottom:3px}
+  input,select{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font:inherit}
+  input:focus,select:focus{outline:2px solid var(--acc);border-color:transparent}
+  .btn{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--txt);font:600 13px system-ui;cursor:pointer}
+  .btn.pri{background:var(--acc);border-color:var(--acc);color:#fff} .btn.bad{color:var(--bad)} .btn:disabled{opacity:.5;cursor:default}
+  .btn.sm{padding:4px 9px;font-size:12px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)} tr:last-child td{border-bottom:0}
+  td.ua{max-width:320px;color:var(--mut);font-size:12px;word-break:break-word}
+  .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line)}
+  .ok{color:var(--ok);border-color:var(--ok)} .bad-t{color:var(--bad);border-color:var(--bad)} .mut{color:var(--mut)} .warn{color:var(--warn);border-color:var(--warn)}
+  #msg{min-height:22px;margin-bottom:8px;font-size:13px} #msg.err{color:var(--bad)} #msg.good{color:var(--ok)}
+  .pager{display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--mut);font-size:13px}
+  .stats{display:flex;gap:12px;margin-bottom:12px} .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 16px}
+  .stat b{display:block;font-size:20px}
+  dialog{background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:22px;width:min(400px,92vw)}
+  dialog::backdrop{background:rgba(0,0,0,.6)} dialog label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+  dialog input,dialog select{width:100%} .row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<header><h1>GET · Administración</h1><a href="/">← Volver al análisis</a></header>
+<main>
+  <nav><button id="t-usuarios" class="on">Usuarios</button><button id="t-accesos">Accesos</button></nav>
+  <div id="msg" role="status"></div>
+
+  <section id="p-usuarios">
+    <div class="bar"><button class="btn pri" id="nuevo">+ Nuevo usuario</button></div>
+    <table><thead><tr><th>Correo</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th></th></tr></thead>
+      <tbody id="u-body"></tbody></table>
+  </section>
+
+  <section id="p-accesos" class="hide">
+    <div class="stats"><div class="stat"><span class="mut">Éxitos (24 h)</span><b id="s-ok">–</b></div>
+      <div class="stat"><span class="mut">Fallos (24 h)</span><b id="s-bad">–</b></div></div>
+    <form class="bar" id="f-acc">
+      <div><label for="q">Correo o IP</label><input id="q" placeholder="buscar…"></div>
+      <div><label for="res">Resultado</label><select id="res"><option value="">Todos</option><option value="exito">Éxito</option><option value="fallo">Fallo</option></select></div>
+      <div><label for="desde">Desde</label><input id="desde" type="date"></div>
+      <div><label for="hasta">Hasta</label><input id="hasta" type="date"></div>
+      <button class="btn pri" type="submit">Filtrar</button><button class="btn" type="button" id="limpiar">Limpiar</button>
+    </form>
+    <table><thead><tr><th>Fecha (Bogotá)</th><th>Correo</th><th>Resultado</th><th>IP</th><th>Navegador</th></tr></thead>
+      <tbody id="a-body"></tbody></table>
+    <div class="pager"><button class="btn sm" id="prev">‹ Anterior</button><span id="pg"></span><button class="btn sm" id="next">Siguiente ›</button></div>
+  </section>
+</main>
+
+<dialog id="dlg"><form method="dialog" id="f-usr">
+  <h2 id="dlg-t" style="margin:0 0 4px;font-size:17px"></h2>
+  <label for="d-email">Correo</label><input id="d-email" type="email" required>
+  <label for="d-nombre">Nombre</label><input id="d-nombre" maxlength="120">
+  <label for="d-rol">Rol</label><select id="d-rol"></select>
+  <label for="d-pw" id="d-pw-l">Contraseña</label><input id="d-pw" type="password" autocomplete="new-password" minlength="8">
+  <div class="row"><button class="btn" type="button" id="d-cancel">Cancelar</button><button class="btn pri" type="submit">Guardar</button></div>
+</form></dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const MOTIVOS = { credenciales: 'credenciales inválidas', inactivo: 'usuario desactivado', no_permitido: 'correo no permitido', error: 'error del servidor' };
+const fmt = (t) => t ? new Date(t).toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'medium' }) : '—';
+let roles = ['admin', 'analista', 'lector'], usuarios = [], editId = null, off = 0;
+const LIM = 50;
+
+function aviso(t, tipo) { const m = $('msg'); m.textContent = t || ''; m.className = tipo || ''; }
+async function api(action, { method = 'GET', body, params } = {}) {
+  const qs = new URLSearchParams({ action, ...(params || {}) });
+  const r = await fetch('/api/usuarios?' + qs, {
+    method, credentials: 'same-origin',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined,
+  });
+  if (r.status === 401) { location.replace('/login.html?next=/admin.html'); throw new Error('Sesión expirada'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) { const e = new Error(j.error || 'Error ' + r.status); e.status = r.status; throw e; }
+  return j;
+}
+
+function tab(n) {
+  for (const k of ['usuarios', 'accesos']) {
+    $('t-' + k).classList.toggle('on', k === n); $('p-' + k).classList.toggle('hide', k !== n);
+  }
+  aviso(''); (n === 'usuarios' ? cargarUsuarios : cargarAccesos)();
+}
+$('t-usuarios').onclick = () => tab('usuarios'); $('t-accesos').onclick = () => tab('accesos');
+
+async function cargarUsuarios() {
+  try {
+    const j = await api('list'); usuarios = j.usuarios; roles = j.roles;
+    $('u-body').innerHTML = usuarios.map((u) => `<tr>
+      <td>${esc(u.email)}</td><td>${esc(u.nombre) || '<span class="mut">—</span>'}</td>
+      <td><span class="tag ${u.rol === 'admin' ? 'warn' : ''}">${esc(u.rol)}</span></td>
+      <td><span class="tag ${u.activo ? 'ok' : 'bad-t'}">${u.activo ? 'activo' : 'desactivado'}</span></td>
+      <td class="mut">${fmt(u.ultimo_login)}</td>
+      <td style="white-space:nowrap"><button class="btn sm" data-a="edit" data-id="${esc(u.id)}">Editar</button>
+        <button class="btn sm" data-a="toggle" data-id="${esc(u.id)}">${u.activo ? 'Desactivar' : 'Activar'}</button>
+        <button class="btn sm bad" data-a="del" data-id="${esc(u.id)}">Eliminar</button></td></tr>`).join('')
+      || '<tr><td colspan="6" class="mut">Sin usuarios</td></tr>';
+  } catch (e) { noAdmin(e); }
+}
+function noAdmin(e) {
+  if (e.status === 403) { document.querySelector('main').innerHTML = '<p>Esta sección es solo para administradores.</p>'; return; }
+  aviso(e.message, 'err');
+}
+
+$('u-body').addEventListener('click', async (ev) => {
+  const b = ev.target.closest('button[data-a]'); if (!b) return;
+  const u = usuarios.find((x) => x.id === b.dataset.id); if (!u) return;
+  try {
+    if (b.dataset.a === 'edit') return abrir(u);
+    if (b.dataset.a === 'toggle') {
+      await api('update', { method: 'POST', body: { id: u.id, activo: !u.activo } });
+      aviso(`${u.email}: ${u.activo ? 'desactivado' : 'activado'}`, 'good');
+    }
+    if (b.dataset.a === 'del') {
+      if (!confirm(`¿Eliminar a ${u.email}? Esta acción no se puede deshacer (el historial de accesos se conserva).`)) return;
+      await api('delete', { method: 'POST', body: { id: u.id } });
+      aviso(`${u.email}: eliminado`, 'good');
+    }
+    cargarUsuarios();
+  } catch (e) { aviso(e.message, 'err'); }
+});
+
+function abrir(u) {
+  editId = u ? u.id : null;
+  $('dlg-t').textContent = u ? 'Editar usuario' : 'Nuevo usuario';
+  $('d-email').value = u ? u.email : ''; $('d-email').disabled = !!u;
+  $('d-nombre').value = u?.nombre || '';
+  $('d-rol').innerHTML = roles.map((r) => `<option ${u && u.rol === r || !u && r === 'analista' ? 'selected' : ''}>${esc(r)}</option>`).join('');
+  $('d-pw').value = ''; $('d-pw').required = !u;
+  $('d-pw-l').textContent = u ? 'Nueva contraseña (opcional)' : 'Contraseña (mín. 8)';
+  $('dlg').showModal();
+}
+$('nuevo').onclick = () => abrir(null);
+$('d-cancel').onclick = () => $('dlg').close();
+$('f-usr').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const body = { nombre: $('d-nombre').value, rol: $('d-rol').value };
+  if ($('d-pw').value) body.password = $('d-pw').value;
+  try {
+    if (editId) await api('update', { method: 'POST', body: { id: editId, ...body } });
+    else await api('create', { method: 'POST', body: { email: $('d-email').value, ...body } });
+    $('dlg').close(); aviso('Guardado', 'good'); cargarUsuarios();
+  } catch (e) { aviso(e.message, 'err'); $('dlg').close(); }
+});
+
+async function cargarAccesos() {
+  try {
+    const j = await api('accesos', { params: { q: $('q').value, resultado: $('res').value, desde: $('desde').value, hasta: $('hasta').value, limit: LIM, offset: off } });
+    $('s-ok').textContent = j.resumen.exitos_24h; $('s-bad').textContent = j.resumen.fallos_24h;
+    $('a-body').innerHTML = j.accesos.map((a) => `<tr><td>${fmt(a.ocurrido_en)}</td><td>${esc(a.email)}</td>
+      <td>${a.exito ? '<span class="tag ok">éxito</span>' : `<span class="tag bad-t">fallo</span> <span class="mut">${esc(MOTIVOS[a.motivo] || a.motivo || '')}</span>`}</td>
+      <td>${esc(a.ip) || '—'}</td><td class="ua">${esc(a.user_agent) || '—'}</td></tr>`).join('')
+      || '<tr><td colspan="5" class="mut">Sin registros con esos filtros</td></tr>';
+    const hasta = Math.min(off + LIM, j.total);
+    $('pg').textContent = j.total ? `${off + 1}–${hasta} de ${j.total}` : '0 resultados';
+    $('prev').disabled = off === 0; $('next').disabled = hasta >= j.total;
+  } catch (e) { noAdmin(e); }
+}
+$('f-acc').addEventListener('submit', (e) => { e.preventDefault(); off = 0; cargarAccesos(); });
+$('limpiar').onclick = () => { $('f-acc').reset(); off = 0; cargarAccesos(); };
+$('prev').onclick = () => { off = Math.max(0, off - LIM); cargarAccesos(); };
+$('next').onclick = () => { off += LIM; cargarAccesos(); };
+
+cargarUsuarios();
+</script>
+</body>
+</html>
