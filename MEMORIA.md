@@ -80,6 +80,13 @@ Dos bases de datos en la misma instancia MariaDB (`127.0.0.1:3307`): **`C98_GET`
    ruta (`app/CLAUDE.md`, `geo/CLAUDE.md`, `geo/README.md`, `geo/.claude/skills/.../SKILL.md`,
    este archivo). No tocar el path externo `C:\Users\impag\Documents\Claude\MEDFUT\SOFTWARE`
    (backup viejo, es otra carpeta).
+10. **Regla de trabajo (2026-11-24): todo cambio se hace primero en local.** Cualquier cambio de código,
+    esquema o configuración se aplica y se prueba primero en la máquina del usuario
+    (`C:\Users\impag\Documents\C98_MEDFUT`). Si la sesión corre en la nube y no tiene esa carpeta
+    conectada (Remote Control), el cambio se entrega como parche listo para `git apply`, con las
+    instrucciones, y **no** se hace push, PR, despliegue en Vercel ni migración en Supabase por cuenta
+    propia: solo cuando el usuario lo apruebe de forma explícita («sube»). Las pruebas en la nube
+    (sin MariaDB ni los archivos reales) no reemplazan la prueba local del usuario.
 
 ## Pendiente real (no repetir reconocimiento — ver `geo/docs/procesos.md` para el detalle)
 
