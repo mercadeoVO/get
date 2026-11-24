@@ -1846,7 +1846,9 @@ async function openTemasStep(){
     if(!d.ok) throw new Error(d.error||'Error desconocido');
     state.temasCatalogo=d.catalogo;
     state.temasPreguntas=d.preguntas;
+    state.temasValores=null; state.temasValoresErr=null;
     renderTemasStep();
+    cargarValoresUnicos();
   }catch(e){
     body.innerHTML=`<div class="alert alert-err">${h(e.message)}</div>`;
   }
@@ -1928,6 +1930,40 @@ async function setPreguntaElectoral(preguntaId,val){
   }catch(e){ alert('No se pudo guardar: '+e.message); }
 }
 
+// Respuestas únicas de cada pregunta (leídas del Excel que se está importando) en un desplegable a la derecha
+async function cargarValoresUnicos(){
+  try{
+    const fd=new FormData();
+    fd.append('temp_id', state.tempId);
+    fd.append('sheets', JSON.stringify(state.selectedSheets||[]));
+    fd.append('headers', JSON.stringify(state.temasHeaders||[]));
+    const d=await fetch(API+'?action=valores_unicos',{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error desconocido');
+    state.temasValores=d.preguntas||{};
+  }catch(e){
+    state.temasValores={}; state.temasValoresErr=e.message;
+  }
+  if(document.getElementById('temas-body')) renderTemasStep();
+}
+function respuestasSelect(p){
+  const base='max-width:260px;min-width:170px;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);';
+  if(!state.temasValores){
+    return `<select disabled style="${base}"><option>Cargando respuestas…</option></select>`;
+  }
+  const info=state.temasValores[p.pregunta];
+  if(!info || !info.valores.length){
+    const motivo=state.temasValoresErr?('No disponible: '+state.temasValoresErr):'Sin respuestas en el archivo';
+    return `<select disabled style="${base}" title="${h(motivo)}"><option>${h(motivo.length>40?'No disponible':motivo)}</option></select>`;
+  }
+  const tot=info.valores.reduce((a,v)=>a+v.n,0);
+  const opts=info.valores.map(v=>{
+    const t=v.valor.length>70?v.valor.slice(0,70)+'…':v.valor;
+    return `<option title="${h(v.valor)}">${h(t)} — ${v.n.toLocaleString()} (${(100*v.n/tot).toFixed(1)}%)</option>`;
+  }).join('');
+  const etiqueta=`Respuestas únicas (${info.valores.length}${info.truncado?'+':''})`;
+  return `<select style="${base}" title="${h(etiqueta)} · ${tot.toLocaleString()} respuestas${info.vacias?' · '+info.vacias.toLocaleString()+' vacías':''}"><option value="" selected>${etiqueta}</option>${opts}</select>`;
+}
+
 function renderTemasStep(){
   const preguntas=state.temasPreguntas||[];
   const electorales=preguntas.filter(p=>p.es_electoral);
@@ -1941,6 +1977,7 @@ function renderTemasStep(){
       html+=`<div style="background:var(--surface2);border-radius:var(--r-md);padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}</span>
         ${electoralChips(p)}
+        ${respuestasSelect(p)}
         <button class="btn btn-outline btn-sm" onclick="setPreguntaElectoral(${p.pregunta_id},0)">No es electoral</button>
       </div>`;
     });
@@ -1957,7 +1994,10 @@ function renderTemasStep(){
          </div>` : '';
     html+=`<div class="pending-item" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
       ${sugElec}
-      <div style="font-size:13.5px;margin-bottom:6px;">${h(p.pregunta)}</div>
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+        <div style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}</div>
+        ${respuestasSelect(p)}
+      </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${sugerenciaTxt}</div>
       ${renderTemaEditor(p.pregunta_id, sugerido)}
     </div>`;
@@ -1967,6 +2007,7 @@ function renderTemasStep(){
     html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <span style="font-size:13px;flex:1;min-width:200px;">${h(p.pregunta)}</span>
+        ${respuestasSelect(p)}
         ${p.temas.map(t=>`<span class="badge badge-green">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')}
         ${editando?'':`<button class="btn btn-outline btn-sm" onclick="editarTema(${p.pregunta_id},true)">Editar</button>`}
       </div>
@@ -2118,10 +2159,18 @@ document.getElementById('btn-confirm').addEventListener('click', async()=>{
   if(state.electoralCtx) fd.append('electoral_ctx',JSON.stringify(state.electoralCtx));
 
   try{
-    const d=await fetch(API+'?action=import',{method:'POST',body:fd}).then(r=>r.json());
+    const resp=await fetch(API+'?action=import',{method:'POST',body:fd});
+    const raw=await resp.text();
+    let d;
+    try{ d=JSON.parse(raw); }
+    catch(_){
+      // El servidor devolvió HTML/texto (error de PHP, proxy, timeout…): mostrar el mensaje real, no «Unexpected token <»
+      const txt=raw.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,400);
+      throw new Error(`El servidor no devolvió una respuesta válida (HTTP ${resp.status}): ${txt||'respuesta vacía'}`);
+    }
     if(!d.ok)throw new Error(d.error||'Error en la importación');
     renderImportResults(d);
-    loadLogs(); loadStats();
+    loadLogs(); loadStats(); recargarPendientes();
   }catch(e){
     document.getElementById('appr-result').innerHTML=`<div class="alert alert-err">${ic('x')} ${h(e.message)}</div>`;
     btn.style.display='';
@@ -2379,6 +2428,14 @@ async function loadPendientes(){
   try{ renderPendientes(await fetch(API+'?action=fuente_pendientes').then(r=>r.json())); }
   catch{ document.getElementById('pend-container').innerHTML='<p style="color:var(--muted);font-size:13px;">No se pudo cargar la lista.</p>'; }
 }
+// Vuelve a contrastar la lista guardada del repositorio con import_log (rápido, no recorre el repositorio):
+// se llama tras importar o eliminar una encuesta para que «pendientes» y su contador queden al día.
+async function recargarPendientes(){
+  try{
+    const d=await fetch(API+'?action=fuente_pendientes').then(r=>r.json());
+    pendCargado=true; renderPendientes(d);
+  }catch{ /* silencioso: el usuario puede pulsar «Revisar repositorio» */ }
+}
 async function revisarRepositorio(){
   const btn=document.getElementById('pend-btn'), c=document.getElementById('pend-container');
   btn.disabled=true; btn.textContent='Revisando…';
@@ -2450,7 +2507,7 @@ async function deleteImport(id, archivo, hoja){
   try{
     const d=await fetch(API+'?action=delete_import',{method:'POST',body:fd}).then(r=>r.json());
     if(!d.ok) throw new Error(d.error);
-    loadLogs();
+    loadLogs(); recargarPendientes();
   }catch(e){
     alert('Error: '+e.message);
   }

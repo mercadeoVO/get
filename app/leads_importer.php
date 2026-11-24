@@ -26,7 +26,25 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
-set_time_limit(120);
+set_time_limit(0);
+
+// Esta API SIEMPRE responde JSON. Los avisos/errores de PHP no deben imprimirse como HTML («<br /><b>Warning…»),
+// porque el navegador no puede parsearlos y el usuario solo ve «Unexpected token '<'». Se mandan al log de PHP,
+// y un error fatal (tiempo agotado, memoria) se convierte en un JSON con el mensaje real.
+if (php_sapi_name() !== 'cli') {
+    ini_set('display_errors', '0');
+    ini_set('log_errors', '1');
+    register_shutdown_function(function () {
+        $e = error_get_last();
+        if (!$e || !in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) return;
+        while (ob_get_level()) ob_end_clean();
+        if (!headers_sent()) { http_response_code(500); header('Content-Type: application/json; charset=utf-8'); }
+        $msg = $e['message'];
+        if (stripos($msg, 'Maximum execution time') !== false)      $msg .= ' — el archivo es muy grande para el tiempo permitido; no se guardó nada de esta hoja.';
+        elseif (stripos($msg, 'Allowed memory size') !== false)       $msg .= ' — falta memoria para procesar el archivo; no se guardó nada de esta hoja.';
+        echo json_encode(['ok' => false, 'error' => 'Error de PHP: ' . $msg . ' (' . basename($e['file']) . ':' . $e['line'] . ')'], JSON_UNESCAPED_UNICODE);
+    });
+}
 
 define('TMP_DIR', __DIR__ . '/tmp/');
 if (!is_dir(TMP_DIR)) {
@@ -2024,6 +2042,10 @@ try {
 
     // ── IMPORT (multi-hoja + extracciones) ───────────────────
     if ($action === 'import') {
+        // Hojas de decenas de miles de filas superan los 120 s globales: sin tope de tiempo y con más memoria.
+        // (Cada hoja va en su propia transacción: si el proceso muere, no queda nada a medias.)
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M');
         $tempId      = basename($_POST['temp_id'] ?? '');
         // Acepta sheets[] (array) o sheet (string, backward-compat)
         $sheetsParam = json_decode($_POST['sheets'] ?? '[]', true) ?? [];
@@ -3133,6 +3155,57 @@ try {
         foreach ($filas as &$f) { $f['pct'] = $total ? round(100 * $f['n'] / $total, 1) : 0; }
         unset($f);
         jsonOut(['ok' => true, 'pregunta_id' => $preguntaId, 'total' => $total, 'respuestas' => $filas]);
+    }
+
+    // ── VALORES_UNICOS ────────────────────────────────────────
+    // Respuestas únicas (con conteo) de las columnas-pregunta del Excel que se está importando, para
+    // verlas en un desplegable junto a cada pregunta al clasificarla. Lee las hojas elegidas completas
+    // del archivo temporal, así que sirve también para preguntas nuevas que aún no tienen respuestas en BD.
+    // POST: temp_id, sheets (JSON array), headers (JSON array). Devuelve valores por pregunta normalizada.
+    if ($action === 'valores_unicos') {
+        set_time_limit(600);
+        ini_set('memory_limit', '1024M');
+        $tempId  = basename($_POST['temp_id'] ?? '');
+        $sheets  = json_decode($_POST['sheets'] ?? '[]', true);
+        $headers = json_decode($_POST['headers'] ?? '[]', true);
+        if (!$tempId || !is_array($sheets) || !is_array($headers)) errOut('Falta temp_id, sheets o headers.');
+        $tmpPath = TMP_DIR . $tempId;
+        if (!file_exists($tmpPath)) errOut('Archivo temporal no encontrado.', 404);
+
+        $MAX_DISTINTOS = 200;   // tope de valores distintos por pregunta (el resto se agrupa en «truncado»)
+        $quiero = [];            // header crudo → pregunta normalizada
+        foreach ($headers as $h) { $h = (string)$h; if ($h !== '') $quiero[$h] = pregNormalize($h); }
+        $cont = [];              // pregunta normalizada → [valor => n]
+        $trunc = [];
+        $vacias = [];
+        foreach ($sheets as $sheet) {
+            $res = xlsxReadRows($tmpPath, (string)$sheet, 0);
+            $rows = $res['rows'] ?? [];
+            if (!$rows) continue;
+            $idx = [];           // índice de columna → pregunta normalizada
+            foreach ($rows[0] as $i => $hdr) {
+                if ($hdr !== null && isset($quiero[(string)$hdr])) $idx[$i] = $quiero[(string)$hdr];
+            }
+            for ($r = 1, $n = count($rows); $r < $n; $r++) {
+                foreach ($idx as $i => $preg) {
+                    $v = $rows[$r][$i] ?? null;
+                    $v = $v === null ? '' : trim((string)$v);
+                    if ($v === '') { $vacias[$preg] = ($vacias[$preg] ?? 0) + 1; continue; }
+                    $v = mb_substr($v, 0, 200, 'UTF-8');
+                    if (!isset($cont[$preg][$v]) && count($cont[$preg] ?? []) >= $MAX_DISTINTOS) { $trunc[$preg] = true; continue; }
+                    $cont[$preg][$v] = ($cont[$preg][$v] ?? 0) + 1;
+                }
+            }
+            unset($rows);
+        }
+        $out = [];
+        foreach ($cont as $preg => $vals) {
+            arsort($vals);
+            $lista = [];
+            foreach ($vals as $v => $n) $lista[] = ['valor' => (string)$v, 'n' => $n];
+            $out[$preg] = ['valores' => $lista, 'truncado' => !empty($trunc[$preg]), 'vacias' => $vacias[$preg] ?? 0];
+        }
+        jsonOut(['ok' => true, 'preguntas' => $out]);
     }
 
     // ── CREAR_TEMA ────────────────────────────────────────────
