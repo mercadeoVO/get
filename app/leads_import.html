@@ -945,7 +945,16 @@ function municipioSourceLabel(sm){
   if(state.autoGeo.enabled && state.autoGeo.levels.includes('municipio')) return 'la extracción automática';
   return null;
 }
-function sheetLocationReady(sm){ return municipioSourceLabel(sm)!==null || !!sm.geoDefault; }
+// Ubicación regional sin municipio (columna o regla de extracción hacia Subregión / Departamento):
+// basta para dar la hoja por ubicada. Los leads quedan a nivel de subregión/departamento, sin
+// zona/comuna/barrio (esos niveles necesitan municipio).
+function regionalSourceLabel(sm){
+  const campos=[...sheetMappedFields(sm), ...state.extractions.map(ex=>ex.target)];
+  const sub=campos.includes('subregion'), dep=campos.includes('geo_departamento');
+  if(sub&&dep) return 'Subregión y Departamento';
+  return sub?'Subregión':(dep?'Departamento':null);
+}
+function sheetLocationReady(sm){ return municipioSourceLabel(sm)!==null || !!sm.geoDefault || regionalSourceLabel(sm)!==null; }
 // Hojas ya cargadas que todavía no tienen ubicación definida
 function sheetsMissingLocation(){
   return state.selectedSheets.filter(n=>{
@@ -1007,6 +1016,7 @@ function renderLocCard(){
   let msg;
   if(src)                 msg=`El municipio viene de ${src}.`;
   else if(manual)         msg=`Municipio manual: ${manual.nombre} (${manual.departamento}).`;
+  else if(regionalSourceLabel(sm)) msg=`La ubicación llega hasta ${regionalSourceLabel(sm)} (sin municipio): no se ubicará zona, comuna ni barrio.`;
   else if(autoOn)         msg='La extracción automática no incluye el nivel Municipio.';
   else if(lowerArr.length) msg=`Esta hoja ubica por ${lowerArr.join(', ')} pero no trae municipio.`;
   else if(sheetMappedFields(sm).some(f=>GEO_ANY_FIELDS.includes(f))) msg='Esta hoja no trae municipio.';

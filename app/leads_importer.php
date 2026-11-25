@@ -1294,6 +1294,98 @@ function parseAdsetForGeo(string $s, \PDO $db): array {
     return $result;
 }
 
+// ── Ubicación por subregión de Antioquia + estimación del municipio ──────────────────────────────
+// Algunos archivos traen solo una «Ubicación» tipo MED(CENTRO), AMVA(NOMED), URABA, ORIENTE… (sin municipio).
+//  · MED(CENTRO|NORTE|SUR) son sectores de Medellín → municipio Medellín (dato real).
+//  · El resto son subregiones: el lead queda con id_geo a nivel de departamento y se guarda su subregión en
+//    import_log_leads.grupo_estimacion; con eso la vista v_leads_municipio_estimado lo reparte entre los
+//    municipios de la subregión según los pesos calculados con los leads que SÍ traen municipio.
+//  · Un lead que ya trae municipio NUNCA se toca. 'AMVA(NOMED)' = Valle de Aburrá sin Medellín → grupo '05S07X'.
+//  · NORTE / ORIENTE / OCCIDENTE existen en otros departamentos: aquí se asumen de Antioquia solo si el
+//    lead no trae departamento (o trae Antioquia).
+const GEO_ALIAS_UBICACION_ANT = [
+    'MEDCENTRO' => ['mpio' => 'Medellín'], 'MEDNORTE' => ['mpio' => 'Medellín'], 'MEDSUR' => ['mpio' => 'Medellín'],
+    'AMVANOMED' => ['grupo' => '05S07X'],
+    'ORIENTE'   => ['grupo' => '05S01'], 'OCCIDENTE' => ['grupo' => '05S02'], 'SUROESTE' => ['grupo' => '05S03'],
+    'NORDESTE'  => ['grupo' => '05S04'], 'NORTE'     => ['grupo' => '05S05'], 'URABA'    => ['grupo' => '05S06'],
+    'BAJOCAUCA' => ['grupo' => '05S08'], 'MAGMEDIO'  => ['grupo' => '05S09'], 'MAGDALENAMEDIO' => ['grupo' => '05S09'],
+];
+
+function aplicarAliasUbicacionAntioquia(array &$lead): bool {
+    $sub = trim((string)($lead['subregion'] ?? ''));
+    if ($sub === '' || trim((string)($lead['municipio'] ?? '')) !== '') return false;   // con municipio propio, no se toca
+    $dpto = normalizeGeoStr((string)($lead['geo_departamento'] ?? ''));
+    if ($dpto !== '' && $dpto !== 'ANTIOQUIA') return false;
+    $alias = GEO_ALIAS_UBICACION_ANT[preg_replace('/[^A-Z]/', '', normalizeGeoStr($sub))] ?? null;
+    if (!$alias) return false;
+    $lead['geo_departamento'] = 'Antioquia';
+    if (isset($alias['mpio'])) $lead['municipio'] = $alias['mpio'];
+    else                       $lead['_grupo_est'] = $alias['grupo'];
+    $lead['subregion'] = null;   // ya resuelto: evita que los pasos siguientes lo traten como nombre de municipio
+    return true;
+}
+
+/** id de subregión (p. ej. '05S06') por nombre; solo si es inequívoco (nombres como NORTE se repiten entre departamentos). */
+function subregionIdPorNombre(string $name, string $dptoTxt, \PDO $db): ?string {
+    if (mb_strlen(trim($name)) < 3) return null;
+    $st = $db->prepare("SELECT id, id_departamento FROM c98_geo.dim_subregion WHERE " . _nsql('nombre') . " = ?");
+    $st->execute([normalizeGeoStr($name)]);
+    $filas = $st->fetchAll(\PDO::FETCH_ASSOC);
+    if ($dptoTxt !== '' && count($filas) > 1) {
+        $d = lookupDepartamentoByName($dptoTxt, $db);
+        if ($d) $filas = array_values(array_filter($filas, fn($f) => $f['id_departamento'] === (string)$d['id_dpto']));
+    }
+    return count($filas) === 1 ? (string)$filas[0]['id'] : null;
+}
+
+/** Grupo de estimación del lead: solo si NO tiene municipio resuelto (id_geo < 5 caracteres) pero sí subregión. */
+function resolverGrupoEstimacion(array $lead, \PDO $db): ?string {
+    if (strlen((string)($lead['id_geo'] ?? '')) >= 5) return null;
+    if (!empty($lead['_grupo_est'])) return (string)$lead['_grupo_est'];
+    $sub = trim((string)($lead['subregion'] ?? ''));
+    return $sub !== '' ? subregionIdPorNombre($sub, trim((string)($lead['geo_departamento'] ?? '')), $db) : null;
+}
+
+/** Columna, tabla de pesos y vista de estimación (idempotente). */
+function ensureEstimacionGeo(\PDO $db): void {
+    try { $db->exec("ALTER TABLE import_log_leads ADD COLUMN grupo_estimacion VARCHAR(8) DEFAULT NULL, ADD INDEX idx_ill_grupo_est (grupo_estimacion)"); } catch (\Exception $e) { /* ya existe */ }
+    $db->exec("CREATE TABLE IF NOT EXISTS geo_peso_estimacion (
+        grupo        VARCHAR(8)   NOT NULL COMMENT 'subregión (05S06) o 05S07X = Valle de Aburrá sin Medellín',
+        id_municipio VARCHAR(5)   NOT NULL,
+        n_leads      INT          NOT NULL,
+        peso         DECIMAL(10,9) NOT NULL,
+        calculado_en DATETIME     NOT NULL,
+        PRIMARY KEY (grupo, id_municipio)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");   // misma collation que import_log_leads
+    $db->exec("CREATE OR REPLACE VIEW v_leads_municipio_estimado AS
+        SELECT l.id_lead, l.import_id, LEFT(l.id_geo, 5) AS id_municipio, 1.000000000 AS peso, 'real' AS origen
+        FROM import_log_leads l
+        WHERE CHAR_LENGTH(l.id_geo) >= 5
+        UNION ALL
+        SELECT l.id_lead, l.import_id, w.id_municipio, w.peso, 'estimado' AS origen
+        FROM import_log_leads l
+        JOIN geo_peso_estimacion w ON w.grupo = l.grupo_estimacion
+        WHERE (l.id_geo IS NULL OR CHAR_LENGTH(l.id_geo) < 5) AND l.grupo_estimacion IS NOT NULL");
+}
+
+/** Pesos = participación de cada municipio entre los leads que SÍ traen municipio, dentro de su subregión. */
+function recalcPesosEstimacion(\PDO $db): int {
+    $base = "SELECT %s AS grupo, m.id AS id_municipio, COUNT(*) AS n
+             FROM import_log_leads l JOIN c98_geo.dim_municipio m ON m.id = LEFT(l.id_geo, 5)
+             WHERE CHAR_LENGTH(l.id_geo) >= 5 AND %s GROUP BY m.id_subregion, m.id";
+    $sql = sprintf($base, 'm.id_subregion', 'm.id_subregion IS NOT NULL')
+         . " UNION ALL " . sprintf($base, "'05S07X'", "m.id_subregion = '05S07' AND m.id <> '05001'");
+    $db->beginTransaction();
+    try {
+        $db->exec("DELETE FROM geo_peso_estimacion");
+        $db->exec("INSERT INTO geo_peso_estimacion (grupo, id_municipio, n_leads, peso, calculado_en)
+                   SELECT t.grupo, t.id_municipio, t.n, t.n / s.total, NOW()
+                   FROM ($sql) t JOIN (SELECT grupo, SUM(n) AS total FROM ($sql) x GROUP BY grupo) s ON s.grupo = t.grupo");
+        $db->commit();
+    } catch (\Exception $e) { $db->rollBack(); throw $e; }
+    return (int)$db->query("SELECT COUNT(*) FROM geo_peso_estimacion")->fetchColumn();
+}
+
 /**
  * Reconcilia la jerarquía geográfica a partir de campos YA presentes en el lead
  * (mapeados directamente desde columnas del Excel) — ej. si vino "barrio" pero no
@@ -1303,6 +1395,9 @@ function parseAdsetForGeo(string $s, \PDO $db): array {
  */
 function reconcileLeadGeo(array &$lead, \PDO $db): bool {
     $enriched = false;
+
+    // 0a. Valores de «Ubicación» propios de Antioquia (MED(CENTRO), AMVA(NOMED), URABA…): ver aplicarAliasUbicacionAntioquia()
+    if (aplicarAliasUbicacionAntioquia($lead)) $enriched = true;
 
     // 0. Detectar municipio mal clasificado en campo subregion
     //    Orden: alias explícito → dim_geo lookup
@@ -2100,6 +2195,8 @@ try {
         ] as $ddl) {
             try { $db->exec($ddl); } catch (\Exception $e) { /* columna ya existe */ }
         }
+        // Columna grupo_estimacion + tabla de pesos + vista v_leads_municipio_estimado (estimación por subregión)
+        try { ensureEstimacionGeo($db); } catch (\Exception $e) { /* no bloquear la importación */ }
 
         // Si aún existe la columna `pregunta` en respuestas (instancia sin migrar),
         // ejecutar la migración EAV ahora de forma automática
@@ -2226,13 +2323,13 @@ try {
                  campaign_id, campaign_name, form_id, form_name,
                  is_organic, platform, nombre, email, telefono,
                  sexo, sexo_origen, rango_edad, estrato, afiliacion_politica,
-                 nivel_educativo, id_geo, import_id)
+                 nivel_educativo, id_geo, grupo_estimacion, import_id)
             VALUES
                 (:id, :created_time, :ad_id, :ad_name, :adset_id, :adset_name,
                  :campaign_id, :campaign_name, :form_id, :form_name,
                  :is_organic, :platform, :nombre, :email, :telefono,
                  :sexo, :sexo_origen, :rango_edad, :estrato, :afiliacion_politica,
-                 :nivel_educativo, :id_geo, :import_id)
+                 :nivel_educativo, :id_geo, :grupo_estimacion, :import_id)
         ");
         // Lead que ya existía: solo se le completa el sexo si no lo tenía; si lo tiene, no se modifica
         $stmtSexoExistente = $db->prepare(
@@ -2479,6 +2576,8 @@ try {
                         // Resolver FK geográfica más granular disponible
                         try {
                             $lead['id_geo'] = resolveGeoId($lead, $db);
+                            // Sin municipio pero con subregión: se guarda para repartirlo luego por pesos (nunca si ya tiene municipio)
+                            $lead['grupo_estimacion'] = resolverGrupoEstimacion($lead, $db);
                         } catch (\Exception $e) { /* no bloquear importación */ }
                     }
 
@@ -2533,6 +2632,7 @@ try {
                         ':afiliacion_politica' => $lead['afiliacion_politica'],
                         ':nivel_educativo' => $lead['nivel_educativo'],
                         ':id_geo' => $lead['id_geo'] ?? null,
+                        ':grupo_estimacion' => $lead['grupo_estimacion'] ?? null,
                         ':import_id' => $importId,
                     ]);
 
@@ -2718,6 +2818,8 @@ try {
             }
         } // end foreach ($sheetsParam as $sheet)
 
+        // Pesos de estimación por subregión: se recalculan con los leads (con municipio) ya guardados
+        try { recalcPesosEstimacion($db); } catch (\Exception $e) { /* no bloquear la importación */ }
         jsonOut(['ok' => true, 'results' => $allResults]);
     } // end if ($action === 'import')
 
