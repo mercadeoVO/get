@@ -2157,7 +2157,8 @@ try {
         $sheetMappingsParam = json_decode($_POST['sheet_mappings'] ?? 'null', true);
         $mappingsFallback   = json_decode($_POST['mappings'] ?? '{}', true) ?? [];
         // [{"from":"adset_name","delimiter":"_","position":0,"target":"municipio_zona"},...]
-        $extractions = json_decode($_POST['extractions'] ?? '[]', true) ?? [];
+        // Ahora por hoja: {sheetName: [reglas]}. Si llega una lista plana (formato anterior) aplica a todas las hojas.
+        $extractionsParam = json_decode($_POST['extractions'] ?? '[]', true) ?? [];
         // Municipio por defecto por hoja: {sheetName: {id:'05001', nombre:'Medellín', departamento:'Antioquia'}}.
         // Se usa cuando la hoja mapea una ubicación inferior a municipio (zona/comuna/barrio) sin
         // columna de municipio: sin él no se puede resolver id_geo ni mostrar municipio al descargar.
@@ -2368,6 +2369,7 @@ try {
                       'geo_departamento','subregion','municipio','zona','comuna_localidad','barrio'];
 
         foreach ($sheetsParam as $sheet) {
+            $extractions = array_is_list($extractionsParam) ? $extractionsParam : ($extractionsParam[$sheet] ?? []);
             $result = xlsxReadRows($tmpPath, $sheet);
             if (!($result['ok'] ?? false)) {
                 $allResults[] = ['sheet'=>$sheet,'ok'=>false,'error'=>$result['error']??'Error'];

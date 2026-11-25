@@ -355,6 +355,8 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
       <div class="card-title" style="margin:0;">Reglas de extracción manuales</div>
       <button class="btn btn-primary btn-sm" onclick="addExtraction()">+ Agregar regla</button>
+      <button class="btn btn-outline btn-sm" onclick="copiarExtracciones()" title="Copia las reglas de esta hoja a las demás hojas seleccionadas">Copiar a las demás hojas</button>
+      <span style="color:var(--muted);font-size:12px;">Hoja: <b id="ext-hoja"></b></span>
     </div>
     <p style="color:var(--muted);font-size:12px;margin-bottom:12px;">
       Parsea el nombre de campaña / adset / anuncio para rellenar campos opcionales.
@@ -568,7 +570,6 @@ let state = {
   // Per-sheet: {sheetName: {columns,previewData,colActions,colFields,loaded}}
   sheetMappings:{},
   activeMapSheet:'',
-  extractions:[],
   electoralCtx: null,
   // Apagado por defecto — el usuario debe activarlo explícitamente por nivel.
   autoGeo: { enabled:false, source:'adset_name', levels:[] },
@@ -680,7 +681,6 @@ document.getElementById('btn-upload').addEventListener('click',async()=>{
     state.importedSheets={};
     (d.imported_sheets||[]).forEach(r=>{ state.importedSheets[r.hoja]=r; });
     state.selectedSheets=[];
-    state.extractions=[];
     renderSheetSelector();
     goStep(2);
   }catch(e){
@@ -732,7 +732,7 @@ async function loadPreviewAndGoS3(){
   // Init per-sheet mapping state
   state.sheetMappings={};
   state.selectedSheets.forEach(name=>{
-    state.sheetMappings[name]={columns:[],previewData:[],colActions:{},colFields:{},loaded:false};
+    state.sheetMappings[name]={columns:[],previewData:[],colActions:{},colFields:{},loaded:false,extractions:[]};
   });
   state.activeMapSheet=state.selectedSheets[0];
 
@@ -812,7 +812,7 @@ async function switchMapTab(sheetName){
     }
   }
   syncActiveSheetToState();
-  renderColumnMap(); renderPreview();
+  renderColumnMap(); renderExtractions(); renderPreview();
   updateGoStep4Btn();
 }
 
@@ -935,13 +935,13 @@ function sheetMappedFields(sm){
 }
 function sheetLowerGeoFields(sm){
   // Columnas mapeadas + destinos de las reglas de extracción (p. ej. «C16_…» → Comuna/Localidad)
-  const campos=[...sheetMappedFields(sm), ...state.extractions.map(ex=>ex.target)];
+  const campos=[...sheetMappedFields(sm), ...(sm.extractions||[]).map(ex=>ex.target)];
   return [...new Set(campos.filter(f=>GEO_BELOW_MPIO.includes(f)))];
 }
 // De dónde sale el municipio, si ya está resuelto sin intervención manual (o null)
 function municipioSourceLabel(sm){
   if(sheetMappedFields(sm).includes('municipio')) return 'una columna de esta hoja';
-  if(state.extractions.some(ex=>ex.target==='municipio')) return 'una regla de extracción manual';
+  if((sm.extractions||[]).some(ex=>ex.target==='municipio')) return 'una regla de extracción manual';
   if(state.autoGeo.enabled && state.autoGeo.levels.includes('municipio')) return 'la extracción automática';
   return null;
 }
@@ -949,7 +949,7 @@ function municipioSourceLabel(sm){
 // basta para dar la hoja por ubicada. Los leads quedan a nivel de subregión/departamento, sin
 // zona/comuna/barrio (esos niveles necesitan municipio).
 function regionalSourceLabel(sm){
-  const campos=[...sheetMappedFields(sm), ...state.extractions.map(ex=>ex.target)];
+  const campos=[...sheetMappedFields(sm), ...(sm.extractions||[]).map(ex=>ex.target)];
   const sub=campos.includes('subregion'), dep=campos.includes('geo_departamento');
   if(sub&&dep) return 'Subregión y Departamento';
   return sub?'Subregión':(dep?'Departamento':null);
@@ -1190,8 +1190,18 @@ function valorValidoParaCampo(target,v){
 }
 const ETQ_CAMPO={sexo:'un sexo (H/M)',rango_edad:'una edad (ej. 18a24)',estrato:'un estrato (1 a 6)'};
 
+// Las reglas son de cada hoja: cada una puede tener nombres de adset con otro formato.
+function extActivas(){ const sm=state.sheetMappings[state.activeMapSheet]; return sm?(sm.extractions=sm.extractions||[]):[]; }
+function copiarExtracciones(){
+  const src=extActivas();
+  const otras=state.selectedSheets.filter(n=>n!==state.activeMapSheet&&state.sheetMappings[n]);
+  if(!src.length||!otras.length) return;
+  if(!confirm('¿Copiar estas '+src.length+' regla(s) a las otras '+otras.length+' hoja(s)? Se reemplazan las reglas que tengan.')) return;
+  otras.forEach(n=>{ state.sheetMappings[n].extractions=src.map(r=>({...r})); });
+  renderLocCard();
+}
 function addExtraction(){
-  state.extractions.push({from:'adset_name',delimiter:'_',position:0,target:'municipio'});
+  extActivas().push({from:'adset_name',delimiter:'_',position:0,target:'municipio'});
   renderExtractions();
   renderLocCard();
 }
@@ -1219,13 +1229,13 @@ function ejemploExtraccion(ex){
     ? `<span style="color:var(--muted)">Ejemplo: «${h(origen)}» → <b style="color:var(--green)">${h(val)}</b></span>`
     : `<span style="color:var(--yellow)">⚠ En «${h(origen)}» no hay nada en la posición ${ex.position} (empieza en 0).</span>`)+nota;
 }
-function refrescarEjemplo(i){ const el=document.getElementById('ext-ej-'+i); if(el) el.innerHTML=ejemploExtraccion(state.extractions[i]); }
-function removeExtraction(i){ state.extractions.splice(i,1); renderExtractions(); renderLocCard(); }
+function refrescarEjemplo(i){ const el=document.getElementById('ext-ej-'+i); if(el) el.innerHTML=ejemploExtraccion(extActivas()[i]); }
+function removeExtraction(i){ extActivas().splice(i,1); renderExtractions(); renderLocCard(); }
 function updExt(i,f,v){
-  state.extractions[i][f]=f==='position'?(parseInt(v,10)||(parseInt(v,10)===-1?-1:0)):v;
+  extActivas()[i][f]=f==='position'?(parseInt(v,10)||(parseInt(v,10)===-1?-1:0)):v;
   if(f==='target'){
     // «Cualquier posición» solo existe para sexo y edad; con otro destino vuelve a posición fija
-    if(!EXT_ANYPOS.has(v) && state.extractions[i].position<0) state.extractions[i].position=0;
+    if(!EXT_ANYPOS.has(v) && extActivas()[i].position<0) extActivas()[i].position=0;
     renderExtractions();
     renderLocCard();   // una regla con destino Municipio cuenta como fuente
     return;
@@ -1235,11 +1245,13 @@ function updExt(i,f,v){
 
 function renderExtractions(){
   const el=document.getElementById('extractions-list');
-  if(!state.extractions.length){
-    el.innerHTML=`<p style="color:var(--muted);font-size:13px;">Sin reglas. Agrega una para parsear campaign/adset/ad names y rellenar campos opcionales automáticamente.</p>`;
+  const exts=extActivas();
+  const lbl=document.getElementById('ext-hoja'); if(lbl) lbl.textContent=state.activeMapSheet||'';
+  if(!exts.length){
+    el.innerHTML=`<p style="color:var(--muted);font-size:13px;">Sin reglas en esta hoja. Agrega una para parsear campaign/adset/ad names y rellenar campos opcionales automáticamente.</p>`;
     return;
   }
-  el.innerHTML=state.extractions.map((ex,i)=>`
+  el.innerHTML=exts.map((ex,i)=>`
     <div class="ext-row">
       <span class="ext-lbl">Desde</span>
       <select onchange="updExt(${i},'from',this.value)">
@@ -2067,8 +2079,8 @@ function goToStep5(){
     || '<span style="color:var(--muted);font-size:12px;">Ninguno</span>';
 
   const eavRows=[...eavSet].map(hdr=>`<div style="font-size:12px;padding:2px 0;"><code>${h(hdr)}</code> → <span style="color:var(--accent2)">EAV</span></div>`).join('');
-  const extRows=state.extractions.map(ex=>
-    `<div style="font-size:12px;padding:2px 0;"><span style="color:var(--orange)">${h(ex.from)}</span>[${h(ex.delimiter)},${ex.position}] → <span style="color:var(--green)">${h(ex.target)}</span></div>`)
+  const extRows=state.selectedSheets.flatMap(n=>((state.sheetMappings[n]||{}).extractions||[]).map(ex=>[n,ex])).map(([n,ex])=>
+    `<div style="font-size:12px;padding:2px 0;"><code>${h(n)}</code>: <span style="color:var(--orange)">${h(ex.from)}</span>[${h(ex.delimiter)},${ex.position}] → <span style="color:var(--green)">${h(ex.target)}</span></div>`)
     .join('');
   const autoGeoRow = state.autoGeo.enabled && state.autoGeo.levels.length
     ? `<div style="font-size:12px;padding:2px 0;">Auto desde <span style="color:var(--orange)">${h(state.autoGeo.source)}</span> → <span style="color:var(--green)">${state.autoGeo.levels.map(h).join(', ')}</span></div>`
@@ -2162,7 +2174,9 @@ document.getElementById('btn-confirm').addEventListener('click', async()=>{
   fd.append('url_carpeta',document.getElementById('appr-url').value);
   fd.append('sheet_mappings',JSON.stringify(sheetMappingsPayload));
   fd.append('sheet_geo_defaults',JSON.stringify(sheetGeoDefaults));
-  fd.append('extractions',JSON.stringify(state.extractions));
+  const extPorHoja={};
+  state.selectedSheets.forEach(n=>{ const e=(state.sheetMappings[n]||{}).extractions||[]; if(e.length) extPorHoja[n]=e; });
+  fd.append('extractions',JSON.stringify(extPorHoja));
   fd.append('auto_geo_enabled', state.autoGeo.enabled && state.autoGeo.levels.length ? '1' : '0');
   fd.append('auto_geo_source', state.autoGeo.source);
   fd.append('auto_geo_levels', JSON.stringify(state.autoGeo.levels));
@@ -2530,7 +2544,6 @@ function resetAll(){
     selectedSheets:[],
     columns:[],previewData:[],
     sheetMappings:{},activeMapSheet:'',
-    extractions:[],
     electoralCtx: null,
     autoGeo: { enabled:false, source:'adset_name', levels:[] },
     temasEdit: new Set(),   // se inicia al cargar la página; sin esto el paso 4 falla tras «importar otro archivo»
@@ -2552,7 +2565,7 @@ function resetAll(){
     state.file={name:d.archivo,size:d.size};
     state.tempId=d.temp_id; state.sheets=d.sheets; state.importedSheets={};
     (d.imported_sheets||[]).forEach(r=>{ state.importedSheets[r.hoja]=r; });
-    state.selectedSheets=[]; state.extractions=[];
+    state.selectedSheets=[];
     err.innerHTML=''; renderSheetSelector(); goStep(2);
     // Llegada desde la lista de pendientes (?hoja=…): deja marcada la hoja pendiente
     const hoja=new URLSearchParams(location.search).get('hoja');
