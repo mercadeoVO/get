@@ -38,4 +38,15 @@ from c98_get.import_log il
 left join c98_get.import_log_leads l on l.import_id = il.id
 left join c98_get.import_electoral ie on ie.import_id = il.id
 group by il.id order by il.importado_en desc""")
+# Estimación del municipio por subregión (misma definición que ensureEstimacionGeo() en app/leads_importer.php):
+# los leads con municipio cuentan 1; los que solo traen subregión se reparten con los pesos de geo_peso_estimacion.
+pc.execute("""create or replace view c98_get.v_leads_municipio_estimado as
+select l.id_lead, l.import_id, left(l.id_geo, 5) as id_municipio, 1.000000000::numeric(10,9) as peso, 'real'::text as origen
+from c98_get.import_log_leads l
+where char_length(l.id_geo) >= 5
+union all
+select l.id_lead, l.import_id, w.id_municipio, w.peso, 'estimado'::text as origen
+from c98_get.import_log_leads l
+join c98_get.geo_peso_estimacion w on w.grupo = l.grupo_estimacion
+where (l.id_geo is null or char_length(l.id_geo) < 5) and l.grupo_estimacion is not null""")
 print("vistas creadas")
