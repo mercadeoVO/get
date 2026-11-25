@@ -3259,6 +3259,57 @@ try {
         jsonOut(['ok' => true, 'pregunta_id' => $preguntaId, 'total' => $total, 'respuestas' => $filas]);
     }
 
+    // ── PREGUNTA_EDITAR ───────────────────────────────────────
+    // Cambia el texto de una pregunta del catálogo (las respuestas y la clasificación se conservan).
+    // El texto es único: si ya existe otra pregunta igual, se rechaza para no duplicar el catálogo.
+    if ($action === 'pregunta_editar') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') errOut('Esta acción requiere POST.');
+        $db = getDB();
+        $preguntaId = (int)($_POST['pregunta_id'] ?? 0);
+        $texto = trim((string)($_POST['pregunta'] ?? ''));
+        if (!$preguntaId) errOut('Falta pregunta_id.');
+        if ($texto === '') errOut('El texto de la pregunta no puede quedar vacío.');
+        if (mb_strlen($texto) > 500) errOut('La pregunta supera los 500 caracteres.');
+        $dup = $db->prepare("SELECT id FROM import_log_leads_preguntas WHERE pregunta = ? AND id <> ?");
+        $dup->execute([$texto, $preguntaId]);
+        if ($dup->fetchColumn() !== false) errOut('Ya existe otra pregunta con ese texto.');
+        $db->prepare("UPDATE import_log_leads_preguntas SET pregunta = ? WHERE id = ?")->execute([$texto, $preguntaId]);
+        jsonOut(['ok' => true, 'pregunta_id' => $preguntaId, 'pregunta' => $texto]);
+    }
+
+    // ── PREGUNTA_ELIMINAR ─────────────────────────────────────
+    // Borra una pregunta del catálogo con TODAS sus respuestas y su clasificación (pregunta_tema).
+    // Es irreversible: exige POST con confirmar=1. Las respuestas se borran por lotes (pueden ser cientos de miles).
+    if ($action === 'pregunta_eliminar') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') errOut('Esta acción requiere POST.');
+        $db = getDB();
+        $preguntaId = (int)($_POST['pregunta_id'] ?? 0);
+        if (!$preguntaId) errOut('Falta pregunta_id.');
+        if (($_POST['confirmar'] ?? '') !== '1') errOut('Falta la confirmación del borrado.');
+        @set_time_limit(0);
+        $ex = $db->prepare("SELECT pregunta FROM import_log_leads_preguntas WHERE id = ?");
+        $ex->execute([$preguntaId]);
+        $texto = $ex->fetchColumn();
+        if ($texto === false) errOut('La pregunta no existe.');
+        $resp = 0;
+        $lote = $db->prepare("DELETE FROM import_log_leads_respuestas WHERE pregunta_id = ? LIMIT 20000");
+        do {
+            $lote->execute([$preguntaId]);
+            $n = $lote->rowCount();
+            $resp += $n;
+        } while ($n > 0);
+        $db->beginTransaction();
+        try {
+            $db->prepare("DELETE FROM pregunta_tema WHERE pregunta_id = ?")->execute([$preguntaId]);
+            $db->prepare("DELETE FROM import_log_leads_preguntas WHERE id = ?")->execute([$preguntaId]);
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            errOut($e->getMessage());
+        }
+        jsonOut(['ok' => true, 'pregunta_id' => $preguntaId, 'pregunta' => $texto, 'respuestas_borradas' => $resp]);
+    }
+
     // ── VALORES_UNICOS ────────────────────────────────────────
     // Respuestas únicas (con conteo) de las columnas-pregunta del Excel que se está importando, para
     // verlas en un desplegable junto a cada pregunta al clasificarla. Lee las hojas elegidas completas

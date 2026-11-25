@@ -334,12 +334,13 @@ function renderSugeridas(sugeridas){
   if (sugeridas.length === 0) { el.innerHTML = '<div class="empty-state">No hay sugerencias pendientes de confirmar.</div>'; return; }
   el.innerHTML = sugeridas.map(s => `
     <div class="pending-item">
-      <div class="preg">${escapeHtml(s.pregunta)}</div>
+      <div class="preg" id="preg-${s.pregunta_id ?? s.id}">${escapeHtml(s.pregunta)}</div>
       <div class="meta-row">
         <span class="id-tag">#${s.pregunta_id}</span>
         <span class="badge badge-blue">${s.codigo} ${escapeHtml(s.tema)} → ${escapeHtml(s.subtema)}</span>
         <button class="btn btn-success btn-sm" onclick="confirmarSugerida(${s.pregunta_id}, ${s.tema_id})">Confirmar</button>
         <button class="btn btn-outline btn-sm" onclick="abrirEditor(${s.pregunta_id}, [${s.tema_id}])">Cambiar</button>
+        ${botonesPregunta(s.pregunta_id)}
       </div>
       ${renderRespuestasToggle(s.pregunta_id)}
       <div id="host-${s.pregunta_id}"></div>
@@ -369,11 +370,12 @@ function renderSinTema(sinTema){
       ${renderCatalogoToggle(s.id)}`;
     return `
     <div class="pending-item">
-      <div class="preg">${escapeHtml(s.pregunta)}</div>
+      <div class="preg" id="preg-${s.pregunta_id ?? s.id}">${escapeHtml(s.pregunta)}</div>
       <div class="meta-row">
         <span class="id-tag">#${s.id}</span>
         <span class="badge badge-yellow">sin clasificar</span>
         <button class="btn btn-primary btn-sm" onclick="abrirEditor(${s.id}, [])">Clasificar</button>
+        ${botonesPregunta(s.id)}
       </div>
       ${renderRespuestasToggle(s.id)}
       ${debilesHtml}
@@ -496,6 +498,56 @@ async function guardarNuevoTema(preguntaId, temaForzado = null, confirmarNuevo =
   } catch(e) {
     toast('Error: '+e.message, false);
   }
+}
+
+// ─── Editar / eliminar pregunta ─────────────────────────────────────────────
+// Eliminar es solo para administradores. En local no hay login (el endpoint de sesión no existe) y se
+// asume admin; en la web, si la sesión dice otro rol, el botón no aparece.
+let ES_ADMIN = true;
+fetch('/api/auth?action=me', {credentials:'same-origin'})
+  .then(r => r.ok ? r.json() : null)
+  .then(j => { if (j && j.ok && j.rol !== 'admin') { ES_ADMIN = false; cargar(); } })
+  .catch(()=>{});
+
+function botonesPregunta(id){
+  return `<button class="btn btn-outline btn-sm" onclick="editarPregunta(${id})">Editar pregunta</button>`
+    + (ES_ADMIN ? `<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red);" onclick="eliminarPregunta(${id})">Eliminar pregunta</button>` : '');
+}
+
+async function editarPregunta(id){
+  const el = document.getElementById('preg-'+id);
+  const actual = el ? el.textContent : '';
+  const nuevo = prompt('Texto de la pregunta (las respuestas y la clasificación se conservan):', actual);
+  if (nuevo === null || nuevo.trim() === actual.trim()) return;
+  const fd = new FormData(); fd.append('pregunta_id', id); fd.append('pregunta', nuevo.trim());
+  try {
+    const d = await fetch(API+'?action=pregunta_editar', {method:'POST', body:fd}).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error desconocido');
+    toast('Pregunta '+id+' actualizada.');
+    cargar();
+  } catch(e) { toast('Error: '+e.message, false); }
+}
+
+async function eliminarPregunta(id){
+  const el = document.getElementById('preg-'+id);
+  const txt = el ? el.textContent : ('#'+id);
+  let n = '?';
+  try {
+    const m = await fetch(API+'?action=respuestas_muestra&pregunta_id='+id).then(r=>r.json());
+    if (m.ok) n = m.total.toLocaleString();
+  } catch(e) {}
+  if (!confirm('¿Eliminar la pregunta?
+
+«'+txt+'»
+
+Se borrarán también sus '+n+' respuestas y su clasificación. No se puede deshacer.')) return;
+  const fd = new FormData(); fd.append('pregunta_id', id); fd.append('confirmar', '1');
+  try {
+    const d = await fetch(API+'?action=pregunta_eliminar', {method:'POST', body:fd}).then(r=>r.json());
+    if (!d.ok) throw new Error(d.error || 'Error desconocido');
+    toast('Pregunta eliminada ('+d.respuestas_borradas.toLocaleString()+' respuestas).');
+    cargar();
+  } catch(e) { toast('Error: '+e.message, false); }
 }
 
 function escapeHtml(s){
