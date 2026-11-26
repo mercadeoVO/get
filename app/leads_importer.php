@@ -546,7 +546,7 @@ function detectColType(?string $col): string {
     if (isset($map[$norm])) return $map[$norm];
     // 1b. Encabezados de una sola palabra que solo cuentan si son TODO el encabezado
     //     («Género» sí; «¿Qué opinas de la violencia de género?» no).
-    $soloExacto = ['genero' => 'sexo', 'sexo' => 'sexo', 'estrato' => 'estrato'];
+    $soloExacto = ['genero' => 'sexo', 'gender' => 'sexo', 'sexo' => 'sexo', 'estrato' => 'estrato'];
     if (isset($soloExacto[$norm])) return $soloExacto[$norm];
     // 2. Substring — solo para patrones largos (>2 chars).
     //    'id' (2 chars) causaría falsos positivos en 'actividad', 'calidad', etc.
