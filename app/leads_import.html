@@ -63,6 +63,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .sheet-card.sheet-card-dup{border-color:#854d0e;background:rgba(133,77,14,.07);}
 .sheet-card.sheet-card-dup.checked{border-color:var(--accent);background:rgba(59,130,246,.08);}
 .sheet-card input[type=checkbox]{position:absolute;top:10px;right:10px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
+.sheet-card.sheet-card-invalid{cursor:not-allowed;opacity:.6;border-style:dashed;background:transparent;}
+.sheet-card.sheet-card-invalid:hover{border-color:var(--border);}
+.sheet-card.sheet-card-invalid input[type=checkbox]{cursor:not-allowed;}
+.sheet-reason{margin-top:6px;font-size:11px;line-height:1.35;color:var(--bad,#b91c1c);}
+.sheet-warn{margin-top:6px;font-size:11px;line-height:1.35;color:var(--warn-ink,#854d0e);}
 .sheet-name{font-weight:600;font-size:13px;margin-bottom:6px;padding-right:22px;word-break:break-all;}
 .sheet-meta{font-size:12px;color:var(--muted);}
 
@@ -694,17 +699,23 @@ document.getElementById('btn-upload').addEventListener('click',async()=>{
 function renderSheetSelector(){
   const total=state.sheets.reduce((s,sh)=>s+(sh.rows||0),0);
   const prevCount=Object.keys(state.importedSheets||{}).length;
+  // valid=false: la hoja no es una exportación de leads de Meta Ads (validada en el servidor) → no seleccionable
+  const nInvalid=state.sheets.filter(sh=>sh.valid===false).length;
   document.getElementById('sheets-total').innerHTML=
     `Se encontraron <strong style="color:var(--text)">${state.sheets.length}</strong> hoja(s) · ≈${total.toLocaleString()} filas en total.`+
     (prevCount ? ` <span class="badge badge-yellow">${prevCount} ya cargada${prevCount!==1?'s':''}</span>` : '')+
+    (nInvalid ? ` <span class="badge badge-orange" title="Solo se importan hojas con las columnas fijas de una exportación de leads de Meta Ads">${nInvalid} no válida${nInvalid!==1?'s':''}</span>` : '')+
     ` Selecciona las que quieres importar:`;
   document.getElementById('sheet-grid').innerHTML=state.sheets.map((sh,i)=>{
     const imp=state.importedSheets[sh.name];
+    const bad=sh.valid===false;
     const fecha=imp ? (imp.ultima_carga||'').replace('T',' ').substring(0,10) : '';
-    return `<div class="sheet-card${imp?' sheet-card-dup':''}" id="shcard-${i}" onclick="toggleSheet(${i})">
-      <input type="checkbox" id="shchk-${i}" onclick="event.stopPropagation();toggleSheet(${i})">
+    return `<div class="sheet-card${imp?' sheet-card-dup':''}${bad?' sheet-card-invalid':''}" id="shcard-${i}" onclick="toggleSheet(${i})"${bad?` title="${h(sh.reason||'Hoja no válida')}"`:''}>
+      <input type="checkbox" id="shchk-${i}" onclick="event.stopPropagation();toggleSheet(${i})"${bad?' disabled':''}>
       <div class="sheet-name">${h(sh.name)}</div>
       <div class="sheet-meta">${(sh.rows||0).toLocaleString()} filas &nbsp;·&nbsp; ${sh.cols||0} col</div>
+      ${bad ? `<div class="sheet-reason">${ic('x')} No válida: ${h(sh.reason||'no tiene las columnas fijas de Meta Ads')}</div>` : ''}
+      ${!bad && sh.warning ? `<div class="sheet-warn">${h(sh.warning)}</div>` : ''}
       ${imp ? `<div style="margin-top:6px;"><span class="badge badge-yellow">Ya cargado</span><span style="font-size:10px;color:var(--muted);margin-left:6px;">${fecha} · ${(imp.leads_ins||0).toLocaleString()} leads</span></div>` : ''}
     </div>`;
   }).join('');
@@ -713,7 +724,9 @@ function renderSheetSelector(){
 }
 
 function toggleSheet(i){
-  const name=state.sheets[i].name;
+  const sh=state.sheets[i];
+  if(!sh||sh.valid===false) return;   // hoja no válida: no se puede seleccionar
+  const name=sh.name;
   const card=document.getElementById('shcard-'+i);
   const chk=document.getElementById('shchk-'+i);
   const idx=state.selectedSheets.indexOf(name);

@@ -392,7 +392,20 @@ function xlsxGetSheets(string $filePath): array
     $reader = makeSpreadsheetReader($filePath);
     $sheets = $reader->getSheets();
     $reader->close();
-    return $sheets;
+    return anotarValidezHojas($sheets); // valid/reason/missing/warning por hoja (ver validarHojaMeta)
+}
+
+/** Encabezados (primera fila con datos) de varias hojas, sin leer el resto de filas. */
+function xlsxReadHeaders(string $filePath, array $sheetNames): array
+{
+    $reader = makeSpreadsheetReader($filePath);
+    $out = [];
+    try {
+        foreach ($sheetNames as $name) $out[$name] = $reader->readHeader((string)$name);
+    } finally {
+        $reader->close();
+    }
+    return $out;
 }
 
 /**
@@ -2071,6 +2084,15 @@ try {
         $sheets  = xlsxGetSheets($tmpPath); // lanza RuntimeException si falla
         $result  = ['ok' => true, 'sheets' => $sheets];
 
+        // Ninguna hoja es exportación de leads de Meta Ads → se rechaza el archivo completo.
+        if (!array_filter($sheets, fn($s) => $s['valid'])) {
+            @unlink($tmpPath);   // la subida recién creada por esta petición; no sirve para nada más
+            $detalle = implode(' ', array_map(fn($s) => "«{$s['name']}»: {$s['reason']}", array_slice($sheets, 0, 5)));
+            errOut('El archivo no tiene ninguna hoja con la estructura de una exportación de leads de Meta Ads '
+                 . '(encabezado id, created_time, ad_id, ad_name, adset_id, adset_name, campaign_id, campaign_name, form_id, form_name…). '
+                 . $detalle, 422);
+        }
+
         // Detectar hojas ya importadas del mismo archivo (por nombre original)
         $origName     = $_FILES['file']['name'] ?? '';
         $importedRows = [];
@@ -2171,6 +2193,17 @@ try {
         if (!$tempId || empty($sheetsParam)) errOut('Falta temp_id o sheet.');
         $tmpPath = TMP_DIR . $tempId;
         if (!file_exists($tmpPath)) errOut('Archivo temporal no encontrado.', 404);
+
+        // Validar la estructura de TODAS las hojas pedidas antes de escribir nada: una hoja que no
+        // es exportación de leads de Meta Ads (resúmenes, tablas dinámicas, catálogos) se rechaza.
+        $invalidas = [];
+        foreach (xlsxReadHeaders($tmpPath, $sheetsParam) as $hoja => $hdr) {
+            $v = validarHojaMeta($hdr);
+            if (!$v['valid']) $invalidas[] = "«{$hoja}»: {$v['reason']}";
+        }
+        if ($invalidas) {
+            errOut('Hojas no válidas, no se importó nada. ' . implode(' ', $invalidas), 422);
+        }
 
         $db = getDB();
 

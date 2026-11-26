@@ -72,7 +72,12 @@ try {
         driveDescargar($id, $esSheet, $dir . $tmpName);
         $reader = in_array($ext, ['xlsx', 'xlsm'], true) ? new PhpXlsxReader($dir . $tmpName)
                 : ($ext === 'csv' ? new PhpCsvReader($dir . $tmpName) : new PhpSpreadsheetReader($dir . $tmpName));
-        $sheets = $reader->getSheets(); $reader->close();
+        $sheets = anotarValidezHojas($reader->getSheets()); $reader->close();   // valid/reason por hoja
+        if (!array_filter($sheets, fn($s) => $s['valid'])) {   // ninguna hoja es exportación de leads de Meta Ads
+            @unlink($dir . $tmpName);   // la descarga recién hecha por esta petición
+            out(['ok' => false, 'error' => 'El archivo no tiene ninguna hoja con la estructura de una exportación de leads de Meta Ads. '
+                . implode(' ', array_map(fn($s) => "«{$s['name']}»: {$s['reason']}", array_slice($sheets, 0, 5)))], 422);
+        }
         // Queda registrado con qué peso/fecha se trajo, para avisar si Drive cambia después
         $db->prepare("UPDATE drive_archivos SET traido_tam = ?, traido_mod = ? WHERE file_id = ?")->execute([$f['tamano'], $f['modificado'], $id]);
         $archivo = $esSheet ? $f['nombre'] . '.xlsx' : $f['nombre'];

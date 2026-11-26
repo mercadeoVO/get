@@ -15,7 +15,8 @@
  *
  * API pública (ambas clases):
  *   $r = new PhpXlsxReader('/path/to/file.xlsx');   // o PhpSpreadsheetReader
- *   $r->getSheets()              → [['name'=>'Sheet1','rows'=>100,'cols'=>10], ...]
+ *   $r->getSheets()              → [['name'=>'Sheet1','rows'=>100,'cols'=>10,'headers'=>[...]], ...]
+ *   $r->readHeader('Sheet1')     → ['id','created_time',...]  (primera fila con datos)
  *   $r->readRows('Sheet1', 21)   → [['col1','col2',...], ['v1','v2',...], ...]
  *   $r->close()
  */
@@ -238,17 +239,23 @@ class PhpXlsxReader
      */
     public function getSheets(): array
     {
+        $this->loadStyles();
         $result = [];
         foreach ($this->sheetNames as $i => $name) {
             $filePath = $this->sheetFiles[$i] ?? '';
-            $rows = 0; $cols = 0;
+            $rows = 0; $cols = 0; $headers = [];
             if ($filePath && ($xml = $this->zip->getFromName($filePath)) !== false) {
-                $xml = ltrim($xml, "\xEF\xBB\xBF");
+                $xml = ltrim($xml, "ï»¿");
                 $doc = simplexml_load_string($xml);
                 if ($doc) {
                     // Contar filas no vacías (approx)
                     if (isset($doc->sheetData)) {
                         $rows = max(0, iterator_count($doc->sheetData->row) - 1);
+                        // Encabezado = primera fila con datos (la misma que readRows() devuelve en [0])
+                        foreach ($doc->sheetData->row as $row) {
+                            $arr = $this->rowToArray($row);
+                            if ($arr !== null) { $headers = $arr; break; }
+                        }
                     }
                     // Columnas desde dimension
                     if (isset($doc->dimension['ref'])) {
@@ -257,11 +264,68 @@ class PhpXlsxReader
                             $cols = $this->colToIndex($m[1]) + 1;
                         }
                     }
+                    // Hay archivos (p. ej. guardados por algunas herramientas) sin <dimension>:
+                    // contar las columnas del encabezado en vez de devolver 0.
+                    if ($cols === 0) $cols = count($headers);
                 }
             }
-            $result[] = ['name' => $name, 'rows' => $rows, 'cols' => $cols];
+            $result[] = ['name' => $name, 'rows' => $rows, 'cols' => $cols, 'headers' => $headers];
         }
         return $result;
+    }
+
+    /**
+     * Encabezado de una hoja (primera fila con datos) sin leer el resto: recorre el XML
+     * con XMLReader y se detiene en la primera fila no vacía.
+     */
+    public function readHeader(string $sheetName): array
+    {
+        $idx = array_search($sheetName, $this->sheetNames);
+        if ($idx === false) throw new RuntimeException("Hoja '$sheetName' no encontrada en el archivo.");
+        $xml = $this->zip->getFromName($this->sheetFiles[$idx] ?? '');
+        if ($xml === false) throw new RuntimeException("No se pudo leer la hoja '$sheetName'.");
+        $this->loadStyles();
+        $r = new XMLReader();
+        $r->XML(ltrim($xml, "ï»¿"));
+        $headers = [];
+        while ($r->read()) {
+            if ($r->nodeType !== XMLReader::ELEMENT || $r->localName !== 'row') continue;
+            $row = simplexml_load_string($r->readOuterXml());
+            $arr = $row ? $this->rowToArray($row) : null;
+            if ($arr !== null) { $headers = $arr; break; }
+        }
+        $r->close();
+        return $headers;
+    }
+
+    /** Convierte un <row> en array denso; null si la fila no tiene datos. */
+    private function rowToArray(\SimpleXMLElement $row): ?array
+    {
+        $cells = [];
+        $maxColIdx = -1;
+        foreach ($row->c as $cell) {
+            // Extraer sólo letras de la referencia de celda (ej. 'AB12' → 'AB')
+            $ref = (string)($cell['r'] ?? '');
+            preg_match('/^([A-Z]+)/', $ref, $m);
+            $colIdx = isset($m[1]) ? $this->colToIndex($m[1]) : count($cells);
+            $cells[$colIdx] = $this->cellValue($cell, true);
+            if ($colIdx > $maxColIdx) $maxColIdx = $colIdx;
+        }
+        if ($maxColIdx < 0) return null; // fila completamente vacía
+
+        // Construir array denso (rellenando huecos con null)
+        $rowArr = [];
+        for ($i = 0; $i <= $maxColIdx; $i++) {
+            $rowArr[] = $cells[$i] ?? null;
+        }
+        // Quitar nulos finales
+        while (!empty($rowArr) && end($rowArr) === null) {
+            array_pop($rowArr);
+        }
+        foreach ($rowArr as $v) {
+            if ($v !== null && (string)$v !== '') return $rowArr;
+        }
+        return null; // sin datos
     }
 
     /**
@@ -293,39 +357,8 @@ class PhpXlsxReader
 
         foreach ($doc->sheetData->row as $row) {
             if ($maxRows > 0 && $count >= $maxRows) break;
-
-            $cells = [];
-            $maxColIdx = -1;
-
-            foreach ($row->c as $cell) {
-                // Extraer sólo letras de la referencia de celda (ej. 'AB12' → 'AB')
-                $ref = (string)($cell['r'] ?? '');
-                preg_match('/^([A-Z]+)/', $ref, $m);
-                $colIdx = isset($m[1]) ? $this->colToIndex($m[1]) : count($cells);
-                $cells[$colIdx] = $this->cellValue($cell, true);
-                if ($colIdx > $maxColIdx) $maxColIdx = $colIdx;
-            }
-
-            if ($maxColIdx < 0) continue; // fila completamente vacía
-
-            // Construir array denso (rellenando huecos con null)
-            $rowArr = [];
-            for ($i = 0; $i <= $maxColIdx; $i++) {
-                $rowArr[] = $cells[$i] ?? null;
-            }
-
-            // Quitar nulos finales
-            while (!empty($rowArr) && end($rowArr) === null) {
-                array_pop($rowArr);
-            }
-
-            // Omitir si queda completamente vacía
-            $hasData = false;
-            foreach ($rowArr as $v) {
-                if ($v !== null && (string)$v !== '') { $hasData = true; break; }
-            }
-            if (!$hasData) continue;
-
+            $rowArr = $this->rowToArray($row);
+            if ($rowArr === null) continue; // fila vacía
             $rows[] = $rowArr;
             $count++;
         }
@@ -386,7 +419,13 @@ class PhpCsvReader
             // Igual que PhpSpreadsheetReader: filas de datos, sin contar el encabezado
             'rows' => max(0, count($this->rows) - 1),
             'cols' => $this->rows ? max(array_map('count', $this->rows)) : 0,
+            'headers' => $this->rows[0] ?? [],
         ]];
+    }
+
+    public function readHeader(string $sheetName): array
+    {
+        return $this->rows[0] ?? [];
     }
 
     public function readRows(string $sheetName, int $maxRows = 0): array
@@ -461,9 +500,15 @@ class PhpSpreadsheetReader
                 'cols' => $highestCol
                     ? \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestCol)
                     : 0,
+                'headers' => $this->readRows($sheet->getTitle(), 1)[0] ?? [],
             ];
         }
         return $result;
+    }
+
+    public function readHeader(string $sheetName): array
+    {
+        return $this->readRows($sheetName, 1)[0] ?? [];
     }
 
     public function readRows(string $sheetName, int $maxRows = 0): array
@@ -536,4 +581,82 @@ class PhpSpreadsheetReader
     {
         unset($this->book);
     }
+}
+
+// ── Validación de estructura: ¿la hoja es una exportación de leads de Meta Ads? ──
+
+/**
+ * Columnas fijas de una exportación de leads de Meta Ads (Lead Ads → «Descargar leads»).
+ * Una exportación trae, en la fila 1 y en este orden:
+ *   id, created_time, ad_id, ad_name, adset_id, adset_name, campaign_id, campaign_name,
+ *   form_id, form_name, is_organic, platform, <preguntas del formulario…>, [lead_status]
+ * Se comparan normalizadas con _normMetaCol() («Created Time», «created_time» y «created time» valen igual).
+ */
+const META_COLS_OBLIGATORIAS = [
+    'created time', 'ad id', 'ad name', 'adset id', 'adset name',
+    'campaign id', 'campaign name', 'form id', 'form name',
+];
+const META_COLS_OPCIONALES = ['is organic', 'platform'];
+
+/**
+ * Valida que una hoja sea una exportación de leads de Meta Ads a partir de su encabezado
+ * (primera fila con datos). Regla (ver docs/importador_validacion_hojas.md):
+ *   1. El encabezado debe contener las 9 columnas fijas obligatorias (META_COLS_OBLIGATORIAS).
+ *   2. Debe haber columna de ID del lead: un encabezado «id»/«lead id», o, si no lo hay, la
+ *      columna 1 debe ser una columna propia (cargas antiguas con el id renombrado o sin
+ *      título). Si la columna 1 es otra columna fija de Meta (p. ej. created_time) no hay id
+ *      y se rechaza: se usaría la fecha como ID y los leads se fusionarían.
+ * Devuelve ['valid'=>bool, 'reason'=>?string, 'missing'=>[...], 'warning'=>?string].
+ */
+function validarHojaMeta(array $headers): array {
+    $norm = array_map(fn($h) => _normMetaCol($h), $headers);
+    $present = array_flip(array_filter($norm, fn($n) => $n !== ''));
+    if (!$present) {
+        return ['valid' => false, 'missing' => META_COLS_OBLIGATORIAS,
+                'reason' => 'Hoja vacía o sin encabezado.', 'warning' => null];
+    }
+    $missing = array_values(array_filter(META_COLS_OBLIGATORIAS, fn($c) => !isset($present[$c])));
+    if ($missing) {
+        $nombres = array_map(fn($c) => str_replace(' ', '_', $c), $missing);
+        $reason = count($missing) === count(META_COLS_OBLIGATORIAS)
+            ? 'No es una exportación de leads de Meta Ads: no tiene ninguna columna fija (created_time, ad_id, adset_name…).'
+            : 'No tiene las columnas fijas de Meta Ads: faltan ' . implode(', ', $nombres) . '.';
+        return ['valid' => false, 'missing' => $nombres, 'reason' => $reason, 'warning' => null];
+    }
+    $warning = null;
+    if (!isset($present['id']) && !isset($present['lead id'])) {
+        $col0 = $norm[0] ?? '';
+        $fijas = array_merge(META_COLS_OBLIGATORIAS, META_COLS_OPCIONALES);
+        if (in_array($col0, $fijas, true)) {
+            return ['valid' => false, 'missing' => ['id'],
+                    'reason' => 'No tiene la columna id del lead (la columna 1 es ' . str_replace(' ', '_', $col0) . ').',
+                    'warning' => null];
+        }
+        $titulo = trim((string)($headers[0] ?? ''));
+        $warning = 'Sin columna «id»: se usará la columna 1' . ($titulo !== '' ? " («{$titulo}»)" : ' (sin título)') . ' como ID del lead.';
+    }
+    return ['valid' => true, 'missing' => [], 'reason' => null, 'warning' => $warning];
+}
+
+/** Igual que normalizeCol() de leads_importer.php: minúsculas, sin tildes, separadores → espacio. */
+function _normMetaCol($col): string {
+    if ($col === null || trim((string)$col) === '') return '';
+    $col = mb_strtolower(trim((string)$col), 'UTF-8');
+    $col = strtr($col, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ü'=>'u','ñ'=>'n','à'=>'a','è'=>'e','ì'=>'i','ò'=>'o','ù'=>'u']);
+    $col = preg_replace('/[^a-z0-9 ]/u', ' ', $col);
+    return trim(preg_replace('/\s+/', ' ', $col));
+}
+
+/**
+ * Añade a cada hoja de getSheets() su validez como exportación de Meta Ads
+ * (valid, reason, missing, warning) y quita 'headers', que no viaja al navegador.
+ */
+function anotarValidezHojas(array $sheets): array {
+    foreach ($sheets as &$sh) {
+        $v = validarHojaMeta($sh['headers'] ?? []);
+        unset($sh['headers']);
+        $sh += $v;
+    }
+    unset($sh);
+    return $sheets;
 }

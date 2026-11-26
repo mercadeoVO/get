@@ -164,11 +164,13 @@ Devuelve `?string` (VARCHAR(15)) o `null`.
 ### ExcelReaderPhp — lector XLSX
 ```php
 $reader = new PhpXlsxReader('/path/file.xlsx');
-$reader->getSheets()           // → [['name'=>'Sheet1','rows'=>100,'cols'=>10], ...]
+$reader->getSheets()           // → [['name'=>'Sheet1','rows'=>100,'cols'=>10,'headers'=>[...]], ...]
+$reader->readHeader('Sheet1')   // → primera fila con datos (sin leer el resto)
 $reader->readRows('Sheet1', 21) // → [['col1','col2',...], ['v1','v2',...], ...]
 $reader->close();
 // Wrapper convenience:
-$sheets = xlsxGetSheets($path);            // → array
+$sheets = xlsxGetSheets($path);            // → array, con valid/reason/missing/warning por hoja
+// Solo se importan exportaciones de leads de Meta Ads: validarHojaMeta() — ver docs/importador_validacion_hojas.md
 $result = xlsxReadRows($path, $sheet, 21); // → ['ok'=>true,'rows'=>[...]]
 ```
 
