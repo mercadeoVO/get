@@ -490,10 +490,14 @@ function getFieldMap(): array {
         'phone number'                          => 'telefono',
         'cual es tu sexo'                       => 'sexo',
         'cual es su sexo'                       => 'sexo',
+        'cual es tu genero'                     => 'sexo',
+        'cual es su genero'                     => 'sexo',
         'cual es tu edad'                       => 'rango_edad',
         'cual es su edad'                       => 'rango_edad',
         'cual es tu estrato'                    => 'estrato',
         'cual es tu estrato socioeconomico'     => 'estrato',
+        'cual es su estrato'                    => 'estrato',
+        'estrato socioeconomico'                => 'estrato',
         'afiliacion politica'                   => 'afiliacion_politica',
         'cual es tu afiliacion politica'        => 'afiliacion_politica',
         'cual es su afiliacion politica'        => 'afiliacion_politica',
@@ -540,6 +544,10 @@ function detectColType(?string $col): string {
     $map  = getFieldMap();
     // 1. Coincidencia exacta — máxima prioridad
     if (isset($map[$norm])) return $map[$norm];
+    // 1b. Encabezados de una sola palabra que solo cuentan si son TODO el encabezado
+    //     («Género» sí; «¿Qué opinas de la violencia de género?» no).
+    $soloExacto = ['genero' => 'sexo', 'sexo' => 'sexo', 'estrato' => 'estrato'];
+    if (isset($soloExacto[$norm])) return $soloExacto[$norm];
     // 2. Substring — solo para patrones largos (>2 chars).
     //    'id' (2 chars) causaría falsos positivos en 'actividad', 'calidad', etc.
     foreach ($map as $pattern => $field) {
@@ -2542,7 +2550,10 @@ try {
                         } elseif ($type === 'is_organic') {
                             $lead['is_organic'] = normalizeBool($val);
                         } elseif ($type === 'estrato') {
-                            $lead['estrato'] = ($val !== null && is_numeric($val)) ? (int)$val : null;
+                            // «3» o «Estrato 3» → 3; un rango como «2-3» es ambiguo y se omite
+                            $ev = $val !== null ? trim((string)$val) : '';
+                            $lead['estrato'] = is_numeric($ev) ? (int)$ev
+                                : (preg_match('/^\D*([0-9])\D*$/u', $ev, $em) ? (int)$em[1] : null);
                         } elseif ($type === 'created_time') {
                             $lead['created_time'] = ($val !== null && trim((string)$val) !== '') ? trim((string)$val) : null;
                         } elseif ($type === 'telefono') {
