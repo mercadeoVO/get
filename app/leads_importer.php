@@ -601,11 +601,46 @@ function normalizeGeoStr(string $s): string {
     return strtoupper(trim(str_replace(array_keys($map), array_values($map), $s)));
 }
 
+/**
+ * Sexo: solo 'Hombre' o 'Mujer'; cualquier otra cosa devuelve null (queda sin dato y el resto de la
+ * cascada —regla, adset, nombre— puede completarlo). Reconoce las formas de Meta («male masculino»,
+ * «femalefemenino»), plurales, puntuación y erratas comunes («maculino», «fenenino», «honbre»).
+ * Si el texto trae señales de los dos sexos («male. femenino») es ambiguo → null.
+ */
 function normalizeSexo(?string $val): ?string {
-    if (!$val) return null;
+    if ($val === null || trim($val) === '') return null;
     $v = normalizeGeoStr($val);
     if (in_array($v, ['HOMBRE','HOMBRES','H','MALE','MASCULINO','MASC'])) return 'Hombre';
     if (in_array($v, ['MUJER','MUJERES','M','F','FEMALE','FEMENINO','FEM','W'])) return 'Mujer';
+
+    $txt  = strtolower(trim(preg_replace('/[^A-Z]+/', ' ', $v)));   // solo letras, en minúscula
+    if ($txt === '') return null;
+    if (in_array($txt, ['h', 'hombre', 'hombres', 'male', 'masculino', 'masc'], true)) return 'Hombre';   // «H.», «Hombre.»
+    if (in_array($txt, ['m', 'f', 'w', 'mujer', 'mujeres', 'female', 'femenino', 'fem'], true)) return 'Mujer';
+    $toks = explode(' ', $txt);
+    $junto = str_replace(' ', '', $txt);                             // «mas culino» → «masculino»
+
+    $fem = false; $mas = false;
+    foreach (['femen', 'femin', 'female', 'mujer', 'hembra', 'woman', 'women', 'fenen', 'fenin',
+              'femm', 'muier', 'famale', 'famele', 'femele'] as $k) {
+        if (str_contains($junto, $k)) { $fem = true; break; }
+    }
+    foreach (['masculin', 'hombre', 'varon', 'macho', 'masc'] as $k) {
+        if (str_contains($junto, $k)) { $mas = true; break; }
+    }
+    if (count($toks) > 1) $toks[] = $junto;   // «mas ulino» → también se evalúa «masulino»
+    foreach ($toks as $t) {
+        $n = strlen($t);
+        if (in_array($t, ['male', 'man', 'men', 'hom', 'home'], true)) $mas = true;
+        if (in_array($t, ['fem', 'fema', 'femal', 'feme', 'femy', 'femae'], true)) $fem = true;
+        // Erratas: a 1-2 letras de la palabra (solo palabras largas, para no confundir «mas» o «mal»)
+        if ($n >= 7 && $n <= 12 && levenshtein($t, 'masculino') <= 2) $mas = true;
+        if ($n >= 4 && $n <= 7  && levenshtein($t, 'hombre') <= 1) $mas = true;
+        if ($n >= 6 && $n <= 10 && (levenshtein($t, 'femenino') <= 2 || levenshtein($t, 'femenina') <= 2)) $fem = true;
+        if ($n >= 4 && $n <= 6  && levenshtein($t, 'mujer') <= 1) $fem = true;
+    }
+    if ($fem && !$mas) return 'Mujer';
+    if ($mas && !$fem) return 'Hombre';
     return null;
 }
 
@@ -644,7 +679,7 @@ function normalizeNivelEducativo(?string $val): ?string {
     $s = trim(preg_replace('/[\s_\-]+/', ' ', $s), ' .');
     if (preg_match('/no (ha )?termin/', $s)) return str_contains($s, 'universidad') ? 'bachiller' : 'primaria';
     if (preg_match('/tecnic|tecnolog/', $s))      return 'tecnico/tecnologia';
-    if (preg_match('/universit|posgrado|postgrado|maestria|doctorad|especializ|profesional/', $s)) return 'universitario';
+    if (preg_match('/universi|posgrado|postgrado|maestria|doctorad|especializ|profesional/', $s)) return 'universitario';
     if (preg_match('/bachiller|secundaria|media/', $s)) return 'bachiller';
     if (preg_match('/primaria|basica/', $s))      return 'primaria';
     return null;
@@ -2621,15 +2656,11 @@ try {
                         }
                     }
 
-                    // Sexo — 1.º lo que trae el archivo (prevalece). Se unifica «H»/«mujer»/«F» al valor estándar;
-                    // un texto que no se reconoce se conserva tal cual: es lo que dijo el archivo.
+                    // Sexo — 1.º lo que trae el archivo (prevalece). Solo se guarda 'Hombre' o 'Mujer'; un texto
+                    // que no se reconoce («unknown», «otro», basura) queda vacío y sigue la cascada (regla/adset/nombre).
                     $lead['_sexo_origen'] = null;
-                    if (trim((string)($lead['sexo'] ?? '')) !== '') {
-                        $lead['sexo'] = normalizeSexo((string)$lead['sexo']) ?? trim((string)$lead['sexo']);
-                        $lead['_sexo_origen'] = 'archivo';
-                    } else {
-                        $lead['sexo'] = null;
-                    }
+                    $lead['sexo'] = normalizeSexo((string)($lead['sexo'] ?? ''));
+                    if ($lead['sexo'] !== null) $lead['_sexo_origen'] = 'archivo';
 
                     // Aplicar reglas de extracción (desde campaign/adset/ad names)
                     foreach ($extractions as $rule) {
