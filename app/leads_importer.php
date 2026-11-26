@@ -319,6 +319,35 @@ function sugerirTemasDebil(string $pregLower, array $catalogoConKeywords): array
 }
 
 /**
+ * Alias de preguntas: cuando se corrige el texto de una pregunta del catálogo, su texto anterior
+ * (el encabezado tal como viene del Excel) queda como alias para que las próximas importaciones
+ * con ese mismo encabezado caigan en la misma pregunta en vez de crear una nueva.
+ */
+function ensurePreguntaAlias(PDO $db): void {
+    static $hecho = false;
+    if ($hecho) return;
+    $db->exec("CREATE TABLE IF NOT EXISTS import_log_leads_preguntas_alias (
+        alias       VARCHAR(500) NOT NULL,
+        pregunta_id SMALLINT UNSIGNED NOT NULL,
+        creado_en   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_alias (alias(255)),
+        KEY idx_pregunta (pregunta_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $hecho = true;
+}
+
+/** Id de la pregunta a la que apunta un alias (texto viejo de una pregunta editada), o null. */
+function preguntaIdPorAlias(PDO $db, string $texto): ?int {
+    ensurePreguntaAlias($db);
+    $st = $db->prepare("SELECT a.pregunta_id FROM import_log_leads_preguntas_alias a
+                        JOIN import_log_leads_preguntas p ON p.id = a.pregunta_id
+                        WHERE a.alias = ? LIMIT 1");
+    $st->execute([$texto]);
+    $id = $st->fetchColumn();
+    return $id === false ? null : (int)$id;
+}
+
+/**
  * Registra (o reconoce) una pregunta en el catálogo y, si es nueva y no
  * electoral, corre el clasificador automático de tema. No pisa una
  * clasificación manual ya existente.
@@ -329,12 +358,18 @@ function registrarPregunta(PDO $db, string $pregRaw, array $temaKeywords): array
     $analisis = analizarElectoral($db, $pregLower);
     $isElectoral = ($analisis && $analisis['confianza'] === 'alta') ? 1 : 0;
 
-    $db->prepare("INSERT IGNORE INTO import_log_leads_preguntas (pregunta, es_electoral) VALUES (?, ?)")
-       ->execute([$pregNorm, $isElectoral]);
-    $stmt = $db->prepare("SELECT id, es_electoral FROM import_log_leads_preguntas WHERE pregunta = ?");
-    $stmt->execute([$pregNorm]);
+    $aliasId = preguntaIdPorAlias($db, $pregNorm);
+    if ($aliasId) {
+        $stmt = $db->prepare("SELECT id, pregunta, es_electoral FROM import_log_leads_preguntas WHERE id = ?");
+        $stmt->execute([$aliasId]);
+    } else {
+        $db->prepare("INSERT IGNORE INTO import_log_leads_preguntas (pregunta, es_electoral) VALUES (?, ?)")
+           ->execute([$pregNorm, $isElectoral]);
+        $stmt = $db->prepare("SELECT id, pregunta, es_electoral FROM import_log_leads_preguntas WHERE pregunta = ?");
+        $stmt->execute([$pregNorm]);
+    }
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$row) return ['pregunta_id' => 0, 'pregunta' => $pregNorm, 'es_electoral' => 0, 'temas' => []];
+    if (!$row) return ['pregunta_id' => 0, 'pregunta' => $pregNorm, 'clave' => $pregNorm, 'es_electoral' => 0, 'temas' => []];
 
     $pregId = (int)$row['id'];
     $esElectoral = (int)$row['es_electoral'];
@@ -359,7 +394,8 @@ function registrarPregunta(PDO $db, string $pregRaw, array $temaKeywords): array
 
     return [
         'pregunta_id'  => $pregId,
-        'pregunta'     => $pregNorm,
+        'pregunta'     => $row['pregunta'],   // texto del catálogo (puede estar corregido a mano)
+        'clave'        => $pregNorm,          // encabezado normalizado del Excel (clave de valores_unicos)
         'es_electoral' => $esElectoral,
         // componentes detectados (objetivo, candidato). Si la pregunta NO está marcada electoral pero
         // el detector la ve como tal, se ofrece como sugerencia para que el usuario la confirme.
@@ -2701,10 +2737,17 @@ try {
                                 $pregLower  = mb_strtolower($pregNorm, 'UTF-8');
                                 $an = analizarElectoral($db, $pregLower);
                                 $isElectoral = ($an && $an['confianza'] === 'alta') ? 1 : 0;
-                                $stmtInsPreg->execute([$pregNorm, $isElectoral]);
-                                $esPreguntaNueva = $stmtInsPreg->rowCount() > 0;
-                                $stmtGetPreg->execute([$pregNorm]);
-                                $pregIdCache[$pregNorm] = (int)($stmtGetPreg->fetchColumn() ?: 0);
+                                $aliasId = preguntaIdPorAlias($db, $pregNorm);
+                                if ($aliasId) {
+                                    // Encabezado cuyo texto se corrigió en el catálogo: va a la pregunta editada
+                                    $esPreguntaNueva = false;
+                                    $pregIdCache[$pregNorm] = $aliasId;
+                                } else {
+                                    $stmtInsPreg->execute([$pregNorm, $isElectoral]);
+                                    $esPreguntaNueva = $stmtInsPreg->rowCount() > 0;
+                                    $stmtGetPreg->execute([$pregNorm]);
+                                    $pregIdCache[$pregNorm] = (int)($stmtGetPreg->fetchColumn() ?: 0);
+                                }
                                 if ($esPreguntaNueva && !$isElectoral && $pregIdCache[$pregNorm]) {
                                     foreach ($temaKeywords as $temaId => $kwJson) {
                                         foreach (json_decode($kwJson, true) as $kw) {
@@ -3308,7 +3351,24 @@ try {
         $dup = $db->prepare("SELECT id FROM import_log_leads_preguntas WHERE pregunta = ? AND id <> ?");
         $dup->execute([$texto, $preguntaId]);
         if ($dup->fetchColumn() !== false) errOut('Ya existe otra pregunta con ese texto.');
-        $db->prepare("UPDATE import_log_leads_preguntas SET pregunta = ? WHERE id = ?")->execute([$texto, $preguntaId]);
+        $otro = preguntaIdPorAlias($db, $texto);
+        if ($otro && $otro !== $preguntaId) errOut('Ese texto ya es el nombre anterior de otra pregunta.');
+        $ant = $db->prepare("SELECT pregunta FROM import_log_leads_preguntas WHERE id = ?");
+        $ant->execute([$preguntaId]);
+        $anterior = $ant->fetchColumn();
+        if ($anterior === false) errOut('La pregunta no existe.');
+        $db->beginTransaction();
+        try {
+            $db->prepare("UPDATE import_log_leads_preguntas SET pregunta = ? WHERE id = ?")->execute([$texto, $preguntaId]);
+            // El texto anterior queda como alias: las próximas importaciones con ese encabezado caen aquí.
+            if ($anterior !== $texto) {
+                $db->prepare("INSERT INTO import_log_leads_preguntas_alias (alias, pregunta_id) VALUES (?, ?)
+                              ON DUPLICATE KEY UPDATE pregunta_id = VALUES(pregunta_id)")->execute([$anterior, $preguntaId]);
+            }
+            // El texto nuevo es ahora el nombre real: no debe quedar también como alias.
+            $db->prepare("DELETE FROM import_log_leads_preguntas_alias WHERE alias = ?")->execute([$texto]);
+            $db->commit();
+        } catch (\Throwable $e) { $db->rollBack(); throw $e; }
         jsonOut(['ok' => true, 'pregunta_id' => $preguntaId, 'pregunta' => $texto]);
     }
 
@@ -3326,6 +3386,7 @@ try {
         $ex->execute([$preguntaId]);
         $texto = $ex->fetchColumn();
         if ($texto === false) errOut('La pregunta no existe.');
+        ensurePreguntaAlias($db);   // antes de la transacción: CREATE TABLE haría commit implícito
         $resp = 0;
         $lote = $db->prepare("DELETE FROM import_log_leads_respuestas WHERE pregunta_id = ? LIMIT 20000");
         do {
@@ -3336,6 +3397,7 @@ try {
         $db->beginTransaction();
         try {
             $db->prepare("DELETE FROM pregunta_tema WHERE pregunta_id = ?")->execute([$preguntaId]);
+            $db->prepare("DELETE FROM import_log_leads_preguntas_alias WHERE pregunta_id = ?")->execute([$preguntaId]);
             $db->prepare("DELETE FROM import_log_leads_preguntas WHERE id = ?")->execute([$preguntaId]);
             $db->commit();
         } catch (\Throwable $e) {

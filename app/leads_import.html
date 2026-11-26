@@ -1965,6 +1965,26 @@ async function setPreguntaElectoral(preguntaId,val){
   }catch(e){ alert('No se pudo guardar: '+e.message); }
 }
 
+// Corrige el texto de una pregunta del catálogo. El encabezado original del Excel queda como alias,
+// así esta importación y las siguientes con ese encabezado siguen cayendo en la misma pregunta.
+function btnEditarPregunta(p){
+  return `<button class="btn btn-outline btn-sm" title="Corregir el texto de la pregunta" onclick="editarPreguntaImport(${p.pregunta_id})">Editar pregunta</button>`;
+}
+async function editarPreguntaImport(preguntaId){
+  const item=(state.temasPreguntas||[]).find(p=>p.pregunta_id==preguntaId);
+  if(!item) return;
+  const nuevo=prompt('Texto de la pregunta (las respuestas y la clasificación se conservan):', item.pregunta);
+  if(nuevo===null || !nuevo.trim() || nuevo.trim()===item.pregunta.trim()) return;
+  const fd=new FormData(); fd.append('pregunta_id',preguntaId); fd.append('pregunta',nuevo.trim());
+  try{
+    const d=await fetch(API+'?action=pregunta_editar',{method:'POST',body:fd}).then(r=>r.json());
+    if(!d.ok) throw new Error(d.error||'Error');
+    if(item.clave===undefined) item.clave=item.pregunta;
+    item.pregunta=d.pregunta;
+    renderTemasStep();
+  }catch(e){ alert('No se pudo editar la pregunta: '+e.message); }
+}
+
 // Respuestas únicas de cada pregunta (leídas del Excel que se está importando) en un desplegable a la derecha
 async function cargarValoresUnicos(){
   try{
@@ -1985,7 +2005,7 @@ function respuestasSelect(p){
   if(!state.temasValores){
     return `<select disabled style="${base}"><option>Cargando respuestas…</option></select>`;
   }
-  const info=state.temasValores[p.pregunta];
+  const info=state.temasValores[p.clave??p.pregunta];
   if(!info || !info.valores.length){
     const motivo=state.temasValoresErr?('No disponible: '+state.temasValoresErr):'Sin respuestas en el archivo';
     return `<select disabled style="${base}" title="${h(motivo)}"><option>${h(motivo.length>40?'No disponible':motivo)}</option></select>`;
@@ -2013,6 +2033,7 @@ function renderTemasStep(){
         <span style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}</span>
         ${electoralChips(p)}
         ${respuestasSelect(p)}
+        ${btnEditarPregunta(p)}
         <button class="btn btn-outline btn-sm" onclick="setPreguntaElectoral(${p.pregunta_id},0)">No es electoral</button>
       </div>`;
     });
@@ -2033,7 +2054,7 @@ function renderTemasStep(){
         <div style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}</div>
         ${respuestasSelect(p)}
       </div>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${sugerenciaTxt}</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${sugerenciaTxt}${btnEditarPregunta(p)}</div>
       ${renderTemaEditor(p.pregunta_id, sugerido)}
     </div>`;
   });
@@ -2044,7 +2065,8 @@ function renderTemasStep(){
         <span style="font-size:13px;flex:1;min-width:200px;">${h(p.pregunta)}</span>
         ${respuestasSelect(p)}
         ${p.temas.map(t=>`<span class="badge badge-green">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')}
-        ${editando?'':`<button class="btn btn-outline btn-sm" onclick="editarTema(${p.pregunta_id},true)">Editar</button>`}
+        ${btnEditarPregunta(p)}
+        ${editando?'':`<button class="btn btn-outline btn-sm" onclick="editarTema(${p.pregunta_id},true)">Editar tema</button>`}
       </div>
       ${editando?renderTemaEditor(p.pregunta_id,p.temas.map(t=>t.tema_id),true):''}
     </div>`;

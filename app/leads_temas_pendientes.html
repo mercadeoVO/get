@@ -536,11 +536,7 @@ async function eliminarPregunta(id){
     const m = await fetch(API+'?action=respuestas_muestra&pregunta_id='+id).then(r=>r.json());
     if (m.ok) n = m.total.toLocaleString();
   } catch(e) {}
-  if (!confirm('¿Eliminar la pregunta?
-
-«'+txt+'»
-
-Se borrarán también sus '+n+' respuestas y su clasificación. No se puede deshacer.')) return;
+  if (!confirm('¿Eliminar la pregunta?\n\n«'+txt+'»\n\nSe borrarán también sus '+n+' respuestas y su clasificación. No se puede deshacer.')) return;
   const fd = new FormData(); fd.append('pregunta_id', id); fd.append('confirmar', '1');
   try {
     const d = await fetch(API+'?action=pregunta_eliminar', {method:'POST', body:fd}).then(r=>r.json());
