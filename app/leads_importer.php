@@ -3055,7 +3055,7 @@ try {
 
         $resultado = [];
         foreach (array_unique(array_filter(array_map('strval', $headers))) as $h) {
-            $resultado[] = registrarPregunta($db, $h, $temaKeywords);
+            $resultado[] = ['header' => $h] + registrarPregunta($db, $h, $temaKeywords);
         }
         jsonOut(['ok' => true, 'preguntas' => $resultado, 'catalogo' => $catalogo]);
     }

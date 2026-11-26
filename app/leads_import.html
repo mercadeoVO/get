@@ -1878,12 +1878,19 @@ function goToStepTemas(){
 // ─── Step 4: Temas ───────────────────────────────────────────────────────
 async function openTemasStep(){
   const eavSet = new Set();
+  // Origen de cada pregunta: encabezado → {hoja → formularios (form_name) vistos en la vista previa}
+  state.temasOrigen={};
   state.selectedSheets.forEach(name=>{
     const sm=state.sheetMappings[name];
     if(!sm||!sm.loaded) return;
+    const fCol=sm.columns.find(c=>c.type==='form_name');
+    const forms=fCol?[...new Set((sm.previewData||[]).map(r=>String(r[fCol.index]??'').trim()).filter(v=>v&&v!=='null'))]:[];
     sm.columns.filter(c=>!FIXED_TYPES.has(c.type)&&c.type!=='__skip'&&c.header!==null).forEach(col=>{
       const act=sm.colActions[col.index]||'skip';
-      if(act==='eav') eavSet.add(col.header??String(col.index));
+      if(act!=='eav') return;
+      const hdr=col.header??String(col.index);
+      eavSet.add(hdr);
+      (state.temasOrigen[hdr]=state.temasOrigen[hdr]||{})[name]=forms;
     });
   });
   state.temasHeaders=[...eavSet];
@@ -2006,6 +2013,16 @@ async function editarPreguntaImport(preguntaId){
   }catch(e){ alert('No se pudo editar la pregunta: '+e.message); }
 }
 
+// «De qué formulario viene»: hojas del archivo y formularios de Meta (form_name) donde aparece la pregunta
+function origenPregunta(p){
+  const o=(state.temasOrigen||{})[p.header];
+  if(!o) return '';
+  const partes=Object.entries(o).map(([hoja,forms])=>
+    `<span title="Hoja del archivo">${ic('file',13)} ${h(hoja)}</span>`+
+    (forms.length?` · <span title="Formulario de Meta (form_name)">${ic('list',13)} ${forms.map(h).join(', ')}</span>`:''));
+  return `<div style="font-size:11.5px;color:var(--muted);display:flex;gap:4px 14px;flex-wrap:wrap;align-items:center;margin-top:3px;">${partes.join('<span style="opacity:.5">|</span>')}</div>`;
+}
+
 // Respuestas únicas de cada pregunta (leídas del Excel que se está importando) en un desplegable a la derecha
 async function cargarValoresUnicos(){
   try{
@@ -2051,7 +2068,7 @@ function renderTemasStep(){
     html+=`<div class="alert alert-info">${electorales.length} pregunta(s) detectadas como Política/Electoral — no necesitan tema. Revisa su objetivo y candidato; si alguna no es electoral, desmárcala.</div>`;
     electorales.forEach(p=>{
       html+=`<div style="background:var(--surface2);border-radius:var(--r-md);padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}</span>
+        <span style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}${origenPregunta(p)}</span>
         ${electoralChips(p)}
         ${respuestasSelect(p)}
         ${btnEditarPregunta(p)}
@@ -2072,7 +2089,7 @@ function renderTemasStep(){
     html+=`<div class="pending-item" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px;">
       ${sugElec}
       <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
-        <div style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}</div>
+        <div style="font-size:13.5px;flex:1;min-width:220px;">${h(p.pregunta)}${origenPregunta(p)}</div>
         ${respuestasSelect(p)}
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${sugerenciaTxt}${btnEditarPregunta(p)}</div>
@@ -2083,7 +2100,7 @@ function renderTemasStep(){
     const editando=!!state.temasEdit && state.temasEdit.has(String(p.pregunta_id));
     html+=`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span style="font-size:13px;flex:1;min-width:200px;">${h(p.pregunta)}</span>
+        <span style="font-size:13px;flex:1;min-width:200px;">${h(p.pregunta)}${origenPregunta(p)}</span>
         ${respuestasSelect(p)}
         ${p.temas.map(t=>`<span class="badge badge-green">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')}
         ${btnEditarPregunta(p)}
