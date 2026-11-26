@@ -216,11 +216,14 @@ function fuenteEscanear(PDO $db, ?FuenteEncuestas $fuente = null): array
     $ins = $db->prepare("INSERT INTO import_fuente_hojas
         (ref, ruta, archivo, hoja, filas, cols, es_encuesta, modificado, tamano, error, fuente)
         VALUES (?,?,?,?,?,?,?,?,?,?,'" . ENCUESTAS_FUENTE . "')");
-    $vistos = [];
-    $res = ['archivos' => count($archivos), 'leidos' => 0, 'sin_cambios' => 0, 'con_error' => 0];
+    $res = ['archivos' => count($archivos), 'leidos' => 0, 'sin_cambios' => 0, 'con_error' => 0, 'quitados' => 0];
+
+    // Archivos que ya no están en la fuente (borrados, movidos o renombrados): se quitan ANTES de leer
+    // los demás, así desaparecen de la lista aunque el recorrido se corte a mitad (archivos grandes, timeout).
+    $vistos = array_fill_keys(array_column($archivos, 'ref'), true);
+    foreach (array_diff_key($previos, $vistos) as $ref => $_) { $del->execute([$ref]); $res['quitados']++; }
 
     foreach ($archivos as $a) {
-        $vistos[$a['ref']] = true;
         $p = $previos[$a['ref']] ?? null;
         if ($p && (int)$p['modificado'] === $a['modificado'] && (int)$p['tamano'] === $a['tamano'] && !(int)$p['con_error']) {
             $res['sin_cambios']++;
@@ -242,8 +245,8 @@ function fuenteEscanear(PDO $db, ?FuenteEncuestas $fuente = null): array
         $db->commit();
     }
 
-    // Archivos que ya no están en la fuente
-    foreach (array_diff_key($previos, $vistos) as $ref => $_) $del->execute([$ref]);
+    // «Última revisión» = cuándo terminó este recorrido, aunque ningún archivo haya cambiado
+    $db->prepare("UPDATE import_fuente_hojas SET revisado_en = NOW() WHERE fuente = ?")->execute([ENCUESTAS_FUENTE]);
 
     return $res;
 }
