@@ -326,6 +326,9 @@ function sugerirTemasDebil(string $pregLower, array $catalogoConKeywords): array
 function ensurePreguntaAlias(PDO $db): void {
     static $hecho = false;
     if ($hecho) return;
+    if ($db->inTransaction()) {   // nunca DDL dentro de una transacción (commit implícito)
+        throw new \LogicException('ensurePreguntaAlias() debe llamarse antes de beginTransaction()');
+    }
     $db->exec("CREATE TABLE IF NOT EXISTS import_log_leads_preguntas_alias (
         alias       VARCHAR(500) NOT NULL,
         pregunta_id SMALLINT UNSIGNED NOT NULL,
@@ -2563,6 +2566,9 @@ try {
                 $colTypes[0] = 'lead_id';
             }
 
+            // DDL antes de la transacción: en MariaDB un CREATE TABLE hace commit implícito y deja
+            // la importación sin transacción («There is no active transaction» al hacer commit).
+            ensurePreguntaAlias($db);
             $db->beginTransaction();
             try {
                 $stmtLog = $db->prepare(
