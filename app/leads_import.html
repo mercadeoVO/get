@@ -175,9 +175,10 @@ code{font-family:'Courier New',monospace;background:rgba(0,0,0,.3);padding:1px 5
 #step-1{display:block;}
 .elect-badge{display:inline-block;background:#f59e0b22;border:1px solid #f59e0b;color:#f59e0b;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;vertical-align:middle;}
 .elect-icon{font-size:13px;vertical-align:middle;}
+  .btn-ic{padding:6px;display:inline-flex;align-items:center;justify-content:center;line-height:0;}
 </style>
 <link rel="stylesheet" href="visor.css?v=33">
-<script src="visor.js?v=11"></script>
+<script src="visor.js?v=12"></script>
 <script>const ic = V.icon;</script>
 </head>
 <body>
@@ -1988,7 +1989,7 @@ async function setPreguntaElectoral(preguntaId,val){
 // Corrige el texto de una pregunta del catálogo. El encabezado original del Excel queda como alias,
 // así esta importación y las siguientes con ese encabezado siguen cayendo en la misma pregunta.
 function btnEditarPregunta(p){
-  return `<button class="btn btn-outline btn-sm" title="Corregir el texto de la pregunta" onclick="editarPreguntaImport(${p.pregunta_id})">Editar pregunta</button>`;
+  return `<button class="btn btn-outline btn-sm btn-ic" title="Editar pregunta" aria-label="Editar pregunta" onclick="editarPreguntaImport(${p.pregunta_id})">${ic('pencil',15)}</button>`;
 }
 async function editarPreguntaImport(preguntaId){
   const item=(state.temasPreguntas||[]).find(p=>p.pregunta_id==preguntaId);
@@ -2086,7 +2087,7 @@ function renderTemasStep(){
         ${respuestasSelect(p)}
         ${p.temas.map(t=>`<span class="badge badge-green">${h(t.codigo)} ${h(t.subtema)}</span>`).join(' ')}
         ${btnEditarPregunta(p)}
-        ${editando?'':`<button class="btn btn-outline btn-sm" onclick="editarTema(${p.pregunta_id},true)">Editar tema</button>`}
+        ${editando?'':`<button class="btn btn-outline btn-sm btn-ic" title="Editar tema" aria-label="Editar tema" onclick="editarTema(${p.pregunta_id},true)">${ic('tag',15)}</button>`}
       </div>
       ${editando?renderTemaEditor(p.pregunta_id,p.temas.map(t=>t.tema_id),true):''}
     </div>`;
