@@ -705,7 +705,9 @@ function renderSheetSelector(){
     `Se encontraron <strong style="color:var(--text)">${state.sheets.length}</strong> hoja(s) · ≈${total.toLocaleString()} filas en total.`+
     (prevCount ? ` <span class="badge badge-yellow">${prevCount} ya cargada${prevCount!==1?'s':''}</span>` : '')+
     (nInvalid ? ` <span class="badge badge-orange" title="Solo se importan hojas con las columnas fijas de una exportación de leads de Meta Ads">${nInvalid} no válida${nInvalid!==1?'s':''}</span>` : '')+
-    ` Selecciona las que quieres importar:`;
+    ` Selecciona las que quieres importar:`+
+    (state.sheets.some(sh=>sh.valid!==false)
+      ? ` <button type="button" class="btn btn-outline btn-sm" id="s2-all" onclick="toggleAllSheets()" style="margin-left:6px;">Seleccionar todas</button>` : '');
   document.getElementById('sheet-grid').innerHTML=state.sheets.map((sh,i)=>{
     const imp=state.importedSheets[sh.name];
     const bad=sh.valid===false;
@@ -723,18 +725,36 @@ function renderSheetSelector(){
   document.getElementById('s2-selected').textContent='';
 }
 
+// Marca o desmarca una hoja (las no válidas nunca se pueden marcar)
+function setSheet(i,on){
+  const sh=state.sheets[i];
+  if(!sh||sh.valid===false) return;
+  const idx=state.selectedSheets.indexOf(sh.name);
+  if(on && idx===-1) state.selectedSheets.push(sh.name);
+  if(!on && idx!==-1) state.selectedSheets.splice(idx,1);
+  document.getElementById('shcard-'+i).classList.toggle('checked',on);
+  document.getElementById('shchk-'+i).checked=on;
+}
+function updateSheetSelCount(){
+  const n=state.selectedSheets.length;
+  const validas=state.sheets.filter(sh=>sh.valid!==false).length;
+  document.getElementById('s2-cont').disabled=n===0;
+  document.getElementById('s2-selected').textContent=n>0?`${n} seleccionada${n!==1?'s':''}` :'';
+  const all=document.getElementById('s2-all');
+  if(all) all.textContent=(validas>0 && n===validas)?'Quitar selección':'Seleccionar todas';
+}
 function toggleSheet(i){
   const sh=state.sheets[i];
   if(!sh||sh.valid===false) return;   // hoja no válida: no se puede seleccionar
-  const name=sh.name;
-  const card=document.getElementById('shcard-'+i);
-  const chk=document.getElementById('shchk-'+i);
-  const idx=state.selectedSheets.indexOf(name);
-  if(idx===-1){state.selectedSheets.push(name);card.classList.add('checked');chk.checked=true;}
-  else{state.selectedSheets.splice(idx,1);card.classList.remove('checked');chk.checked=false;}
-  const n=state.selectedSheets.length;
-  document.getElementById('s2-cont').disabled=n===0;
-  document.getElementById('s2-selected').textContent=n>0?`${n} seleccionada${n!==1?'s':''}` :'';
+  setSheet(i, !state.selectedSheets.includes(sh.name));
+  updateSheetSelCount();
+}
+// «Seleccionar todas» marca solo las hojas válidas; si ya están todas, las desmarca
+function toggleAllSheets(){
+  const validas=state.sheets.map((sh,i)=>i).filter(i=>state.sheets[i].valid!==false);
+  const todas=validas.every(i=>state.selectedSheets.includes(state.sheets[i].name));
+  validas.forEach(i=>setSheet(i,!todas));
+  updateSheetSelCount();
 }
 
 // ─── Step 2 → 3: Load and init per-sheet mappings ─────────────────────────
